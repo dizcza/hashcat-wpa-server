@@ -257,11 +257,11 @@ class HashcatWorker(object):
         self.futures.append(future)
 
     def terminate(self):
-        # todo: kill hashcat processes
         futures_active = iter(future for future in self.futures if not future.done())
         for future in futures_active:
             if future.cancel():
                 continue
+        subprocess_call(["pkill", "hashcat"])
 
     def __del__(self):
         self.executor.shutdown(wait=False)
