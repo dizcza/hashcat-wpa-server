@@ -1,0 +1,3 @@
+HASHCAT_STATUS_TIMER: 20
+CAPTURES_DIR: 'captures'
+SQLALCHEMY_DATABASE_URI: 'sqlite:///users.db'

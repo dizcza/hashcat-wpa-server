@@ -1,0 +1,24 @@
+.idea/
+__pycache__/
+wordlists/
+logs/
+env/
+
+# airdump capture
+*.cap
+
+# hashcat acceptable capture format
+*.hccapx
+
+# cracked keys
+*.key
+
+# sqlite database
+*.db
+
+# igored files
+temp.py
+
+# certificate
+*.pem
+*.p12

@@ -1,0 +1,15 @@
+version: '2'
+services:
+  app:
+    image: "hashcat-wpa-server"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+     - "443:443"
+    environment:
+       - "SLACK_TOKEN=${SLACK_TOKEN}"
+       - "CAPTURE_MIME_ENCODED=${CAPTURE_MIME_ENCODED}"
+       - "HASHCAT_USERNAME=${HASHCAT_USERNAME}"
+       - "HASHCAT_PASSWORD=${HASHCAT_PASSWORD}"
+       - "TERM=xterm"

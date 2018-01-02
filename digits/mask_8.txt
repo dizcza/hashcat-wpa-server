@@ -1,0 +1,23 @@
+# same
+aaaaaaaa
+aaaaaaaaa
+aaaaaaaaaa
+
+# pairs
+aaaabbbb
+aabbccdd
+aaabbbccc
+aaaaabbbbb
+aabbccddee
+
+# central mirror
+abcddcba
+abcdeedcba
+
+# repeat
+abababab
+ababababa
+ababababab
+abcabcabc
+abcdabcd
+abcdeabcde
