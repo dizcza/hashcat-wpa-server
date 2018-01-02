@@ -4,8 +4,6 @@ import subprocess
 
 from app.domain import Rule, WordList
 
-BENCHMARK_SPEED = 0
-
 
 def convert_ms_to_human_readable(seconds: float) -> str:
     minutes = int(seconds / 60)
@@ -32,12 +30,3 @@ def count_words(wordlist: WordList) -> int:
                                         stdout=subprocess.PIPE).communicate()
     count = int(out.split(' ')[0])
     return count
-
-
-def estimate_running_time(wordlist: WordList, rule: Rule) -> str:
-    if BENCHMARK_SPEED == 0:
-        return "(no devices found)"
-    words_count = count_words(wordlist)
-    rules_count = count_rules(rule)
-    seconds = words_count * rules_count / BENCHMARK_SPEED
-    return convert_ms_to_human_readable(seconds)

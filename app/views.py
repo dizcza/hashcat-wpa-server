@@ -14,7 +14,6 @@ from app.worker import HashcatWorker
 from app.app_logger import logger
 from app.hashcat_cmd import Rule, WordList
 from app.domain import UploadForm
-from app.utils import estimate_running_time
 
 hashcat_worker = HashcatWorker(app)
 jwt = create_jwt(app)
@@ -134,21 +133,10 @@ def list_keys():
             line = f.readline()
         if ':' not in line:
             continue
-        line = line[:-1]  # remove new line
+        if line[-1] == '\n':
+            line = line[:-1]
         parts = line.split(':')
         essid = parts[-2]
         passwd = parts[-1]
         keys[filename] = "ESSID={}, password={}".format(essid, passwd)
     return jsonify(keys)
-
-
-@app.route("/estimate")
-@jwt_required()
-def estimate():
-    try:
-        wordlist = WordList(request.headers['wordlist'])
-        rule = get_rule_header()
-    except ValueError or KeyError:
-        return abort(400, "Invalid form")
-    running_time = estimate_running_time(wordlist, rule)
-    return jsonify(running_time)
