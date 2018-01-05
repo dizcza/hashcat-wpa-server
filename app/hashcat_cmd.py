@@ -142,16 +142,16 @@ class HashcatStatus(object):
                 continue
             else:
                 logs.append(line)
-        out, err = process.communicate()
-        warn, err = split_warnings_errors(err)
-        logs.append(out)
-        out = '\n'.join(logs)
-        finished_message = {
-            "command": "`{}`".format(' '.join(hashcat_cmd_list)),
-            "warnings": warn,
-            "errors": err,
-            "progress": "{:.1f} %".format(progress * 100),
-        }
-        self.slack_sender.send(finished_message, "#hashcat")
-        finished_message["out"] = out
-        self.slack_sender.send(finished_message, "#debug")
+        if not os.getenv('PRODUCTION', False):
+            out, err = process.communicate()
+            warn, err = split_warnings_errors(err)
+            logs.append(out)
+            out = '\n'.join(logs)
+            finished_message = {
+                "command": "`{}`".format(' '.join(hashcat_cmd_list)),
+                "warnings": warn,
+                "errors": err,
+                "progress": "{:.1f} %".format(progress * 100),
+                "out": out
+            }
+            self.slack_sender.send(finished_message, "#hashcat")

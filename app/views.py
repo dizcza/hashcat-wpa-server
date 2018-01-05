@@ -11,6 +11,7 @@ from werkzeug.utils import secure_filename
 from app import app
 from app.user_database import create_jwt
 from app.worker import HashcatWorker
+from app.slack_sender import SlackSender
 from app.app_logger import logger
 from app.hashcat_cmd import Rule, WordList
 from app.domain import UploadForm
@@ -125,18 +126,6 @@ def terminate_workers():
 @app.route("/list")
 @jwt_required()
 def list_keys():
-    key_pattern = os.path.join(app.config.get("CAPTURES_DIR", ''), "*.key")
-    keys = {}
-    for key_file in glob.glob(key_pattern):
-        filename = os.path.basename(key_file)
-        with open(key_file) as f:
-            line = f.readline()
-        if ':' not in line:
-            continue
-        if line[-1] == '\n':
-            line = line[:-1]
-        parts = line.split(':')
-        essid = parts[-2]
-        passwd = parts[-1]
-        keys[filename] = "ESSID={}, password={}".format(essid, passwd)
-    return jsonify(keys)
+    sender = SlackSender()
+    sender.list_cracked()
+    return jsonify("See #general")
