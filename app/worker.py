@@ -12,7 +12,7 @@ from app.domain import Rule, WordList, UploadForm
 from app.app_logger import logger
 from app import utils
 
-Benchmark = namedtuple("Benchmark", ("speed", "notify", "gpus"))
+Benchmark = namedtuple("Benchmark", ("speed", "gpus"))
 
 
 def subprocess_call(args, slack_sender: SlackSender = None):
@@ -177,10 +177,9 @@ def _crack_async(upload_form: UploadForm, status_timer: int):
     logger.info("Finished cracking {}".format(upload_form.capture_path))
 
 
-def _hashcat_benchmark_async(notify: bool) -> Benchmark:
+def _hashcat_benchmark_async() -> Benchmark:
     """
     Called in background process.
-    :param notify: send the result to slack or not
     """
     gpus = set_cuda_visible_devices()
     out, err = subprocess_call(['hashcat', '-m2500', "-b", "--machine-readable"])
@@ -189,7 +188,7 @@ def _hashcat_benchmark_async(notify: bool) -> Benchmark:
     for line in filter(pattern.fullmatch, out.splitlines()):
         device_speed = int(line.split(':')[-1])
         total_speed += device_speed
-    benchmark = Benchmark(total_speed, notify, gpus)
+    benchmark = Benchmark(total_speed, gpus)
     return benchmark
 
 
@@ -232,9 +231,8 @@ class HashcatWorker(object):
         benchmark = future.result()
         logger.info(benchmark)
         utils.BENCHMARK_SPEED = benchmark.speed
-        if benchmark.notify:
-            benchmark_message = {"speed": benchmark.speed, "gpus": benchmark.gpus}
-            self.slack_sender.send(benchmark_message, channel="#benchmark")
+        benchmark_message = {"speed": benchmark.speed, "gpus": benchmark.gpus}
+        self.slack_sender.send(benchmark_message, channel="#benchmark")
 
     def crack_capture(self, upload_form: UploadForm):
         """
@@ -246,12 +244,11 @@ class HashcatWorker(object):
         future.add_done_callback(self.exception_callback)
         self.futures.append(future)
 
-    def benchmark(self, notify: bool):
+    def benchmark(self):
         """
         Run hashcat WPA benchmark.
-        :param notify: send the result to slack or not
         """
-        future = self.executor.submit(_hashcat_benchmark_async, notify=notify)
+        future = self.executor.submit(_hashcat_benchmark_async)
         future.add_done_callback(self.exception_callback)
         future.add_done_callback(self.callback_benchmark)
         self.futures.append(future)

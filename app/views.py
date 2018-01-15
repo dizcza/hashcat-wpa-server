@@ -1,6 +1,4 @@
-import multiprocessing
 import os
-import glob
 from typing import Optional
 
 from flask import request, abort
@@ -18,7 +16,6 @@ from app.domain import UploadForm
 
 hashcat_worker = HashcatWorker(app)
 jwt = create_jwt(app)
-hashcat_worker.benchmark(notify=False)
 
 
 @app.route('/')
@@ -95,8 +92,8 @@ def ping():
 @app.route("/benchmark")
 @jwt_required()
 def hashcat_benchmark():
-    hashcat_worker.benchmark(notify=True)
-    return jsonify("See '#benchmark' slack channel")
+    hashcat_worker.benchmark()
+    return jsonify("See #benchmark")
 
 
 @app.route("/auth", methods=['POST'])
