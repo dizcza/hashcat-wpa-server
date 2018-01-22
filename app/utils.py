@@ -5,16 +5,6 @@ import subprocess
 from app.domain import Rule, WordList
 
 
-def convert_ms_to_human_readable(seconds: float) -> str:
-    minutes = int(seconds / 60)
-    minutes = min(minutes, 1)
-    hours = int(minutes / 60)
-    days = int(hours / 24)
-    hours %= 24
-    minutes %= 60
-    return "{:d} days {:d} hours {:d} minutes".format(days, hours, minutes)
-
-
 def count_rules(rule: Rule) -> int:
     with open(rule.get_path()) as f:
         rules = f.readlines()
@@ -30,3 +20,12 @@ def count_words(wordlist: WordList) -> int:
                                         stdout=subprocess.PIPE).communicate()
     count = int(out.split(' ')[0])
     return count
+
+
+def split_uppercase(word: str) -> set:
+    pos_upper = [pos for pos, letter in enumerate(word) if letter.isupper()]
+    pos_upper.append(len(word))
+    simple_words = set([])
+    for left, right in zip(pos_upper[:-1], pos_upper[1:]):
+        simple_words.add(word[left: right])
+    return simple_words

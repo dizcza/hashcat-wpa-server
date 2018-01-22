@@ -1,4 +1,7 @@
 a
 ab
 abc
-abcd
+aaaa
+aabb
+abab
+aaab

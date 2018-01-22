@@ -2,6 +2,7 @@ import os
 from datetime import date
 from dateutil.rrule import rrule, DAILY
 import itertools
+from typing import Union
 
 
 def count_digits(digits_generator):
@@ -13,7 +14,7 @@ def count_digits(digits_generator):
 
 
 @count_digits
-def _create_days(flashback_years: int, year_format: str) -> list:
+def _create_days(flashback_years: int, year_format="%Y") -> list:
     assert year_format in {"%Y", "%y"}, "Invalid year format: {}".format(year_format)
     end_day = date.today()
     start_day = date(end_day.year - flashback_years, end_day.month, end_day.day)
@@ -64,7 +65,7 @@ def _read_mask(mask_path: str) -> list:
     return list(lines)
 
 
-def _save_digits(digits: list, path_to: str):
+def _save_digits(digits: Union[set, list], path_to: str):
     digits_count = len(digits)
     digits = '\n'.join(digits)
     with open(path_to, 'w') as f:
@@ -83,12 +84,12 @@ def create_digits_8(flashback_years=100, password_length_max=20):
 
 def create_digits_append(flashback_years=100):
     digits_wordlist_path = os.path.join("wordlists", "digits_append.txt")
-    digits = _create_days(flashback_years, year_format="%y")
+    digits = set([])
     curr_year = date.today().year
     for year in range(curr_year, curr_year-flashback_years-1, -1):
-        digits.append(str(year))
+        digits.add(str(year))
     masks = _read_mask(os.path.join("digits", "mask_append.txt"))
-    digits.extend(_create_digits_mask(masks))
+    digits.update(_create_digits_mask(masks))
     _save_digits(digits, digits_wordlist_path)
 
 

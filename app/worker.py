@@ -9,6 +9,7 @@ from app.slack_sender import SlackSender
 from app.nvidia_smi import set_cuda_visible_devices
 from app.hashcat_cmd import HashcatStatus, HashcatCmd
 from app.domain import Rule, WordList, UploadForm
+from app.utils import split_uppercase
 from app.app_logger import logger
 from app import utils
 
@@ -110,10 +111,20 @@ class Attack(object):
             return
         if not self.is_attack_needed():
             return
-        essids_prefix = {self.essid, self.essid.lower()}
-        essids_prefix = [value + '\n' for value in essids_prefix]
+        essid_parts = {self.essid}
+        join_chars = (' ', '-', '_')
+        for splitter in join_chars:
+            essid_parts.update(self.essid.split(splitter))
+        essid_parts.update(split_uppercase(self.essid))
+        essids_case_insensitive = set([])
+        for essid in essid_parts:
+            for splitter in join_chars:
+                essid = essid.strip(splitter)
+            essids_case_insensitive.add(essid)
+            essids_case_insensitive.add(essid.lower())
+            essids_case_insensitive.add(essid.upper())
         with open(WordList.ESSID.get_path(), 'w') as f:
-            f.writelines(essids_prefix)
+            f.writelines([essid + '\n' for essid in essids_case_insensitive])
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlist(WordList.ESSID)
         hashcat_cmd.add_wordlist(WordList.DIGITS_APPEND)
