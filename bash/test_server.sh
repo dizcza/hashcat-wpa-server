@@ -9,4 +9,4 @@ curl --insecure -H "Authorization: JWT $token" ${HASHCAT_WPA_URL}/ping
 echo
 #curl --insecure -H "Authorization: JWT $token" ${HASHCAT_WPA_URL}/benchmark
 curl --insecure -H "Authorization: JWT $token" ${HASHCAT_WPA_URL}/list
-curl --insecure -H "Authorization: JWT $token" -H "filename: test_cap.cap" -H "timeout: 60" -H "wordlist: phpbb.txt" -H "rule: best64.rule" --data-binary "@captures/test_cap.cap" ${HASHCAT_WPA_URL}/upload
+#curl --insecure -H "Authorization: JWT $token" -H "filename: test_cap.cap" -H "timeout: 60" -H "wordlist: phpbb.txt" -H "rule: best64.rule" --data-binary "@captures/test_cap.cap" ${HASHCAT_WPA_URL}/upload

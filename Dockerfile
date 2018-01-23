@@ -1,4 +1,5 @@
-FROM dizcza/docker-hashcat:intel-cpu
+ARG branch=intel-cpu
+FROM dizcza/docker-hashcat:$branch
 
 RUN apt-get update && \
     apt-get install -y bzip2 python3.5 supervisor vim htop
