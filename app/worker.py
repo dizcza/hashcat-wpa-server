@@ -103,32 +103,51 @@ class Attack(object):
             self.response['reason'] = "cap2hccapx failed"
             self.slacker.send(self.response, channel="#errors")
 
-    def run_essid_digits(self):
+    def run_essid_attack(self):
         """
         Run ESSID + digits_append.txt combinator attack.
+        Run ESSID + best64.rule attack.
         """
         if self.essid is None:
             return
         if not self.is_attack_needed():
             return
+
+        def modify_case(word):
+            return {word, word.lower(), word.upper(), word.capitalize(), word.lower().capitalize()}
+
         essid_parts = {self.essid}
-        join_chars = (' ', '-', '_')
-        for splitter in join_chars:
-            essid_parts.update(self.essid.split(splitter))
+        regex_non_char = re.compile('[^a-zA-Z]')
+        essid_parts.update(regex_non_char.split(self.essid))
         essid_parts.update(split_uppercase(self.essid))
         essids_case_insensitive = set([])
         for essid in essid_parts:
-            for splitter in join_chars:
-                essid = essid.strip(splitter)
-            essids_case_insensitive.add(essid)
-            essids_case_insensitive.add(essid.lower())
-            essids_case_insensitive.add(essid.upper())
+            essid = regex_non_char.sub('', essid)
+            essids_case_insensitive.update(modify_case(essid))
+        essids_case_insensitive.update(modify_case(self.essid))
+        essids_case_insensitive = filter(len, essids_case_insensitive)
         with open(WordList.ESSID.get_path(), 'w') as f:
             f.writelines([essid + '\n' for essid in essids_case_insensitive])
+        self._run_essid_digits()
+        self._run_essid_rule()
+
+    def _run_essid_digits(self):
+        """
+        Run ESSID + digits_append.txt combinator attack.
+        """
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlist(WordList.ESSID)
         hashcat_cmd.add_wordlist(WordList.DIGITS_APPEND)
         hashcat_cmd.add_custom_argument("-a1")
+        subprocess_call(hashcat_cmd.build(), self.slacker)
+
+    def _run_essid_rule(self):
+        """
+        Run ESSID + best64.rule attack.
+        """
+        hashcat_cmd = self.new_cmd()
+        hashcat_cmd.add_wordlist(WordList.ESSID)
+        hashcat_cmd.add_rule(Rule.BEST_64)
         subprocess_call(hashcat_cmd.build(), self.slacker)
 
     def run_digits8(self):
@@ -180,7 +199,7 @@ def _crack_async(upload_form: UploadForm, status_timer: int):
     """
     attack = Attack(upload_form, status_timer)
     attack.cap2hccapx()
-    attack.run_essid_digits()
+    attack.run_essid_attack()
     attack.run_weak_passwords()
     attack.run_digits8()
     attack.run_main_wordlist()

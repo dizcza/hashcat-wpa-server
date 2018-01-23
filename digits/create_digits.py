@@ -32,12 +32,19 @@ def _create_digits_mask(masks: list) -> list:
     digits_unique = tuple(range(10))
     digits = []
     for pattern in masks:
-        alphabet = tuple(set(pattern))
-        for digits_perm in itertools.permutations(digits_unique, len(alphabet)):
-            sample = str(pattern)
-            for (char_from, digit_to) in zip(alphabet, digits_perm):
-                sample = sample.replace(char_from, str(digit_to))
-            digits.append(sample)
+        if pattern.endswith('1'):
+            # try all 100 combinations of (a, b) pairs
+            pattern_size = len(pattern) - 1
+            formatter = "{:0>%dd}" % pattern_size
+            digits.extend(map(formatter.format, range(10 ** pattern_size)))
+        else:
+            # take only different digits in (a, b) pairs (total 90 pairs)
+            alphabet = tuple(set(pattern))
+            for digits_perm in itertools.permutations(digits_unique, len(alphabet)):
+                sample = str(pattern)
+                for (char_from, digit_to) in zip(alphabet, digits_perm):
+                    sample = sample.replace(char_from, str(digit_to))
+                digits.append(sample)
     assert len(set(digits)) == len(digits)
     return digits
 

@@ -1,6 +1,7 @@
+# '1' suffix means try all 10^n combinations, do not treat 'a' and 'b' different
 a
-ab
-abc
+ab1
+abc1
 aaaa
 aabb
 abab
