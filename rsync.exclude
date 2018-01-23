@@ -1,0 +1,11 @@
+.idea
+.git
+bash
+captures
+env
+logs
+wordlists
+nvidia-docker-compose.yml
+rsync.exclude
+app/run.py
+app/__pycache__
