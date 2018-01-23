@@ -1,0 +1,7 @@
+captures/
+bash/
+env/
+logs/
+server_keys_backup/
+wordlists/
+temp.py

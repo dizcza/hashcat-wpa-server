@@ -22,7 +22,6 @@ RUN for dict in phpbb.txt.bz2 rockyou.txt.bz2 john.txt.bz2 conficker.txt.bz2; do
     bzip2 -d ${dict}; done
 
 RUN mkdir -p /hashcat-wpa-server/captures
-RUN wget --no-check-certificate https://hashcat.net/misc/example_hashes/hashcat.hccapx -O /hashcat-wpa-server/captures/example.hccapx
 
 COPY ./requirements.txt /hashcat-wpa-server/requirements.txt
 RUN pip3.5 install -r /hashcat-wpa-server/requirements.txt

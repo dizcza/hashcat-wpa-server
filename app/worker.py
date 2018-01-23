@@ -237,7 +237,6 @@ class HashcatWorker(object):
         self.futures = []
         self.slack_sender = SlackSender()
         self.status_timer = self.app.config['HASHCAT_STATUS_TIMER']
-        self.example_hccapx = os.path.join(self.app.config['CAPTURES_DIR'], "example.hccapx")
 
     def exception_callback(self, future):
         """
