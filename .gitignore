@@ -22,3 +22,6 @@ temp.py
 # certificate
 *.pem
 *.p12
+
+# nvidia-docker-compose automatically generated
+nvidia-docker-compose.yml

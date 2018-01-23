@@ -1,7 +1,7 @@
 FROM dizcza/docker-hashcat:intel-cpu
 
 RUN apt-get update && \
-    apt-get install -y bzip2 vim python3.5 supervisor
+    apt-get install -y bzip2 python3.5 supervisor vim htop
 
 RUN echo "deb http://nginx.org/packages/ubuntu/ xenial nginx" >> /etc/apt/sources.list && \
     echo "deb-src http://nginx.org/packages/ubuntu/ xenial nginx" >> /etc/apt/sources.list
@@ -33,8 +33,6 @@ RUN python3.5 digits/create_digits.py
 RUN mkdir -p /etc/nginx/server_keys
 COPY ./server_keys/ /etc/nginx/server_keys/
 COPY ./nginx.conf /etc/nginx/nginx.conf
-
-RUN apt-get install htop
 
 COPY ./supervisor.conf /etc/supervisor/conf.d/hashcat_wpa.conf
 

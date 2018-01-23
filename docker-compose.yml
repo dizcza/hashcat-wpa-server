@@ -14,3 +14,4 @@ services:
        - "HASHCAT_USERNAME=${HASHCAT_USERNAME}"
        - "HASHCAT_PASSWORD=${HASHCAT_PASSWORD}"
        - "TERM=xterm"
+    restart: always
