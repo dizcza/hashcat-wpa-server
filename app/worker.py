@@ -148,7 +148,9 @@ class Attack(object):
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlist(WordList.ESSID)
         hashcat_cmd.add_rule(Rule.BEST_64)
-        subprocess_call(hashcat_cmd.build(), self.slacker)
+        hashcat_cmd.pipe_word_candidates = True
+        hashcat_cmd = ' '.join(hashcat_cmd.build())
+        os.system(hashcat_cmd)
 
     def run_digits8(self):
         """
