@@ -83,12 +83,6 @@ def upload():
     return jsonify("Started processing {}".format(capture_filename))
 
 
-@app.route("/ping")
-@jwt_required()
-def ping():
-    return "Authorized"
-
-
 @app.route("/benchmark")
 @jwt_required()
 def hashcat_benchmark():
