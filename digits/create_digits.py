@@ -2,7 +2,7 @@ import os
 from datetime import date
 from dateutil.rrule import rrule, DAILY
 import itertools
-from typing import Union
+from typing import Union, Iterable
 
 
 def count_digits(digits_generator):
@@ -14,23 +14,26 @@ def count_digits(digits_generator):
 
 
 @count_digits
-def _create_days(flashback_years: int, year_format="%Y") -> list:
-    assert year_format in {"%Y", "%y"}, "Invalid year format: {}".format(year_format)
+def _create_days(flashback_years: int, date_fmt=("%m%d%Y", "%d%m%Y", "%Y%m%d", "%Y%d%m")) -> list:
     end_day = date.today()
     start_day = date(end_day.year - flashback_years, end_day.month, end_day.day)
-    days = set([])
-    for date_formatted in ("%m%d{}", "%d%m{}",
-                           "{}%m%d", "{}%d%m"):
-        date_formatted = date_formatted.format(year_format)
+    days = set()
+    for date_formatted in date_fmt:
         for dt in rrule(DAILY, dtstart=start_day, until=end_day):
             days.add(dt.strftime(date_formatted))
-    return sorted(list(days))
+    return sorted(days)
 
 
 @count_digits
-def _create_digits_mask(masks: list) -> list:
+def _create_digits_mask(masks: Iterable, alphabet_size_max=5) -> list:
     digits_unique = tuple(range(10))
     digits = []
+
+    def convert(pattern: str, alphabet: Iterable, code: Iterable):
+        for (char_from, digit_to) in zip(alphabet, code):
+            pattern = pattern.replace(char_from, str(digit_to))
+        return pattern
+
     for pattern in masks:
         if pattern.endswith('1'):
             # try all 100 combinations of (a, b) pairs
@@ -39,12 +42,18 @@ def _create_digits_mask(masks: list) -> list:
             digits.extend(map(formatter.format, range(10 ** pattern_size)))
         else:
             # take only different digits in (a, b) pairs (total 90 pairs)
-            alphabet = tuple(set(pattern))
-            for digits_perm in itertools.permutations(digits_unique, len(alphabet)):
-                sample = str(pattern)
-                for (char_from, digit_to) in zip(alphabet, digits_perm):
-                    sample = sample.replace(char_from, str(digit_to))
-                digits.append(sample)
+            alphabet = sorted(set(pattern))
+            alphabet_size = len(alphabet)
+            if len(alphabet) > alphabet_size_max:
+                # only ascending order: 11223344
+                for start in range(11-alphabet_size):
+                    code = range(start, start+alphabet_size)
+                    sample = convert(pattern, alphabet, code)
+                    digits.append(sample)
+            else:
+                for digits_perm in itertools.permutations(digits_unique, alphabet_size):
+                    sample = convert(pattern, alphabet, code=digits_perm)
+                    digits.append(sample)
     assert len(set(digits)) == len(digits)
     return digits
 
@@ -53,8 +62,8 @@ def _create_digits_mask(masks: list) -> list:
 def _create_digits_cycle(password_length_max: int) -> list:
     digits = []
     for start in range(10):
-        for password_length in range(8, password_length_max):
-            right = [str(d % 10) for d in range(start, start+password_length+1)]
+        for password_length in range(8, password_length_max+1):
+            right = [str(d % 10) for d in range(start, start+password_length)]
             left = right[::-1]
             for sample in (right, left):
                 sample = ''.join(sample)
@@ -82,7 +91,7 @@ def _save_digits(digits: Union[set, list], path_to: str):
 
 def create_digits_8(flashback_years=100, password_length_max=20):
     digits_wordlist_path = os.path.join("wordlists", "digits_8.txt")
-    digits = _create_days(flashback_years, year_format="%Y")
+    digits = _create_days(flashback_years)
     masks = _read_mask(os.path.join("digits", "mask_8.txt"))
     digits.extend(_create_digits_mask(masks))
     digits.extend(_create_digits_cycle(password_length_max))
@@ -100,6 +109,17 @@ def create_digits_append(flashback_years=100):
     _save_digits(digits, digits_wordlist_path)
 
 
+def create_digits_mobile(flashback_years=50):
+    digits = []
+    digits_wordlist_path = os.path.join("wordlists", "digits_mobile.txt")
+    masks = _read_mask(os.path.join("digits", "mask_8.txt"))
+    digits.extend(_create_digits_mask(masks, alphabet_size_max=3))
+    digits.extend(_create_digits_cycle(password_length_max=10))
+    digits.extend(_create_days(flashback_years, date_fmt=("%d%m%Y",)))
+    _save_digits(digits, digits_wordlist_path)
+
+
 if __name__ == '__main__':
     create_digits_8()
     create_digits_append()
+    create_digits_mobile()

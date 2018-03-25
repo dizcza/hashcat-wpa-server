@@ -3,6 +3,7 @@ __pycache__/
 wordlists/
 logs/
 env/
+ignored/
 
 # airdump capture
 *.cap
