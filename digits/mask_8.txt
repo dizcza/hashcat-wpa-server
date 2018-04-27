@@ -6,11 +6,14 @@ aaaaaaaaaa
 # pairs
 aaaabbbb
 aabbccdd
+aabbaabb
 aaabbbccc
+aaabbbaaa
 aaaaabbbbb
 aabbccddee
 
 # central mirror
+aabbbbaa
 abcddcba
 abcdeedcba
 

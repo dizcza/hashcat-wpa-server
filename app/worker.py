@@ -1,17 +1,18 @@
 import concurrent.futures
-import subprocess
 import os
 import re
+import subprocess
+import time
+from collections import namedtuple, defaultdict
 from functools import partial
-from collections import namedtuple
 
-from app.slack_sender import SlackSender
-from app.nvidia_smi import set_cuda_visible_devices
-from app.hashcat_cmd import HashcatStatus, HashcatCmd
-from app.domain import Rule, WordList, UploadForm
-from app.utils import split_uppercase
-from app.app_logger import logger
 from app import utils
+from app.app_logger import logger
+from app.domain import Rule, WordList, UploadForm
+from app.hashcat_cmd import HashcatStatus, HashcatCmd
+from app.nvidia_smi import set_cuda_visible_devices
+from app.slack_sender import SlackSender
+from app.utils import split_uppercase
 
 Benchmark = namedtuple("Benchmark", ("speed", "gpus"))
 
@@ -39,7 +40,22 @@ def subprocess_call(args, slack_sender: SlackSender = None):
     return out, err
 
 
+def monitor_timer(func):
+    def wrapped(*args, **kwargs):
+        start = time.time()
+        res = func(*args, **kwargs)
+        elapsed_sec = time.time() - start
+        timer = Attack.timers[func.__name__]
+        timer['count'] += 1
+        timer['elapsed'] += elapsed_sec
+        return res
+    return wrapped
+
+
 class Attack(object):
+
+    timers = defaultdict(lambda: dict(count=0, elapsed=1e-6))
+
     def __init__(self, upload_form: UploadForm, status_timer: int):
         self.upload_form = upload_form
         self.slacker = SlackSender()
@@ -120,7 +136,7 @@ class Attack(object):
         regex_non_char = re.compile('[^a-zA-Z]')
         essid_parts.update(regex_non_char.split(self.essid))
         essid_parts.update(split_uppercase(self.essid))
-        essids_case_insensitive = set([])
+        essids_case_insensitive = set()
         for essid in essid_parts:
             essid = regex_non_char.sub('', essid)
             essids_case_insensitive.update(modify_case(essid))
@@ -131,6 +147,7 @@ class Attack(object):
         self._run_essid_digits()
         self._run_essid_rule()
 
+    @monitor_timer
     def _run_essid_digits(self):
         """
         Run ESSID + digits_append.txt combinator attack.
@@ -141,6 +158,7 @@ class Attack(object):
         hashcat_cmd.add_custom_argument("-a1")
         subprocess_call(hashcat_cmd.build(), self.slacker)
 
+    @monitor_timer
     def _run_essid_rule(self):
         """
         Run ESSID + best64.rule attack.
@@ -152,6 +170,7 @@ class Attack(object):
         hashcat_cmd = ' '.join(hashcat_cmd.build())
         os.system(hashcat_cmd)
 
+    @monitor_timer
     def run_digits8(self):
         """
         Run digits8+ attack. This includes:
@@ -165,6 +184,7 @@ class Attack(object):
         hashcat_cmd.add_wordlist(WordList.DIGITS_8)
         self.hashcat_status.run_with_status(hashcat_cmd)
 
+    @monitor_timer
     def run_weak_passwords(self):
         """
         Run weak password attack, using a very shallow yet commonly used dictionaries:
@@ -174,13 +194,13 @@ class Attack(object):
         if not self.is_attack_needed():
             return
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlist(WordList.JOHN)
-        hashcat_cmd.add_wordlist(WordList.CONFICKER)
+        hashcat_cmd.add_wordlist(WordList.WEAK)
         hashcat_cmd.add_rule(Rule.BEST_64)
         hashcat_cmd.pipe_word_candidates = True
         hashcat_cmd = ' '.join(hashcat_cmd.build())
         os.system(hashcat_cmd)
 
+    @monitor_timer
     def run_main_wordlist(self):
         """
         Run main attack, specified by the user through the client app.
@@ -207,6 +227,8 @@ def _crack_async(upload_form: UploadForm, status_timer: int):
     attack.run_main_wordlist()
     attack.send_response()
     logger.info("Finished cracking {}".format(upload_form.capture_path))
+    for name, timer in attack.timers.items():
+        logger.debug("Timer {}: {:.2f} sec".format(name, timer['elapsed'] / timer['count']))
 
 
 def _hashcat_benchmark_async() -> Benchmark:

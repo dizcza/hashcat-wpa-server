@@ -15,10 +15,9 @@ class Rule(Enum):
 class WordList(Enum):
     ROCKYOU = "rockyou.txt"
     PHPBB = "phpbb.txt"
-    CONFICKER = "conficker.txt"
-    JOHN = "john.txt"
     DIGITS_8 = "digits_8.txt"
     DIGITS_APPEND = "digits_append.txt"
+    WEAK = "conficker_elitehacker_john_riskypass_top1000.txt"
     ESSID = "essid.txt"
 
     def get_path(self):
