@@ -32,8 +32,6 @@ COPY ./digits /hashcat-wpa-server/digits
 WORKDIR /hashcat-wpa-server
 RUN python3.5 digits/create_digits.py
 
-RUN mkdir -p /etc/nginx/server_keys
-COPY ./server_keys/ /etc/nginx/server_keys/
 COPY ./nginx.conf /etc/nginx/nginx.conf
 
 COPY ./supervisor.conf /etc/supervisor/conf.d/hashcat_wpa.conf

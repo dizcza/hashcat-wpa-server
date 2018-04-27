@@ -309,8 +309,7 @@ class HashcatWorker(object):
     def terminate(self):
         futures_active = iter(future for future in self.futures if not future.done())
         for future in futures_active:
-            if future.cancel():
-                continue
+            future.cancel()
         subprocess_call(["pkill", "hashcat"])
 
     def __del__(self):
