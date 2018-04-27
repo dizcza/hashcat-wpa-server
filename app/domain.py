@@ -25,7 +25,7 @@ class WordList(Enum):
 
 
 class UploadForm(object):
-    def __init__(self, capture_path: str, wordlist: WordList, rule: Optional[Rule], timeout_seconds: int):
+    def __init__(self, capture_path: str, wordlist: Optional[WordList], rule: Optional[Rule], timeout_seconds: int):
         self.capture_path = capture_path
         self.wordlist = wordlist
         self.rule = rule

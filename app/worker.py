@@ -205,7 +205,7 @@ class Attack(object):
         """
         Run main attack, specified by the user through the client app.
         """
-        if not self.is_attack_needed():
+        if self.upload_form.wordlist is None or not self.is_attack_needed():
             return
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlist(self.upload_form.wordlist)

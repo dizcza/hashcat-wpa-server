@@ -25,11 +25,20 @@ def index():
 
 def get_rule_header() -> Rule:
     rule = request.headers['rule']
-    if rule == "No rule":
+    if rule == "(None)":
         rule = None
     else:
         rule = Rule(rule)
     return rule
+
+
+def get_wordlist_header() -> WordList:
+    wordlist = request.headers['wordlist']
+    if wordlist == "(None)":
+        wordlist = None
+    else:
+        wordlist = WordList(wordlist)
+    return wordlist
 
 
 def parse_upload_form() -> Optional[UploadForm]:
@@ -42,7 +51,7 @@ def parse_upload_form() -> Optional[UploadForm]:
         return None
     capture_filepath = os.path.join(app.config.get("CAPTURES_DIR", ''), capture_filepath)
     timeout = int(request.headers['timeout']) * 60
-    wordlist = WordList(request.headers['wordlist'])
+    wordlist = get_wordlist_header()
     rule = get_rule_header()
     mime_correct = app.config.get('CAPTURE_MIME', '')
     if mime_correct == '':
