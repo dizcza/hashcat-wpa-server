@@ -1,6 +1,7 @@
 # encoding=utf-8
 
 import subprocess
+import threading
 
 from app.domain import Rule, WordList
 
@@ -29,3 +30,18 @@ def split_uppercase(word: str) -> set:
     for left, right in zip(pos_upper[:-1], pos_upper[1:]):
         simple_words.add(word[left: right])
     return simple_words
+
+
+class ProgressLock(object):
+    def __init__(self):
+        self._lock = threading.RLock()
+        self.progress = 0
+        self.status = "Running"
+        self.key = None
+        self.completed = False
+
+    def __enter__(self):
+        self._lock.acquire()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._lock.release()

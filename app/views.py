@@ -87,9 +87,22 @@ def upload():
         return abort(400, "Couldn't write received file")
     if upload_form is None:
         return abort(400, "Invalid form")
-    hashcat_worker.crack_capture(upload_form)
+    job_id = hashcat_worker.crack_capture(upload_form)
     capture_filename = os.path.basename(upload_form.capture_path)
-    return jsonify("Started processing {}".format(capture_filename))
+    return jsonify(message="Started processing {}".format(capture_filename),
+                   job_id=job_id)
+
+
+@app.route('/progress/<int:job_id>')
+@jwt_required()
+def progress(job_id):
+    lock = hashcat_worker.locks[job_id]
+    with lock:
+        response = jsonify(progress=lock.progress,
+                           status=lock.status,
+                           key=lock.key,
+                           completed=lock.completed)
+    return response
 
 
 @app.route("/benchmark")

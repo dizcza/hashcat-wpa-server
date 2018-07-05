@@ -12,7 +12,7 @@ from app.domain import Rule, WordList, UploadForm
 from app.hashcat_cmd import HashcatStatus, HashcatCmd
 from app.nvidia_smi import set_cuda_visible_devices
 from app.slack_sender import SlackSender
-from app.utils import split_uppercase
+from app.utils import split_uppercase, ProgressLock
 
 Benchmark = namedtuple("Benchmark", ("speed", "gpus"))
 
@@ -62,6 +62,7 @@ class Attack(object):
         self.hashcat_status = HashcatStatus(self.slacker, upload_form.timeout_seconds, status_timer)
         self.response = {
             'capture': upload_form.capture_path,
+            'status': "Running",
         }
         self.essid = None
         self.key_file = self.as_capture(".key")
@@ -101,6 +102,7 @@ class Attack(object):
             with open(self.key_file, 'r') as f:
                 key_password = f.read()
             self.response['key'] = key_password
+            self.response['status'] = "Completed"
             channel = "#cracked"
         elif not os.path.exists(self.hcap_file) or self.essid is None:
             self.response['status'] = "0 WPA handshakes captured"
@@ -210,10 +212,10 @@ class Attack(object):
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlist(self.upload_form.wordlist)
         hashcat_cmd.add_rule(self.upload_form.rule)
-        self.hashcat_status.run_with_status(hashcat_cmd)
+        yield from self.hashcat_status.run_with_status(hashcat_cmd)
 
 
-def _crack_async(upload_form: UploadForm, status_timer: int):
+def _crack_async(upload_form: UploadForm, status_timer: int, lock: ProgressLock):
     """
     Called in background process.
     :param upload_form: received upload form
@@ -224,8 +226,15 @@ def _crack_async(upload_form: UploadForm, status_timer: int):
     attack.run_essid_attack()
     attack.run_weak_passwords()
     attack.run_digits8()
-    attack.run_main_wordlist()
+    for progress in attack.run_main_wordlist():
+        with lock:
+            lock.progress = progress
     attack.send_response()
+    with lock:
+        lock.progress = 100
+        lock.status = attack.response['status']
+        lock.key = attack.response.get('key', None)
+        lock.completed = True
     logger.info("Finished cracking {}".format(upload_form.capture_path))
     for name, timer in attack.timers.items():
         logger.debug("Timer {}: {:.2f} sec".format(name, timer['elapsed'] / timer['count']))
@@ -259,6 +268,7 @@ class HashcatWorker(object):
         self.futures = []
         self.slack_sender = SlackSender()
         self.status_timer = self.app.config['HASHCAT_STATUS_TIMER']
+        self.locks = {}
 
     def exception_callback(self, future):
         """
@@ -272,6 +282,9 @@ class HashcatWorker(object):
         error_response = {
             "error": exception,
         }
+        lock = self.locks[id(future)]
+        with lock:
+            lock.status = repr(exception)
         self.slack_sender.send(error_response, "#errors")
 
     def callback_benchmark(self, future: concurrent.futures.Future):
@@ -293,9 +306,13 @@ class HashcatWorker(object):
         Starts cracking .cap file in parallel process.
         :param upload_form: received upload form
         """
-        future = self.executor.submit(_crack_async, upload_form, self.status_timer)
+        lock = ProgressLock()
+        future = self.executor.submit(_crack_async, upload_form, self.status_timer, lock)
+        job_id = id(future)
+        self.locks[job_id] = lock
         future.add_done_callback(self.exception_callback)
         self.futures.append(future)
+        return job_id
 
     def benchmark(self):
         """

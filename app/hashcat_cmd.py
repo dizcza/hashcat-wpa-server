@@ -130,6 +130,7 @@ class HashcatStatus(object):
                     tried_keys = parts[progress_index + 1]
                     total_keys = parts[progress_index + 2]
                     progress = int(tried_keys) / int(total_keys)
+                    yield progress * 100
                 except ValueError or IndexError:
                     # ignore this update
                     pass
@@ -155,3 +156,4 @@ class HashcatStatus(object):
                 "out": out
             }
             self.slack_sender.send(finished_message, "#hashcat")
+        yield 100
