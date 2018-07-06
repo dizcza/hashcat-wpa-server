@@ -1,0 +1,35 @@
+<html>
+    <head>
+      {% if title %}
+      <title>{{ title }} - Hashcat WPA</title>
+      {% else %}
+      <title>Hashcat WPA</title>
+      {% endif %}
+    </head>
+    <body>
+        <div>
+            Hashcat WPA/WPA2 server:
+            <a href="{{ url_for('index') }}">Home</a>
+            {% if current_user.is_anonymous %}
+            <a href="{{ url_for('login') }}">Login or Register</a>
+            {% else %}
+            <a href="{{ url_for('logout') }}">Logout</a>
+            {% endif %}
+            <a href="{{ url_for('upload') }}">Upload .cap file</a>
+        </div>
+            {% if current_user.is_active %}
+            <p>You're logged in as <b>{{ current_user.username }}</b></p>
+            {% endif %}
+        <hr>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class=flashes>
+            {% for category, message in messages %}
+              <p class="{{ category }}">{{ message }}</p>
+            {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </body>
+</html>

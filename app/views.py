@@ -1,26 +1,29 @@
 import os
 from typing import Optional
 
-from flask import request, abort
+import flask
+from flask import request, abort, render_template, redirect, url_for
 from flask.json import jsonify
-from flask_jwt import jwt_required, JWTError
+from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 
 from app import app
-from app.user_database import create_jwt
-from app.worker import HashcatWorker
-from app.slack_sender import SlackSender
 from app.app_logger import logger
-from app.hashcat_cmd import Rule, WordList
 from app.domain import UploadForm
+from app.hashcat_cmd import Rule, WordList
+from app.login import LoginForm, RegistrationForm
+from app.login import User, add_new_user
+from app.slack_sender import SlackSender
+from app.utils import is_safe_url, log_request
+from app.worker import HashcatWorker
 
 hashcat_worker = HashcatWorker(app)
-jwt = create_jwt(app)
 
 
 @app.route('/')
+@app.route('/index')
 def index():
-    return jsonify("Welcome to Hashcat WPA/WPA2 server")
+    return render_template('base.html')
 
 
 def get_rule_header() -> Rule:
@@ -67,18 +70,10 @@ def parse_upload_form() -> Optional[UploadForm]:
     return UploadForm(capture_filepath, wordlist, rule, timeout)
 
 
-def log_request():
-    str_info = str(request.headers)
-    for key in ('REMOTE_ADDR',):
-        value = request.environ.get(key)
-        str_info += "{}: {}\r\n".format(key, value)
-    logger.debug(str_info)
-
-
-@app.route('/upload', methods=['POST'])
-@jwt_required()
+@app.route('/upload', methods=['GET', 'POST'])
+@login_required
 def upload():
-    log_request()
+    log_request(logger)
     try:
         upload_form = parse_upload_form()
     except ValueError or KeyError:
@@ -93,8 +88,14 @@ def upload():
                    job_id=job_id)
 
 
+@app.route('/secret')
+@login_required
+def secret():
+    return jsonify('Secret page!')
+
+
 @app.route('/progress/<int:job_id>')
-@jwt_required()
+@login_required
 def progress(job_id):
     lock = hashcat_worker.locks[job_id]
     with lock:
@@ -105,39 +106,59 @@ def progress(job_id):
     return response
 
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user is None or not user.verify_password(form.password.data):
+            flask.flash('Invalid username or password', category='error')
+            return redirect(url_for('login'))
+        login_user(user, remember=form.remember_me.data)
+        next_page = request.args.get('next')
+        if not is_safe_url(next_page):
+            return flask.abort(400)
+        flask.flash('Successfully logged in.')
+        return redirect(next_page or flask.url_for('index'))
+    return render_template('login.html', title='Login', form=form)
+
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        add_new_user(form)
+        flask.flash('You have been successfully registered.')
+        return redirect(url_for('login'))
+    return render_template('register.html', title='Register', form=form)
+
+
 @app.route("/benchmark")
-@jwt_required()
+@login_required
 def hashcat_benchmark():
     hashcat_worker.benchmark()
     return jsonify("See #benchmark")
 
 
-@app.route("/auth", methods=['POST'])
-def auth():
-    data = request.get_data()
-    if not data:
-        raise JWTError('Invalid auth request', "Empty request")
-    data = data.decode('ascii')
-    parts = data.split(':')
-    if len(parts) != 2:
-        raise JWTError('Bad Request', 'Invalid credentials')
-    username, password = parts
-    identity = jwt.authentication_callback(username, password)
-    if not identity:
-        raise JWTError('Bad Request', 'Invalid credentials')
-    access_token = jwt.jwt_encode_callback(identity)
-    return jwt.auth_response_callback(access_token, identity)
-
-
 @app.route("/terminate")
-@jwt_required()
+@login_required
 def terminate_workers():
     hashcat_worker.terminate()
     return jsonify("Terminated")
 
 
 @app.route("/list")
-@jwt_required()
+@login_required
 def list_keys():
     sender = SlackSender()
     sender.list_cracked()

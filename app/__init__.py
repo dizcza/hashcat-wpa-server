@@ -10,15 +10,16 @@ def create_app():
 
     app.config['CAPTURE_MIME'] = itsdangerous.base64_decode(os.environ.get('CAPTURE_MIME_ENCODED', ''))
     app.config['SECRET_KEY'] = os.urandom(24)
+    app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///{}".format(os.path.join(os.path.dirname(__file__), 'users.db'))
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_AUTH_URL_RULE'] = None
 
+    # todo: get rid of .yml
     with open("config.yml", 'r') as f:
         config_dict = yaml.safe_load(f)
     config_schema = Schema({
         'HASHCAT_STATUS_TIMER': And(Use(int), lambda x: x > 0),
         'CAPTURES_DIR': Use(str),
-        'SQLALCHEMY_DATABASE_URI': And(Use(str), lambda x: len(x) > 0),
     })
     config_schema.validate(config_dict)
     for key, value in config_dict.items():

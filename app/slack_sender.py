@@ -9,15 +9,15 @@ from app.app_logger import logger
 class SlackSender(object):
 
     def __init__(self):
+        self.channel_id = {}
         slack_token = os.environ.get("SLACK_TOKEN", None)
         if slack_token:
             self.slacker = slacker.Slacker(slack_token)
+            for channel_info in self.slacker.channels.list().body["channels"]:
+                self.channel_id[channel_info["name"]] = channel_info["id"]
         else:
             self.slacker = None
             logger.warning("To receive slack bot messages, setup 'SLACK_TOKEN' env")
-        self.channel_id = {}
-        for channel_info in self.slacker.channels.list().body["channels"]:
-            self.channel_id[channel_info["name"]] = channel_info["id"]
 
     def send(self, response: dict, channel="#general"):
         if self.slacker is None:
@@ -32,8 +32,10 @@ class SlackSender(object):
             logger.error(error)
 
     def list_cracked(self):
-        messages = self.slacker.channels.history(self.channel_id["cracked"], count=1000).body["messages"]
         cracked_wpa = set([])
+        if self.slacker is None:
+            return cracked_wpa
+        messages = self.slacker.channels.history(self.channel_id["cracked"], count=1000).body["messages"]
         key_pattern = "`key`:"
         for msg in messages:
             text = msg["text"]
