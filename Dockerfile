@@ -18,9 +18,10 @@ RUN wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py && \
 # wordlists
 RUN mkdir -p /hashcat-wpa-server/wordlists
 WORKDIR /hashcat-wpa-server/wordlists
-RUN for dict in phpbb.txt.bz2 rockyou.txt.bz2; do \
-    wget -q --no-check-certificate http://downloads.skullsecurity.org/passwords/${dict} && \
-    bzip2 -d ${dict}; done
+RUN wget --no-check-certificate https://www.dropbox.com/s/tqsvy830b9m2fgn/phpbb.txt.bz2?dl=1 -O phpbb.txt.bz2 && \
+    bzip2 -d phpbb.txt.bz2
+RUN wget --no-check-certificate https://www.dropbox.com/s/1jidlq4706pd3x1/rockyou.txt.bz2?dl=1 -O rockyou.txt.bz2 && \
+    bzip2 -d rockyou.txt.bz2
 RUN wget --no-check-certificate https://www.dropbox.com/s/6439rfwfy6qaz3h/conficker_elitehacker_john_riskypass_top1000.txt?dl=1 -O conficker_elitehacker_john_riskypass_top1000.txt
 
 RUN mkdir -p /hashcat-wpa-server/captures

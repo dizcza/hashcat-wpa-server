@@ -6,8 +6,8 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-     - "443:443"
-     - "9000:443"
+     - "80:80"
+     - "9000:80"
     environment:
        - "SLACK_TOKEN=${SLACK_TOKEN}"
        - "CAPTURE_MIME_ENCODED=${CAPTURE_MIME_ENCODED}"
