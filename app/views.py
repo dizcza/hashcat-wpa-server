@@ -9,7 +9,6 @@ from app import app, db
 from app.app_logger import logger
 from app.login import LoginForm, RegistrationForm
 from app.login import User, add_new_user
-from app.slack_sender import SlackSender
 from app.uploader import cap_uploads, UploadForm, UploadedTask
 from app.utils import is_safe_url, log_request
 from app.worker import HashcatWorker
@@ -121,11 +120,3 @@ def hashcat_benchmark():
 def terminate_workers():
     hashcat_worker.terminate()
     return jsonify("Terminated")
-
-
-@app.route("/list")
-@login_required
-def list_keys():
-    sender = SlackSender()
-    sender.list_cracked()
-    return jsonify("See #general")

@@ -9,21 +9,19 @@ from functools import partial
 
 from app import utils, db
 from app.app_logger import logger
-from app.domain import Rule, WordList, NONE_ENUM
+from app.domain import Rule, WordList, NONE_ENUM, ProgressLock
 from app.hashcat_cmd import HashcatStatus, HashcatCmd
 from app.nvidia_smi import set_cuda_visible_devices
-from app.slack_sender import SlackSender
-from app.utils import split_uppercase, ProgressLock
+from app.utils import split_uppercase, extract_essid_key
 from app.uploader import UploadedTask
 
 Benchmark = namedtuple("Benchmark", ("speed", "gpus"))
 
 
-def subprocess_call(args, slack_sender: SlackSender = None):
+def subprocess_call(args):
     """
     Called in background process.
     :param args: shell args
-    :param slack_sender: SlackSender
     """
     logger.debug(">>> {}".format(' '.join(args)))
     process = subprocess.Popen(args,
@@ -31,14 +29,6 @@ def subprocess_call(args, slack_sender: SlackSender = None):
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
     out, err = process.communicate()
-    if slack_sender is not None:
-        log_message = {
-            "command": "`{}`".format(' '.join(args)),
-            "out": out,
-            "err": err,
-        }
-        channel = '#' + args[0]
-        slack_sender.send(log_message, channel)
     return out, err
 
 
@@ -62,8 +52,7 @@ class Attack(object):
         self.capture_path = uploaded_task.filename
         self.wordlist = None if uploaded_task.wordlist == NONE_ENUM else WordList(uploaded_task.wordlist)
         self.rule = None if uploaded_task.rule == NONE_ENUM else Rule(uploaded_task.rule)
-        self.slacker = SlackSender()
-        self.hashcat_status = HashcatStatus(self.slacker, timeout, status_timer)
+        self.hashcat_status = HashcatStatus(timeout, status_timer)
         self.response = {
             'capture': self.capture_path,
             'status': "Running",
@@ -100,30 +89,22 @@ class Attack(object):
     def is_attack_needed(self):
         return os.path.exists(self.hcap_file) and not self.is_already_cracked()
 
-    def send_response(self):
-        channel = "#general"
-        if self.is_already_cracked():
+    def get_key_status(self):
+        key_password = None
+        status = "Completed"
+        if os.path.exists(self.key_file):
             with open(self.key_file, 'r') as f:
-                key_password = f.read()
-            self.response['key'] = key_password
-            self.response['status'] = "Completed"
-            channel = "#cracked"
-        elif not os.path.exists(self.hcap_file) or self.essid is None:
-            self.response['status'] = "0 WPA handshakes captured"
-        else:
-            self.response['status'] = "Completed"
-        self.slacker.send(self.response, channel)
+                key_password = extract_essid_key(f.read())
+        elif not os.path.exists(self.hcap_file):
+            status = "0 WPA handshakes captured"
+        return key_password, status
 
     def cap2hccapx(self):
         """
         Convert airodump's `.cap` to hashcat's `.hccapx`
         """
-        out, err = subprocess_call(['cap2hccapx', self.capture_path, self.hcap_file],
-                                   slack_sender=self.slacker)
+        out, err = subprocess_call(['cap2hccapx', self.capture_path, self.hcap_file])
         self.essid = self.parse_essid(out)
-        if not os.path.exists(self.hcap_file):
-            self.response['reason'] = "cap2hccapx failed"
-            self.slacker.send(self.response, channel="#errors")
 
     def run_essid_attack(self):
         """
@@ -162,7 +143,7 @@ class Attack(object):
         hashcat_cmd.add_wordlist(WordList.ESSID)
         hashcat_cmd.add_wordlist(WordList.DIGITS_APPEND)
         hashcat_cmd.add_custom_argument("-a1")
-        subprocess_call(hashcat_cmd.build(), self.slacker)
+        subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
     def _run_essid_rule(self):
@@ -231,11 +212,11 @@ def _crack_async(attack: Attack, lock: ProgressLock):
     for progress in attack.run_main_wordlist():
         with lock:
             lock.progress = progress
-    attack.send_response()
+    key, status = attack.get_key_status()
     with lock:
         lock.progress = 100
-        lock.status = attack.response['status']
-        lock.key = attack.response.get('key', None)
+        lock.status = status
+        lock.key = key
         lock.completed = True
     logger.info("Finished cracking {}".format(attack.capture_path))
     for name, timer in attack.timers.items():
@@ -268,7 +249,6 @@ class HashcatWorker(object):
         self.app = app
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.workers)
         self.futures = []
-        self.slack_sender = SlackSender()
         self.status_timer = self.app.config['HASHCAT_STATUS_TIMER']
         self.locks = {}
         self.task_id_by_job_id = {}
@@ -279,16 +259,11 @@ class HashcatWorker(object):
         :param future:
         """
         exception = future.exception()
-        if exception is None:
-            return
-        logger.error(exception)
-        error_response = {
-            "error": exception,
-        }
-        lock = self.locks[id(future)]
-        with lock:
-            lock.status = repr(exception)
-        self.slack_sender.send(error_response, "#errors")
+        if exception is not None:
+            logger.error(exception)
+            lock = self.locks[id(future)]
+            with lock:
+                lock.status = repr(exception)
 
     def callback_attack(self, future: concurrent.futures.Future):
         job_id = id(future)
@@ -317,7 +292,7 @@ class HashcatWorker(object):
         logger.info(benchmark)
         utils.BENCHMARK_SPEED = benchmark.speed
         benchmark_message = {"speed": benchmark.speed, "gpus": benchmark.gpus}
-        self.slack_sender.send(benchmark_message, channel="#benchmark")
+        # todo notify
 
     def crack_capture(self, uploaded_task: UploadedTask, timeout: int):
         """

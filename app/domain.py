@@ -1,4 +1,5 @@
 import os
+import threading
 from enum import Enum, unique
 
 
@@ -24,3 +25,18 @@ class WordList(Enum):
 
     def get_path(self):
         return os.path.join("wordlists", self.value)
+
+
+class ProgressLock(object):
+    def __init__(self):
+        self._lock = threading.RLock()
+        self.progress = 0
+        self.status = "Running"
+        self.key = None
+        self.completed = False
+
+    def __enter__(self):
+        self._lock.acquire()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._lock.release()

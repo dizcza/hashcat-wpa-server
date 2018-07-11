@@ -2,7 +2,6 @@ import time
 import os
 import subprocess
 
-from app.slack_sender import SlackSender
 from app.nvidia_smi import set_cuda_visible_devices
 from app.domain import Rule, WordList
 
@@ -96,8 +95,7 @@ class HashcatCmd(object):
 
 
 class HashcatStatus(object):
-    def __init__(self, slack_sender: SlackSender, timeout_minutes: int, status_timer: int):
-        self.slack_sender = slack_sender
+    def __init__(self, timeout_minutes: int, status_timer: int):
         self.timeout = timeout_minutes * 60
         self.status_timer = status_timer
         self.status_log_path = os.path.join("logs", "status.txt")
@@ -110,50 +108,20 @@ class HashcatStatus(object):
                                    universal_newlines=True,
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE)
-        wordlist = ' '.join(wordl.value for wordl in hashcat_cmd.wordlists)
-        progress = 0.
-        logs = []
         for line in iter(process.stdout.readline, ''):
             time_spent = time.time() - start
             if time_spent > self.timeout:
-                timedout_err = {
-                    "progress": "{:.1f} %".format(progress * 100),
-                    "reason": "timed-out ({} sec)".format(self.timeout),
-                }
-                self.slack_sender.send(timedout_err, "#errors")
                 process.terminate()
-                return
+                raise TimeoutError("Timed out {} sec".format(self.timeout))
             if line.startswith("STATUS"):
                 parts = line.split()
                 try:
                     progress_index = parts.index("PROGRESS")
                     tried_keys = parts[progress_index + 1]
                     total_keys = parts[progress_index + 2]
-                    progress = int(tried_keys) / int(total_keys)
-                    yield progress * 100
+                    progress = 100. * int(tried_keys) / int(total_keys)
+                    yield progress
                 except ValueError or IndexError:
                     # ignore this update
                     pass
-                status_message = {
-                    hashcat_cmd.hcap_file: "[{:.1f} %] {}".format(progress * 100, ' '.join(parts)),
-                    "wordlist": wordlist
-                }
-                self.slack_sender.send(status_message, "#status")
-            elif line == '\n' or line.startswith("[s]tatus"):
-                continue
-            else:
-                logs.append(line)
-        if not os.getenv('PRODUCTION', False):
-            out, err = process.communicate()
-            warn, err = split_warnings_errors(err)
-            logs.append(out)
-            out = '\n'.join(logs)
-            finished_message = {
-                "command": "`{}`".format(' '.join(hashcat_cmd_list)),
-                "warnings": warn,
-                "errors": err,
-                "progress": "{:.1f} %".format(progress * 100),
-                "out": out
-            }
-            self.slack_sender.send(finished_message, "#hashcat")
         yield 100

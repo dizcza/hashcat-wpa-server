@@ -9,8 +9,6 @@ services:
      - "80:80"
      - "9000:80"
     environment:
-       - "SLACK_TOKEN=${SLACK_TOKEN}"
-       - "CAPTURE_MIME_ENCODED=${CAPTURE_MIME_ENCODED}"
        - "HASHCAT_USERNAME=${HASHCAT_USERNAME}"
        - "HASHCAT_PASSWORD=${HASHCAT_PASSWORD}"
        - "TERM=xterm"

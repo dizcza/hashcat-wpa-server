@@ -1,7 +1,6 @@
 # encoding=utf-8
 
 import subprocess
-import threading
 from urllib.parse import urlparse, urljoin
 
 from flask import request
@@ -49,16 +48,10 @@ def log_request(logger):
     logger.debug(str_info)
 
 
-class ProgressLock(object):
-    def __init__(self):
-        self._lock = threading.RLock()
-        self.progress = 0
-        self.status = "Running"
-        self.key = None
-        self.completed = False
-
-    def __enter__(self):
-        self._lock.acquire()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._lock.release()
+def extract_essid_key(hashcat_key: str) -> str:
+    parts = hashcat_key.split(':')
+    if len(parts) != 5:
+        # failed to extract essid:key
+        return hashcat_key
+    essid, key = parts[3], parts[4]
+    return "{essid}:{key}".format(essid=essid, key=key)
