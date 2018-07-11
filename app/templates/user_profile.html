@@ -2,8 +2,12 @@
 
 {% block content %}
 <h2>Uploaded captures</h2>
+<p>Hashcat WPA/WPA2 benchmark speed: <b>{{ benchmark.speed }}</b> H/s.
+    Last update: {{ benchmark.date }}
+    <button onclick="updateBenchmark()">Update</button>
+</p>
 <form action="" method="post">
-    <table class=todos>
+    <table>
         <tr>
             <th>#</th>
             <th>Filename</th>
@@ -24,10 +28,25 @@
             <td>{{ task.duration }}</td>
             <td>{{ task.wordlist }}</td>
             <td>{{ task.rule }}</td>
-            <td>{{ task.status }} </td>
+            <td>{{ task.status }}</td>
             <td>{{ task.found_key }}</td>
         </tr>
         {%- endfor %}
     </table>
 </form>
+{% endblock %}
+
+
+{% block scripts %}
+<script src="http://code.jquery.com/jquery.js"></script>
+<script>
+    function updateBenchmark() {
+       $.ajax({
+            url : '/benchmark',
+            type : 'GET'
+       }).done(function(message) {
+            alert(message)
+       })
+    }
+</script>
 {% endblock %}

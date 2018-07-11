@@ -1,11 +1,13 @@
 # encoding=utf-8
 
 import subprocess
+import datetime
 from urllib.parse import urlparse, urljoin
-
 from flask import request
 
 from app.domain import Rule, WordList
+
+DATE_FORMAT = "%Y-%m-%d %H:%M"
 
 
 def count_rules(rule: Rule) -> int:
@@ -55,3 +57,11 @@ def extract_essid_key(hashcat_key: str) -> str:
         return hashcat_key
     essid, key = parts[3], parts[4]
     return "{essid}:{key}".format(essid=essid, key=key)
+
+
+def date_formatted() -> str:
+    return datetime.datetime.now().strftime(DATE_FORMAT)
+
+
+def str_to_date(date_str: str) -> datetime.datetime:
+    return datetime.datetime.strptime(date_str, DATE_FORMAT)

@@ -4,18 +4,16 @@ import re
 import datetime
 import subprocess
 import time
-from collections import namedtuple, defaultdict
+from collections import defaultdict
 from functools import partial
 
-from app import utils, db
+from app import db, lock_app
 from app.app_logger import logger
 from app.domain import Rule, WordList, NONE_ENUM, ProgressLock
 from app.hashcat_cmd import HashcatStatus, HashcatCmd
 from app.nvidia_smi import set_cuda_visible_devices
-from app.utils import split_uppercase, extract_essid_key
+from app.utils import split_uppercase, extract_essid_key, date_formatted
 from app.uploader import UploadedTask
-
-Benchmark = namedtuple("Benchmark", ("speed", "gpus"))
 
 
 def subprocess_call(args):
@@ -169,7 +167,7 @@ class Attack(object):
             return
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlist(WordList.DIGITS_8)
-        self.hashcat_status.run_with_status(hashcat_cmd)
+        subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
     def run_weak_passwords(self):
@@ -214,7 +212,6 @@ def _crack_async(attack: Attack, lock: ProgressLock):
             lock.progress = progress
     key, status = attack.get_key_status()
     with lock:
-        lock.progress = 100
         lock.status = status
         lock.key = key
         lock.completed = True
@@ -223,19 +220,21 @@ def _crack_async(attack: Attack, lock: ProgressLock):
         logger.debug("Timer {}: {:.2f} sec".format(name, timer['elapsed'] / timer['count']))
 
 
-def _hashcat_benchmark_async() -> Benchmark:
+def _hashcat_benchmark_async(benchmark_filepath):
     """
     Called in background process.
     """
-    gpus = set_cuda_visible_devices()
-    out, err = subprocess_call(['hashcat', '-m2500', "-b", "--machine-readable"])
+    set_cuda_visible_devices()
+    out, err = subprocess_call(['hashcat', '-m2500', "-b", "--machine-readable", "--quiet"])
     pattern = re.compile("\d+:2500:.*:.*:\d+\.\d+:\d+")
     total_speed = 0
     for line in filter(pattern.fullmatch, out.splitlines()):
         device_speed = int(line.split(':')[-1])
         total_speed += device_speed
-    benchmark = Benchmark(total_speed, gpus)
-    return benchmark
+    if total_speed > 0:
+        snapshot = "{date},{speed}\n".format(date=date_formatted(), speed=total_speed)
+        with lock_app, open(benchmark_filepath, 'a') as f:
+            f.write(snapshot)
 
 
 class HashcatWorker(object):
@@ -252,61 +251,41 @@ class HashcatWorker(object):
         self.status_timer = self.app.config['HASHCAT_STATUS_TIMER']
         self.locks = {}
         self.task_id_by_job_id = {}
-
-    def exception_callback(self, future: concurrent.futures.Future):
-        """
-        Called in main process.
-        :param future:
-        """
-        exception = future.exception()
-        if exception is not None:
-            logger.error(exception)
-            lock = self.locks[id(future)]
-            with lock:
-                lock.status = repr(exception)
+        self.benchmark()
 
     def callback_attack(self, future: concurrent.futures.Future):
         job_id = id(future)
         lock = self.locks[job_id]
+        exception = future.exception()
         with lock:
-            lock.completed = True
-            if future.cancelled():
+            if exception is not None:
+                logger.error(exception)
+                lock.status = repr(exception)
+            elif future.cancelled():
                 lock.status = "Canceled"
+            lock.completed = True
         task_id = self.task_id_by_job_id[job_id]
         task = UploadedTask.query.get(task_id)
         with lock:
             task.status = lock.status
             task.progress = lock.progress
             task.found_key = lock.key
-        task.duration = datetime.datetime.utcnow() - task.uploaded_time
+        task.duration = datetime.datetime.now() - task.uploaded_time
         db.session.commit()
-
-    def callback_benchmark(self, future: concurrent.futures.Future):
-        """
-        Called in main process.
-        :param future: Future of total WPA crack speed (hashes per second)
-        """
-        if future.cancelled():
-            return
-        benchmark = future.result()
-        logger.info(benchmark)
-        utils.BENCHMARK_SPEED = benchmark.speed
-        benchmark_message = {"speed": benchmark.speed, "gpus": benchmark.gpus}
-        # todo notify
 
     def crack_capture(self, uploaded_task: UploadedTask, timeout: int):
         """
         Called in main process.
         Starts cracking .cap file in parallel process.
         :param uploaded_task: uploaded .cap file task
+        :param timeout: brute force timeout in minutes
         """
         lock = ProgressLock()
         attack = Attack(uploaded_task, timeout=timeout, status_timer=self.status_timer)
-        future = self.executor.submit(_crack_async, attack, lock)
+        future = self.executor.submit(_crack_async, attack=attack, lock=lock)
         job_id = id(future)
         self.locks[job_id] = lock
         self.task_id_by_job_id[job_id] = uploaded_task.id
-        future.add_done_callback(self.exception_callback)
         future.add_done_callback(self.callback_attack)
         self.futures.append(future)
 
@@ -314,9 +293,7 @@ class HashcatWorker(object):
         """
         Run hashcat WPA benchmark.
         """
-        future = self.executor.submit(_hashcat_benchmark_async)
-        future.add_done_callback(self.exception_callback)
-        future.add_done_callback(self.callback_benchmark)
+        future = self.executor.submit(_hashcat_benchmark_async, benchmark_filepath=self.app.config['BENCHMARK_FILE'])
         self.futures.append(future)
 
     def terminate(self):

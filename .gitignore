@@ -26,3 +26,6 @@ temp.py
 
 # nvidia-docker-compose automatically generated
 nvidia-docker-compose.yml
+
+# hashcat benchmarks
+app/benchmark.csv

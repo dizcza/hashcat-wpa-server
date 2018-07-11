@@ -1,16 +1,17 @@
 import os
-
+import datetime
 import flask
 from flask import request, render_template, redirect, url_for
 from flask.json import jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 
-from app import app, db
+from app import app, db, lock_app
+from app.domain import Benchmark
 from app.app_logger import logger
 from app.login import LoginForm, RegistrationForm
 from app.login import User, add_new_user
 from app.uploader import cap_uploads, UploadForm, UploadedTask
-from app.utils import is_safe_url, log_request
+from app.utils import is_safe_url, log_request, str_to_date, date_formatted
 from app.worker import HashcatWorker
 
 hashcat_worker = HashcatWorker(app)
@@ -28,6 +29,16 @@ def is_mime_valid(file_path):
     with open(file_path, 'rb') as f:
         data = f.read()
     return data.startswith(app.config['CAPTURE_MIME'])
+
+
+def read_last_benchmark():
+    benchmark_filepath = app.config['BENCHMARK_FILE']
+    if not os.path.exists(benchmark_filepath):
+        return Benchmark(date=date_formatted(), speed=0)
+    with lock_app, open(benchmark_filepath) as f:
+        last_line = f.readlines()[-1]
+    date_str, speed = last_line.rstrip().split(',')
+    return Benchmark(date=date_str, speed=speed)
 
 
 @app.route('/upload', methods=['GET', 'POST'])
@@ -56,7 +67,7 @@ def upload():
 @login_required
 def user_profile():
     tasks = UploadedTask.query.filter_by(user_id=current_user.id).all()
-    return render_template('user_profile.html', title='Home', tasks=tasks)
+    return render_template('user_profile.html', title='Home', tasks=tasks, benchmark=read_last_benchmark())
 
 
 @app.route('/progress/<int:job_id>')
@@ -110,9 +121,16 @@ def register():
 
 @app.route("/benchmark")
 @login_required
-def hashcat_benchmark():
-    hashcat_worker.benchmark()
-    return jsonify("See #benchmark")
+def benchmark():
+    benchmark_last = read_last_benchmark()
+    since_last_update = datetime.datetime.now() - str_to_date(benchmark_last.date)
+    wait_time = app.config['BENCHMARK_UPDATE_PERIOD'] - since_last_update.seconds
+    if benchmark_last.speed == 0 or wait_time < 0:
+        hashcat_worker.benchmark()
+        return jsonify("Started benchmark.")
+    else:
+        message = "Wait {wait_time} seconds for the next benchmark update.".format(wait_time=wait_time)
+        return jsonify(message)
 
 
 @app.route("/terminate")

@@ -1,9 +1,11 @@
 import os
 import threading
 from enum import Enum, unique
+from collections import namedtuple
 
 
 NONE_ENUM = str(None)
+Benchmark = namedtuple('Benchmark', ('date', 'speed'))
 
 
 @unique

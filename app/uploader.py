@@ -32,7 +32,7 @@ class UploadedTask(db.Model):
     filename = db.Column(db.String(128))
     wordlist = db.Column(db.String(128))
     rule = db.Column(db.String(128))
-    uploaded_time = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    uploaded_time = db.Column(db.DateTime, default=datetime.datetime.now)
     duration = db.Column(db.Interval, default=datetime.timedelta)
     status = db.Column(db.String(256), default="Scheduled")
     progress = db.Column(db.Float, default=0)
