@@ -1,19 +1,16 @@
 import os
-from typing import Optional
 
 import flask
-from flask import request, abort, render_template, redirect, url_for
+from flask import request, render_template, redirect, url_for
 from flask.json import jsonify
 from flask_login import login_user, logout_user, login_required, current_user
-from werkzeug.utils import secure_filename
 
-from app import app
+from app import app, db
 from app.app_logger import logger
-from app.domain import UploadForm
-from app.hashcat_cmd import Rule, WordList
 from app.login import LoginForm, RegistrationForm
 from app.login import User, add_new_user
 from app.slack_sender import SlackSender
+from app.uploader import cap_uploads, UploadForm, UploadedTask
 from app.utils import is_safe_url, log_request
 from app.worker import HashcatWorker
 
@@ -26,72 +23,41 @@ def index():
     return render_template('base.html')
 
 
-def get_rule_header() -> Rule:
-    rule = request.headers['rule']
-    if rule == "(None)":
-        rule = None
-    else:
-        rule = Rule(rule)
-    return rule
-
-
-def get_wordlist_header() -> WordList:
-    wordlist = request.headers['wordlist']
-    if wordlist == "(None)":
-        wordlist = None
-    else:
-        wordlist = WordList(wordlist)
-    return wordlist
-
-
-def parse_upload_form() -> Optional[UploadForm]:
-    """
-    :return: UploadForm instance if request is valid, None otherwise
-    :raises ValueError, KeyError, IOError
-    """
-    capture_filepath = secure_filename(request.headers['filename'])
-    if os.path.splitext(capture_filepath)[1] != '.cap':
-        return None
-    capture_filepath = os.path.join(app.config.get("CAPTURES_DIR", ''), capture_filepath)
-    timeout = int(request.headers['timeout']) * 60
-    wordlist = get_wordlist_header()
-    rule = get_rule_header()
-    mime_correct = app.config.get('CAPTURE_MIME', '')
-    if mime_correct == '':
-        logger.warning("For extra security, set correct 'CAPTURE_MIME' env")
-    capture_bytes = request.get_data()
-    mime_received = capture_bytes[: min(len(capture_bytes), len(mime_correct))]
-    if mime_received != mime_correct:
-        return None
-    with open(capture_filepath, 'wb') as f:
-        bytes_written = f.write(capture_bytes)
-    if bytes_written != len(capture_bytes):
-        raise IOError()
-    return UploadForm(capture_filepath, wordlist, rule, timeout)
+def is_mime_valid(file_path):
+    if not os.path.exists(file_path):
+        return False
+    with open(file_path, 'rb') as f:
+        data = f.read()
+    return data.startswith(app.config['CAPTURE_MIME'])
 
 
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
     log_request(logger)
-    try:
-        upload_form = parse_upload_form()
-    except ValueError or KeyError:
-        upload_form = None
-    except IOError:
-        return abort(400, "Couldn't write received file")
-    if upload_form is None:
-        return abort(400, "Invalid form")
-    job_id = hashcat_worker.crack_capture(upload_form)
-    capture_filename = os.path.basename(upload_form.capture_path)
-    return jsonify(message="Started processing {}".format(capture_filename),
-                   job_id=job_id)
+    form = UploadForm()
+    if form.validate_on_submit():
+        filename = cap_uploads.save(request.files['capture'])
+        filepath = os.path.join(app.config['CAPTURES_DIR'], filename)
+        if is_mime_valid(filepath):
+            new_task = UploadedTask(user_id=current_user.id, filename=filepath, wordlist=form.wordlist.data,
+                                    rule=form.rule.data)
+            db.session.add(new_task)
+            db.session.commit()
+            flask.flash("Uploaded {}".format(filename))
+            hashcat_worker.crack_capture(new_task, timeout=form.timeout.data)
+            return redirect(url_for('user_profile'))
+        else:
+            flask.flash("Invalid file", category='error')
+            return redirect(url_for('upload'))
+    return render_template('upload.html', title='Upload', form=form)
 
 
-@app.route('/secret')
+@app.route('/user_profile')
 @login_required
-def secret():
-    return jsonify('Secret page!')
+def user_profile():
+    tasks = UploadedTask.query.filter_by(user_id=current_user.id).all()
+    return render_template('user_profile.html', title='Home', tasks=tasks)
 
 
 @app.route('/progress/<int:job_id>')

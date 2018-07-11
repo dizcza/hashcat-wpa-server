@@ -96,9 +96,9 @@ class HashcatCmd(object):
 
 
 class HashcatStatus(object):
-    def __init__(self, slack_sender: SlackSender, timeout: int, status_timer: int):
+    def __init__(self, slack_sender: SlackSender, timeout_minutes: int, status_timer: int):
         self.slack_sender = slack_sender
-        self.timeout = timeout
+        self.timeout = timeout_minutes * 60
         self.status_timer = status_timer
         self.status_log_path = os.path.join("logs", "status.txt")
 

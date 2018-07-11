@@ -1,13 +1,12 @@
 from flask_login import LoginManager
 from flask_login import UserMixin
-from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
 from werkzeug.security import generate_password_hash, check_password_hash
 from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo
 from flask_migrate import Migrate
 
-from app import app
+from app import app, db
 
 
 class LoginForm(FlaskForm):
@@ -36,7 +35,6 @@ class RegistrationForm(FlaskForm):
             raise ValidationError('Please use a different email address.')
 
 
-db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 migrate = Migrate(app, db)
@@ -48,6 +46,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True, index=True)
     email = db.Column(db.String(64), unique=True, index=True)
     password_hash = db.Column(db.String(128))
+    uploads = db.relationship('UploadedTask', backref=__tablename__, lazy=True)
 
     @staticmethod
     def validate_username(username):

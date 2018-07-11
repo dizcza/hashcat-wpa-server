@@ -1,0 +1,15 @@
+<!-- This template file just creates the label for the field, the field input, and the errors for the field. -->
+{% macro render_field(field) %}
+
+<p>
+    {{ field.label }}<br>
+    {{ field(**kwargs) | safe }}
+    <span class="error" style="color: red;">
+    {% for error in field.errors %}
+        [{{ error }}]
+    {% endfor %}
+    </span>
+    <br>
+</p>
+
+{% endmacro %}

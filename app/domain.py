@@ -1,6 +1,8 @@
 import os
 from enum import Enum, unique
-from typing import Optional
+
+
+NONE_ENUM = str(None)
 
 
 @unique
@@ -22,11 +24,3 @@ class WordList(Enum):
 
     def get_path(self):
         return os.path.join("wordlists", self.value)
-
-
-class UploadForm(object):
-    def __init__(self, capture_path: str, wordlist: Optional[WordList], rule: Optional[Rule], timeout_seconds: int):
-        self.capture_path = capture_path
-        self.wordlist = wordlist
-        self.rule = rule
-        self.timeout_seconds = timeout_seconds

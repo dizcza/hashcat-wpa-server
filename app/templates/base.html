@@ -16,6 +16,7 @@
             <a href="{{ url_for('logout') }}">Logout</a>
             {% endif %}
             <a href="{{ url_for('upload') }}">Upload .cap file</a>
+            <a href="{{ url_for('user_profile') }}">User profile</a>
         </div>
             {% if current_user.is_active %}
             <p>You're logged in as <b>{{ current_user.username }}</b></p>

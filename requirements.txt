@@ -5,6 +5,7 @@ Flask==1.0.2
 Flask-JWT==0.3.2
 Flask-Login==0.4.1
 Flask-Migrate==2.2.1
+Flask-Uploads==0.2.1
 Flask-SQLAlchemy==2.3.2
 Flask-WTF==0.14.2
 gunicorn==19.9.0
@@ -12,11 +13,8 @@ idna==2.7
 itsdangerous==0.24
 Jinja2==2.10
 MarkupSafe==1.0
-PyJWT==1.6.4
 python-dateutil==2.7.3
-PyYAML==3.12
 requests==2.19.1
-schema==0.6.8
 simplejson==3.16.0
 six==1.11.0
 slacker==0.9.65

@@ -1,35 +1,28 @@
-from flask import Flask
-from schema import Schema, And, Use
-import itsdangerous
 import os
-import yaml
+
+import itsdangerous
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 
 
 def create_app():
     app = Flask(__name__)
 
-    app.config['CAPTURE_MIME'] = itsdangerous.base64_decode(os.environ.get('CAPTURE_MIME_ENCODED', ''))
-    app.config['SECRET_KEY'] = os.urandom(24)
-    app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///{}".format(os.path.join(os.path.dirname(__file__), 'users.db'))
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['JWT_AUTH_URL_RULE'] = None
+    app_dir = os.path.dirname(__file__)
+    root_dir = os.path.dirname(app_dir)
 
-    # todo: get rid of .yml
-    with open("config.yml", 'r') as f:
-        config_dict = yaml.safe_load(f)
-    config_schema = Schema({
-        'HASHCAT_STATUS_TIMER': And(Use(int), lambda x: x > 0),
-        'CAPTURES_DIR': Use(str),
-    })
-    config_schema.validate(config_dict)
-    for key, value in config_dict.items():
-        app.config[key] = value
-    for dir_config_name in ('CAPTURES_DIR',):
-        if not os.path.exists(app.config[dir_config_name]):
-            os.makedirs(app.config[dir_config_name])
+    app.config['CAPTURES_DIR'] = os.path.join(root_dir, 'captures')
+    app.config['CAPTURE_MIME'] = itsdangerous.base64_decode("1MOyoQIABAAAAAAAAAAAAP//AABpAAAA")
+    app.config['SECRET_KEY'] = os.urandom(24)
+    app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///{}".format(os.path.join(app_dir, 'users.db'))
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['HASHCAT_STATUS_TIMER'] = 20
+
+    os.makedirs(app.config['CAPTURES_DIR'], exist_ok=True)
     return app
 
 
 app = create_app()
+db = SQLAlchemy(app)
 
 from app import views

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% from "_form_macros.html" import render_field %}
+
+{% block content %}
+    <h1>Upload .cap file</h1>
+    <form action="" method="post" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        {{ render_field(form.wordlist) }}
+        {{ render_field(form.rule) }}
+        {{ render_field(form.timeout) }}
+        {{ render_field(form.capture) }}
+        <p>{{ form.submit() }}</p>
+    </form>
+{% endblock %}

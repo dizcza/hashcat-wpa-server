@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Uploaded captures</h2>
+<form action="" method="post">
+    <table class=todos>
+        <tr>
+            <th>#</th>
+            <th>Filename</th>
+            <th>Date</th>
+            <th>Progress</th>
+            <th>Duration</th>
+            <th>Wordlist</th>
+            <th>Rule</th>
+            <th>Status</th>
+            <th>Found Key</th>
+        </tr>
+        {%- for task in tasks %}
+        <tr>
+            <td>{{ task.id }}</td>
+            <td>{{ task.filename }}</td>
+            <td>{{ task.uploaded_time.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>{{ task.progress }}</td>
+            <td>{{ task.duration }}</td>
+            <td>{{ task.wordlist }}</td>
+            <td>{{ task.rule }}</td>
+            <td>{{ task.status }} </td>
+            <td>{{ task.found_key }}</td>
+        </tr>
+        {%- endfor %}
+    </table>
+</form>
+{% endblock %}
