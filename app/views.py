@@ -11,7 +11,7 @@ from app.app_logger import logger
 from app.login import LoginForm, RegistrationForm
 from app.login import User, add_new_user
 from app.uploader import cap_uploads, UploadForm, UploadedTask
-from app.utils import is_safe_url, log_request, str_to_date, date_formatted
+from app.utils import is_safe_url, str_to_date, date_formatted
 from app.worker import HashcatWorker
 
 hashcat_worker = HashcatWorker(app)
@@ -44,10 +44,9 @@ def read_last_benchmark():
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
-    log_request(logger)
     form = UploadForm()
     if form.validate_on_submit():
-        filename = cap_uploads.save(request.files['capture'])
+        filename = cap_uploads.save(request.files['capture'], folder=current_user.username)
         filepath = os.path.join(app.config['CAPTURES_DIR'], filename)
         if is_mime_valid(filepath):
             new_task = UploadedTask(user_id=current_user.id, filepath=filepath, wordlist=form.wordlist.data,
@@ -69,7 +68,7 @@ def user_profile():
     tasks = UploadedTask.query.filter_by(user_id=current_user.id).all()
     tasks = tasks[::-1]
     return render_template('user_profile.html', title='Home', tasks=tasks, benchmark=read_last_benchmark(),
-                           enumerate=enumerate)
+                           enumerate=enumerate, basename=os.path.basename)
 
 
 @app.route('/progress')

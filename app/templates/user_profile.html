@@ -22,7 +22,7 @@
         {%- for row_id, task in enumerate(tasks) %}
         <tr id="task{{ task.id }}">
             <td>{{ row_id }}</td>
-            <td>{{ task.filename }}</td>
+            <td>{{ basename(task.filepath) }}</td>
             <td>{{ task.uploaded_time.strftime('%Y-%m-%d %H:%M') }}</td>
             <td class="progress">{{ task.progress }} %</td>
             <td>{{ task.duration }}</td>
