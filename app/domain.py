@@ -33,9 +33,8 @@ class ProgressLock(object):
     def __init__(self):
         self._lock = threading.RLock()
         self.progress = 0
-        self.status = "Running"
+        self.status = "Scheduled"
         self.key = None
-        self.completed = False
 
     def __enter__(self):
         self._lock.acquire()

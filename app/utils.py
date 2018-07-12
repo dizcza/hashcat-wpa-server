@@ -1,8 +1,10 @@
 # encoding=utf-8
 
-import subprocess
 import datetime
+import os
+import subprocess
 from urllib.parse import urlparse, urljoin
+
 from flask import request
 
 from app.domain import Rule, WordList
@@ -50,13 +52,18 @@ def log_request(logger):
     logger.debug(str_info)
 
 
-def extract_essid_key(hashcat_key: str) -> str:
-    parts = hashcat_key.split(':')
-    if len(parts) != 5:
-        # failed to extract essid:key
-        return hashcat_key
-    essid, key = parts[3], parts[4]
-    return "{essid}:{key}".format(essid=essid, key=key)
+def read_plain_key(key_path) -> str:
+    with open(key_path) as f:
+        lines = f.readlines()
+    found_keys = set()
+    for hashcat_key in lines:
+        parts = hashcat_key.split(':')
+        if len(parts) != 5:
+            # failed to extract essid:key
+            found_keys.add(hashcat_key)
+        essid, key = parts[3], parts[4]
+        found_keys.add("{essid}:{key}".format(essid=essid, key=key))
+    return ', '.join(found_keys)
 
 
 def date_formatted() -> str:
@@ -65,3 +72,10 @@ def date_formatted() -> str:
 
 def str_to_date(date_str: str) -> datetime.datetime:
     return datetime.datetime.strptime(date_str, DATE_FORMAT)
+
+
+def with_suffix(path: str, suffix: str) -> str:
+    # todo use pathlib
+    base = os.path.splitext(os.path.basename(path))[0]
+    new_file = os.path.join(os.path.dirname(path), "{}.{}".format(base, suffix))
+    return new_file

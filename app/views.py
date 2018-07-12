@@ -50,7 +50,7 @@ def upload():
         filename = cap_uploads.save(request.files['capture'])
         filepath = os.path.join(app.config['CAPTURES_DIR'], filename)
         if is_mime_valid(filepath):
-            new_task = UploadedTask(user_id=current_user.id, filename=filepath, wordlist=form.wordlist.data,
+            new_task = UploadedTask(user_id=current_user.id, filepath=filepath, wordlist=form.wordlist.data,
                                     rule=form.rule.data)
             db.session.add(new_task)
             db.session.commit()
@@ -67,19 +67,25 @@ def upload():
 @login_required
 def user_profile():
     tasks = UploadedTask.query.filter_by(user_id=current_user.id).all()
-    return render_template('user_profile.html', title='Home', tasks=tasks, benchmark=read_last_benchmark())
+    tasks = tasks[::-1]
+    return render_template('user_profile.html', title='Home', tasks=tasks, benchmark=read_last_benchmark(),
+                           enumerate=enumerate)
 
 
-@app.route('/progress/<int:job_id>')
+@app.route('/progress')
 @login_required
-def progress(job_id):
-    lock = hashcat_worker.locks[job_id]
-    with lock:
-        response = jsonify(progress=lock.progress,
-                           status=lock.status,
-                           key=lock.key,
-                           completed=lock.completed)
-    return response
+def progress():
+    user_tasks = UploadedTask.query.filter_by(user_id=current_user.id).all()
+    tasks_progress = []
+    for task in user_tasks:
+        for job_id, lock in hashcat_worker.locks[task.id].items():
+            with lock:
+                task_progress = dict(task_id=task.id,
+                                     progress="{:.1f}".format(lock.progress),
+                                     status=lock.status,
+                                     found_key=lock.key)
+            tasks_progress.append(task_progress)
+    return jsonify(tasks_progress)
 
 
 @app.route('/login', methods=['GET', 'POST'])

@@ -12,7 +12,7 @@ from app.app_logger import logger
 from app.domain import Rule, WordList, NONE_ENUM, ProgressLock
 from app.hashcat_cmd import HashcatStatus, HashcatCmd
 from app.nvidia_smi import set_cuda_visible_devices
-from app.utils import split_uppercase, extract_essid_key, date_formatted
+from app.utils import split_uppercase, read_plain_key, date_formatted, with_suffix
 from app.uploader import UploadedTask
 
 
@@ -46,8 +46,9 @@ class Attack(object):
 
     timers = defaultdict(lambda: dict(count=0, elapsed=1e-6))
 
-    def __init__(self, uploaded_task: UploadedTask, timeout: int, status_timer: int):
-        self.capture_path = uploaded_task.filename
+    def __init__(self, uploaded_task: UploadedTask, lock: ProgressLock, timeout: int, status_timer: int):
+        self.lock = lock
+        self.capture_path = uploaded_task.filepath
         self.wordlist = None if uploaded_task.wordlist == NONE_ENUM else WordList(uploaded_task.wordlist)
         self.rule = None if uploaded_task.rule == NONE_ENUM else Rule(uploaded_task.rule)
         self.hashcat_status = HashcatStatus(timeout, status_timer)
@@ -56,19 +57,9 @@ class Attack(object):
             'status': "Running",
         }
         self.essid = None
-        self.key_file = self.as_capture(".key")
-        self.hcap_file = self.as_capture(".hccapx")
+        self.key_file = with_suffix(self.capture_path, 'key')
+        self.hcap_file = with_suffix(self.capture_path, 'hccapx')
         self.new_cmd = partial(HashcatCmd, hcap_file=self.hcap_file, outfile=self.key_file)
-
-    def as_capture(self, new_ext: str) -> str:
-        """
-        :param new_ext: new file extension path
-        :return: capture filepath with the new extension
-        """
-        assert new_ext.startswith('.'), "Invalid new file extension"
-        base = os.path.splitext(os.path.basename(self.capture_path))[0]
-        new_file = os.path.join(os.path.dirname(self.capture_path), "{}{}".format(base, new_ext))
-        return new_file
 
     @staticmethod
     def parse_essid(stdout: str):
@@ -87,20 +78,25 @@ class Attack(object):
     def is_attack_needed(self):
         return os.path.exists(self.hcap_file) and not self.is_already_cracked()
 
-    def get_key_status(self):
+    def read_key(self):
         key_password = None
         status = "Completed"
         if os.path.exists(self.key_file):
-            with open(self.key_file, 'r') as f:
-                key_password = extract_essid_key(f.read())
+            key_password = read_plain_key(self.key_file)
         elif not os.path.exists(self.hcap_file):
             status = "0 WPA handshakes captured"
-        return key_password, status
+        with self.lock:
+            self.lock.status = status
+            self.lock.key = key_password
+            self.lock.status = "Completed"
+            self.lock.progress = 100
 
     def cap2hccapx(self):
         """
         Convert airodump's `.cap` to hashcat's `.hccapx`
         """
+        with self.lock:
+            self.lock.status = "Converting .cap to .hccapx"
         out, err = subprocess_call(['cap2hccapx', self.capture_path, self.hcap_file])
         self.essid = self.parse_essid(out)
 
@@ -117,6 +113,8 @@ class Attack(object):
         def modify_case(word):
             return {word, word.lower(), word.upper(), word.capitalize(), word.lower().capitalize()}
 
+        with self.lock:
+            self.lock.status = "Running ESSID attack"
         essid_parts = {self.essid}
         regex_non_char = re.compile('[^a-zA-Z]')
         essid_parts.update(regex_non_char.split(self.essid))
@@ -165,6 +163,8 @@ class Attack(object):
         """
         if not self.is_attack_needed():
             return
+        with self.lock:
+            self.lock.status = "Running digits8"
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlist(WordList.DIGITS_8)
         subprocess_call(hashcat_cmd.build())
@@ -178,6 +178,8 @@ class Attack(object):
         """
         if not self.is_attack_needed():
             return
+        with self.lock:
+            self.lock.status = "Running weak passwords"
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlist(WordList.WEAK)
         hashcat_cmd.add_rule(Rule.BEST_64)
@@ -192,13 +194,17 @@ class Attack(object):
         """
         if self.wordlist is None or not self.is_attack_needed():
             return
+        with self.lock:
+            self.lock.status = "Running main wordlist"
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlist(self.wordlist)
         hashcat_cmd.add_rule(self.rule)
-        yield from self.hashcat_status.run_with_status(hashcat_cmd)
+        for progress in self.hashcat_status.run_with_status(hashcat_cmd):
+            with self.lock:
+                self.lock.progress = progress
 
 
-def _crack_async(attack: Attack, lock: ProgressLock):
+def _crack_async(attack: Attack):
     """
     Called in background process.
     :param attack: hashcat attack to crack uploaded capture
@@ -207,14 +213,8 @@ def _crack_async(attack: Attack, lock: ProgressLock):
     attack.run_essid_attack()
     attack.run_weak_passwords()
     attack.run_digits8()
-    for progress in attack.run_main_wordlist():
-        with lock:
-            lock.progress = progress
-    key, status = attack.get_key_status()
-    with lock:
-        lock.status = status
-        lock.key = key
-        lock.completed = True
+    attack.run_main_wordlist()
+    attack.read_key()
     logger.info("Finished cracking {}".format(attack.capture_path))
     for name, timer in attack.timers.items():
         logger.debug("Timer {}: {:.2f} sec".format(name, timer['elapsed'] / timer['count']))
@@ -249,27 +249,36 @@ class HashcatWorker(object):
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.workers)
         self.futures = []
         self.status_timer = self.app.config['HASHCAT_STATUS_TIMER']
-        self.locks = {}
-        self.task_id_by_job_id = {}
+        self.locks = defaultdict(dict)
         self.benchmark()
 
+    def find_task_and_lock(self, job_id_query: int):
+        task_id, lock = None, None
+        for task_id, job_locks in self.locks.items():
+            lock = job_locks.get(job_id_query, None)
+            if lock is not None:
+                break
+        return task_id, lock
+
     def callback_attack(self, future: concurrent.futures.Future):
-        job_id = id(future)
-        lock = self.locks[job_id]
         exception = future.exception()
-        with lock:
-            if exception is not None:
-                logger.error(exception)
-                lock.status = repr(exception)
-            elif future.cancelled():
-                lock.status = "Canceled"
-            lock.completed = True
-        task_id = self.task_id_by_job_id[job_id]
+        if exception is not None:
+            logger.error(exception)
+        job_id = id(future)
+        task_id, lock = self.find_task_and_lock(job_id_query=job_id)
+        if lock is None:
+            logger.error("Could not find lock for job {}".format(job_id))
+            return
         task = UploadedTask.query.get(task_id)
         with lock:
+            if exception is not None:
+                lock.status = "Error: {}".format(repr(exception))
+            elif future.cancelled():
+                lock.status = "Canceled"
             task.status = lock.status
             task.progress = lock.progress
             task.found_key = lock.key
+        task.completed = True
         task.duration = datetime.datetime.now() - task.uploaded_time
         db.session.commit()
 
@@ -281,11 +290,10 @@ class HashcatWorker(object):
         :param timeout: brute force timeout in minutes
         """
         lock = ProgressLock()
-        attack = Attack(uploaded_task, timeout=timeout, status_timer=self.status_timer)
-        future = self.executor.submit(_crack_async, attack=attack, lock=lock)
+        attack = Attack(uploaded_task, lock=lock, timeout=timeout, status_timer=self.status_timer)
+        future = self.executor.submit(_crack_async, attack=attack)
         job_id = id(future)
-        self.locks[job_id] = lock
-        self.task_id_by_job_id[job_id] = uploaded_task.id
+        self.locks[uploaded_task.id][job_id] = lock
         future.add_done_callback(self.callback_attack)
         self.futures.append(future)
 

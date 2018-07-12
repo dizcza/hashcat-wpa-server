@@ -19,17 +19,17 @@
             <th>Status</th>
             <th>Found Key</th>
         </tr>
-        {%- for task in tasks %}
-        <tr>
-            <td>{{ task.id }}</td>
+        {%- for row_id, task in enumerate(tasks) %}
+        <tr id="task{{ task.id }}">
+            <td>{{ row_id }}</td>
             <td>{{ task.filename }}</td>
             <td>{{ task.uploaded_time.strftime('%Y-%m-%d %H:%M') }}</td>
-            <td>{{ task.progress }}</td>
+            <td class="progress">{{ task.progress }} %</td>
             <td>{{ task.duration }}</td>
             <td>{{ task.wordlist }}</td>
             <td>{{ task.rule }}</td>
-            <td>{{ task.status }}</td>
-            <td>{{ task.found_key }}</td>
+            <td class="status">{{ task.status }}</td>
+            <td class="found_key">{{ task.found_key }}</td>
         </tr>
         {%- endfor %}
     </table>
@@ -48,5 +48,20 @@
             alert(message)
        })
     }
+
+    $(document).ready(function() {
+        $.ajax({
+            url : '/progress',
+            type : 'GET'
+        }).done(function(response) {
+            $.each(response, function(index, data) {
+                var $task_row = $("#task" + data.task_id);
+                $task_row.find("td.progress").text(data.progress + " %");
+                $task_row.find("td.status").text(data.status);
+                $task_row.find("td.found_key").text(data.found_key);
+            });
+        })
+        setTimeout(arguments.callee, 10000);
+    });
 </script>
 {% endblock %}
