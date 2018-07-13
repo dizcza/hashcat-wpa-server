@@ -4,6 +4,7 @@ import itsdangerous
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from threading import RLock
+from flask_migrate import Migrate
 
 
 def create_app():
@@ -27,6 +28,7 @@ def create_app():
 
 app = create_app()
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 lock_app = RLock()
 
 from app import views

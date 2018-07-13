@@ -65,18 +65,15 @@ def upload():
 @app.route('/user_profile')
 @login_required
 def user_profile():
-    tasks = UploadedTask.query.filter_by(user_id=current_user.id).all()
-    tasks = tasks[::-1]
-    return render_template('user_profile.html', title='Home', tasks=tasks, benchmark=read_last_benchmark(),
-                           enumerate=enumerate, basename=os.path.basename)
+    return render_template('user_profile.html', title='Home', tasks=current_user.uploads[::-1],
+                           benchmark=read_last_benchmark(), enumerate=enumerate, basename=os.path.basename)
 
 
 @app.route('/progress')
 @login_required
 def progress():
-    user_tasks = UploadedTask.query.filter_by(user_id=current_user.id).all()
     tasks_progress = []
-    for task in user_tasks:
+    for task in current_user.uploads:
         for job_id, lock in hashcat_worker.locks[task.id].items():
             with lock:
                 task_progress = dict(task_id=task.id,

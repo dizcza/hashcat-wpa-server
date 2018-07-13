@@ -4,7 +4,6 @@ from flask_wtf import FlaskForm
 from werkzeug.security import generate_password_hash, check_password_hash
 from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo
-from flask_migrate import Migrate
 
 from app import app, db
 
@@ -37,7 +36,6 @@ class RegistrationForm(FlaskForm):
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
-migrate = Migrate(app, db)
 
 
 class User(UserMixin, db.Model):
@@ -46,7 +44,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True, index=True)
     email = db.Column(db.String(64), unique=True, index=True)
     password_hash = db.Column(db.String(128))
-    uploads = db.relationship('UploadedTask', backref=__tablename__, lazy=True)
+    uploads = db.relationship('UploadedTask', backref='user', lazy=True)
 
     @staticmethod
     def validate_username(username):

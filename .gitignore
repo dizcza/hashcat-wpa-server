@@ -29,3 +29,6 @@ nvidia-docker-compose.yml
 
 # hashcat benchmarks
 app/benchmark.csv
+
+# Alembic database migration
+migrations/

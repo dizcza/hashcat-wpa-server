@@ -41,19 +41,13 @@
 <script src="http://code.jquery.com/jquery.js"></script>
 <script>
     function updateBenchmark() {
-       $.ajax({
-            url : '/benchmark',
-            type : 'GET'
-       }).done(function(message) {
+       $.get('/benchmark').done(function(message) {
             alert(message)
        })
     }
 
     $(document).ready(function() {
-        $.ajax({
-            url : '/progress',
-            type : 'GET'
-        }).done(function(response) {
+        $.get('/progress').done(function(response) {
             $.each(response, function(index, data) {
                 var $task_row = $("#task" + data.task_id);
                 $task_row.find("td.progress").text(data.progress + " %");
