@@ -98,7 +98,6 @@ class HashcatStatus(object):
     def __init__(self, timeout_minutes: int, status_timer: int):
         self.timeout = timeout_minutes * 60
         self.status_timer = status_timer
-        self.status_log_path = os.path.join("logs", "status.txt")
 
     def run_with_status(self, hashcat_cmd: HashcatCmd):
         hashcat_cmd.set_status_timer(self.status_timer)

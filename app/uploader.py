@@ -64,4 +64,3 @@ class UploadForm(FlaskForm):
 
 cap_uploads = UploadSet(name='files', extensions=EXTENSIONS, default_dest=lambda app: app.config['CAPTURES_DIR'])
 configure_uploads(app, cap_uploads)
-check_incomplete_tasks()

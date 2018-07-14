@@ -88,7 +88,6 @@ class Attack(object):
         with self.lock:
             self.lock.status = status
             self.lock.key = key_password
-            self.lock.status = "Completed"
             self.lock.progress = 100
 
     def cap2hccapx(self):
@@ -250,7 +249,6 @@ class HashcatWorker(object):
         self.futures = []
         self.status_timer = self.app.config['HASHCAT_STATUS_TIMER']
         self.locks = defaultdict(dict)
-        self.benchmark()
 
     def find_task_and_lock(self, job_id_query: int):
         task_id, lock = None, None
@@ -272,12 +270,13 @@ class HashcatWorker(object):
         task = UploadedTask.query.get(task_id)
         with lock:
             if exception is not None:
-                lock.status = "Error: {}".format(repr(exception))
+                lock.status = repr(exception)
             elif future.cancelled():
                 lock.status = "Canceled"
             task.status = lock.status
             task.progress = lock.progress
             task.found_key = lock.key
+            lock.completed = True
         task.completed = True
         task.duration = datetime.datetime.now() - task.uploaded_time
         db.session.commit()

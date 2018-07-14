@@ -2,8 +2,11 @@ import logging
 import os
 import time
 
+from app.config import ROOT_DIR
 
-def create_logger(logging_level=logging.DEBUG, logs_dir="logs"):
+
+def create_logger(logging_level=logging.DEBUG):
+    logs_dir = os.path.join(ROOT_DIR, "logs")
     new_logger = logging.getLogger(__name__)
     new_logger.setLevel(logging_level)
 

@@ -1,20 +1,28 @@
-import os
 import datetime
+import os
+
 import flask
 from flask import request, render_template, redirect, url_for
 from flask.json import jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 
-from app import app, db, lock_app
-from app.domain import Benchmark
-from app.app_logger import logger
+from app import app, db
 from app.login import LoginForm, RegistrationForm
-from app.login import User, add_new_user
-from app.uploader import cap_uploads, UploadForm, UploadedTask
-from app.utils import is_safe_url, str_to_date, date_formatted
+from app.login import User, RoleEnum, register_user, create_first_users, Role, roles_required, user_has_roles
+from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks
+from app.utils import is_safe_url, str_to_date, is_mime_valid, read_last_benchmark
 from app.worker import HashcatWorker
 
 hashcat_worker = HashcatWorker(app)
+
+
+def proceed_login(user: User, remember=False):
+    login_user(user, remember=remember)
+    next_page = request.args.get('next')
+    if not is_safe_url(next_page):
+        return flask.abort(400)
+    flask.flash('Successfully logged in.')
+    return redirect(next_page or flask.url_for('index'))
 
 
 @app.route('/')
@@ -23,22 +31,15 @@ def index():
     return render_template('base.html')
 
 
-def is_mime_valid(file_path):
-    if not os.path.exists(file_path):
-        return False
-    with open(file_path, 'rb') as f:
-        data = f.read()
-    return data.startswith(app.config['CAPTURE_MIME'])
+@app.shell_context_processor
+def make_shell_context():
+    return dict(db=db, User=User, Role=Role, UploadedTask=UploadedTask)
 
 
-def read_last_benchmark():
-    benchmark_filepath = app.config['BENCHMARK_FILE']
-    if not os.path.exists(benchmark_filepath):
-        return Benchmark(date=date_formatted(), speed=0)
-    with lock_app, open(benchmark_filepath) as f:
-        last_line = f.readlines()[-1]
-    date_str, speed = last_line.rstrip().split(',')
-    return Benchmark(date=date_str, speed=speed)
+@app.before_first_request
+def before_first_request():
+    create_first_users()
+    check_incomplete_tasks()
 
 
 @app.route('/upload', methods=['GET', 'POST'])
@@ -46,6 +47,8 @@ def read_last_benchmark():
 def upload():
     form = UploadForm()
     if form.validate_on_submit():
+        if not user_has_roles(current_user, RoleEnum.USER):
+            return flask.abort(403, description="You do not have the permission to start jobs.")
         filename = cap_uploads.save(request.files['capture'], folder=current_user.username)
         filepath = os.path.join(app.config['CAPTURES_DIR'], filename)
         if is_mime_valid(filepath):
@@ -94,12 +97,7 @@ def login():
         if user is None or not user.verify_password(form.password.data):
             flask.flash('Invalid username or password', category='error')
             return redirect(url_for('login'))
-        login_user(user, remember=form.remember_me.data)
-        next_page = request.args.get('next')
-        if not is_safe_url(next_page):
-            return flask.abort(400)
-        flask.flash('Successfully logged in.')
-        return redirect(next_page or flask.url_for('index'))
+        return proceed_login(user, remember=form.remember_me.data)
     return render_template('login.html', title='Login', form=form)
 
 
@@ -115,9 +113,23 @@ def register():
         return redirect(url_for('index'))
     form = RegistrationForm()
     if form.validate_on_submit():
-        add_new_user(form)
-        flask.flash('You have been successfully registered.')
-        return redirect(url_for('login'))
+        user = register_user(form, RoleEnum.GUEST)
+        flask.flash("You have been successfully registered as {role} '{name}'.".format(role=RoleEnum.GUEST.value,
+                                                                                       name=user.username))
+        return proceed_login(user)
+    return render_template('register.html', title='Register', form=form)
+
+
+@app.route('/register_admin', methods=['GET', 'POST'])
+@login_required
+@roles_required(RoleEnum.ADMIN)
+def register_admin():
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = register_user(form, RoleEnum.USER)
+        flask.flash("You have successfully registered the new {role} '{name}'.".format(role=RoleEnum.USER.value,
+                                                                                       name=user.username))
+        return redirect(url_for('index'))
     return render_template('register.html', title='Register', form=form)
 
 

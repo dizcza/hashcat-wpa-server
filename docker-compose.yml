@@ -9,7 +9,7 @@ services:
      - "80:80"
      - "9000:80"
     environment:
-       - "HASHCAT_USERNAME=${HASHCAT_USERNAME}"
-       - "HASHCAT_PASSWORD=${HASHCAT_PASSWORD}"
+       - "HASHCAT_ADMIN_USER=${HASHCAT_ADMIN_USER}"
+       - "HASHCAT_ADMIN_PASSWORD=${HASHCAT_ADMIN_PASSWORD}"
        - "TERM=xterm"
     restart: always

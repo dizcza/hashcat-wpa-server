@@ -7,7 +7,9 @@ from urllib.parse import urlparse, urljoin
 
 from flask import request
 
-from app.domain import Rule, WordList
+from app import lock_app
+from app.config import Config
+from app.domain import Rule, WordList, Benchmark
 
 DATE_FORMAT = "%Y-%m-%d %H:%M"
 
@@ -79,3 +81,20 @@ def with_suffix(path: str, suffix: str) -> str:
     base = os.path.splitext(os.path.basename(path))[0]
     new_file = os.path.join(os.path.dirname(path), "{}.{}".format(base, suffix))
     return new_file
+
+
+def is_mime_valid(file_path: str) -> bool:
+    if not os.path.exists(file_path):
+        return False
+    with open(file_path, 'rb') as f:
+        data = f.read()
+    return data.startswith(Config.CAPTURE_MIME)
+
+
+def read_last_benchmark():
+    if not os.path.exists(Config.BENCHMARK_FILE):
+        return Benchmark(date=date_formatted(), speed=0)
+    with lock_app, open(Config.BENCHMARK_FILE) as f:
+        last_line = f.readlines()[-1]
+    date_str, speed = last_line.rstrip().split(',')
+    return Benchmark(date=date_str, speed=speed)

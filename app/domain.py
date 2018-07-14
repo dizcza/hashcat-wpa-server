@@ -2,6 +2,7 @@ import os
 import threading
 from enum import Enum, unique
 from collections import namedtuple
+from app.config import WORDLISTS_DIR, RULES_DIR
 
 
 NONE_ENUM = str(None)
@@ -13,7 +14,7 @@ class Rule(Enum):
     BEST_64 = "best64.rule"
 
     def get_path(self):
-        return os.path.join("rules", self.value)
+        return os.path.join(RULES_DIR, self.value)
 
 
 @unique
@@ -26,7 +27,7 @@ class WordList(Enum):
     ESSID = "essid.txt"
 
     def get_path(self):
-        return os.path.join("wordlists", self.value)
+        return os.path.join(WORDLISTS_DIR, self.value)
 
 
 class ProgressLock(object):
@@ -35,6 +36,7 @@ class ProgressLock(object):
         self.progress = 0
         self.status = "Scheduled"
         self.key = None
+        self.completed = True
 
     def __enter__(self):
         self._lock.acquire()
