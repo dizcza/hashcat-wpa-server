@@ -9,7 +9,7 @@ from functools import partial
 
 from app import db, lock_app
 from app.app_logger import logger
-from app.domain import Rule, WordList, NONE_ENUM, ProgressLock
+from app.domain import Rule, WordList, NONE_ENUM, ProgressLock, JobLock
 from app.hashcat_cmd import HashcatStatus, HashcatCmd
 from app.nvidia_smi import set_cuda_visible_devices
 from app.utils import split_uppercase, read_plain_key, date_formatted, with_suffix
@@ -248,13 +248,12 @@ class HashcatWorker(object):
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.workers)
         self.futures = []
         self.status_timer = self.app.config['HASHCAT_STATUS_TIMER']
-        self.locks = defaultdict(dict)
+        self.locks = {}
 
     def find_task_and_lock(self, job_id_query: int):
         task_id, lock = None, None
-        for task_id, job_locks in self.locks.items():
-            lock = job_locks.get(job_id_query, None)
-            if lock is not None:
+        for task_id, (job_id, lock) in self.locks.items():
+            if job_id == job_id_query:
                 break
         return task_id, lock
 
@@ -292,7 +291,7 @@ class HashcatWorker(object):
         attack = Attack(uploaded_task, lock=lock, timeout=timeout, status_timer=self.status_timer)
         future = self.executor.submit(_crack_async, attack=attack)
         job_id = id(future)
-        self.locks[uploaded_task.id][job_id] = lock
+        self.locks[uploaded_task.id] = JobLock(job_id=job_id, lock=lock)
         future.add_done_callback(self.callback_attack)
         self.futures.append(future)
 

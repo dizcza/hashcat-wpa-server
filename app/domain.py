@@ -7,6 +7,7 @@ from app.config import WORDLISTS_DIR, RULES_DIR
 
 NONE_ENUM = str(None)
 Benchmark = namedtuple('Benchmark', ('date', 'speed'))
+JobLock = namedtuple('JobLock', ('job_id', 'lock'))
 
 
 @unique
@@ -36,7 +37,7 @@ class ProgressLock(object):
         self.progress = 0
         self.status = "Scheduled"
         self.key = None
-        self.completed = True
+        self.completed = False
 
     def __enter__(self):
         self._lock.acquire()

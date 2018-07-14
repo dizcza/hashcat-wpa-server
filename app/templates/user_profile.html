@@ -53,6 +53,9 @@
                 $task_row.find("td.progress").text(data.progress + " %");
                 $task_row.find("td.status").text(data.status);
                 $task_row.find("td.found_key").text(data.found_key);
+                if (data.completed) {
+                    $.get('/delete_lock/' + data.task_id);
+                }
             });
         })
         setTimeout(arguments.callee, 10000);

@@ -76,15 +76,25 @@ def user_profile():
 @login_required
 def progress():
     tasks_progress = []
-    for task in current_user.uploads:
-        for job_id, lock in hashcat_worker.locks[task.id].items():
-            with lock:
-                task_progress = dict(task_id=task.id,
-                                     progress="{:.1f}".format(lock.progress),
-                                     status=lock.status,
-                                     found_key=lock.key)
-            tasks_progress.append(task_progress)
+    user_tasks_id = set(task.id for task in current_user.uploads)
+    user_tasks_running_id = set(hashcat_worker.locks.keys()).intersection(user_tasks_id)
+    for task_id in user_tasks_running_id:
+        job_id, lock = hashcat_worker.locks[task_id]
+        with lock:
+            task_progress = dict(task_id=task_id,
+                                 progress="{:.1f}".format(lock.progress),
+                                 status=lock.status,
+                                 found_key=lock.key,
+                                 completed=lock.completed)
+        tasks_progress.append(task_progress)
     return jsonify(tasks_progress)
+
+
+@app.route('/delete_lock/<int:task_id>')
+@login_required
+def delete_lock(task_id):
+    if task_id in hashcat_worker.locks:
+        del hashcat_worker.locks[task_id]
 
 
 @app.route('/login', methods=['GET', 'POST'])
