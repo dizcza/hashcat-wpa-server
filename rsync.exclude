@@ -14,3 +14,5 @@ rsync.exclude
 app/run.py
 app/__pycache__
 app/benchmark.csv
+README.md
+LICENCE

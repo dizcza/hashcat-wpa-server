@@ -1,7 +1,7 @@
 version: '2'
 services:
   app:
-    image: "hashcat-wpa-server"
+    image: "hashcat-wpa-server:intel-cpu"
     build:
       context: .
       dockerfile: Dockerfile
