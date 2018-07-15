@@ -8,7 +8,7 @@ from urllib.parse import urlparse, urljoin
 from flask import request
 
 from app import lock_app
-from app.config import Config
+from app.config import Config, BENCHMARK_FILE
 from app.domain import Rule, WordList, Benchmark
 
 DATE_FORMAT = "%Y-%m-%d %H:%M"
@@ -92,9 +92,9 @@ def is_mime_valid(file_path: str) -> bool:
 
 
 def read_last_benchmark():
-    if not os.path.exists(Config.BENCHMARK_FILE):
-        return Benchmark(date=date_formatted(), speed=0)
-    with lock_app, open(Config.BENCHMARK_FILE) as f:
+    if not os.path.exists(BENCHMARK_FILE):
+        return Benchmark(date="(Never)", speed=0)
+    with lock_app, open(BENCHMARK_FILE) as f:
         last_line = f.readlines()[-1]
     date_str, speed = last_line.rstrip().split(',')
     return Benchmark(date=date_str, speed=speed)

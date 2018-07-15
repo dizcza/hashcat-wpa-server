@@ -35,6 +35,7 @@ def check_incomplete_tasks():
             task.status = "Completed"
         else:
             task.status = "Aborted"
+            task.completed = True
     db.session.commit()
 
 

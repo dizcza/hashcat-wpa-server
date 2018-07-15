@@ -4,6 +4,7 @@ wordlists/
 logs/
 env/
 ignored/
+database/
 
 # airdump capture
 *.cap

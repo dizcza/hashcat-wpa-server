@@ -5,11 +5,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        branch: intel-cpu
     ports:
-     - "80:80"
-     - "9000:80"
+     - "9111:80"
     environment:
        - "HASHCAT_ADMIN_USER=${HASHCAT_ADMIN_USER}"
        - "HASHCAT_ADMIN_PASSWORD=${HASHCAT_ADMIN_PASSWORD}"
        - "TERM=xterm"
+    volumes:
+      - $HOME/hashcat_database/:/hashcat-wpa-server/database/
     restart: always

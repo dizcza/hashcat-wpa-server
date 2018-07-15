@@ -1,7 +1,7 @@
 import concurrent.futures
+import datetime
 import os
 import re
-import datetime
 import subprocess
 import time
 from collections import defaultdict
@@ -9,11 +9,12 @@ from functools import partial
 
 from app import db, lock_app
 from app.app_logger import logger
+from app.config import BENCHMARK_FILE
 from app.domain import Rule, WordList, NONE_ENUM, ProgressLock, JobLock
 from app.hashcat_cmd import HashcatStatus, HashcatCmd
 from app.nvidia_smi import set_cuda_visible_devices
-from app.utils import split_uppercase, read_plain_key, date_formatted, with_suffix
 from app.uploader import UploadedTask
+from app.utils import split_uppercase, read_plain_key, date_formatted, with_suffix
 
 
 def subprocess_call(args):
@@ -46,12 +47,12 @@ class Attack(object):
 
     timers = defaultdict(lambda: dict(count=0, elapsed=1e-6))
 
-    def __init__(self, uploaded_task: UploadedTask, lock: ProgressLock, timeout: int, status_timer: int):
+    def __init__(self, uploaded_task: UploadedTask, lock: ProgressLock, timeout: int):
         self.lock = lock
         self.capture_path = uploaded_task.filepath
         self.wordlist = None if uploaded_task.wordlist == NONE_ENUM else WordList(uploaded_task.wordlist)
         self.rule = None if uploaded_task.rule == NONE_ENUM else Rule(uploaded_task.rule)
-        self.hashcat_status = HashcatStatus(timeout, status_timer)
+        self.hashcat_status = HashcatStatus(timeout)
         self.response = {
             'capture': self.capture_path,
             'status': "Running",
@@ -219,7 +220,7 @@ def _crack_async(attack: Attack):
         logger.debug("Timer {}: {:.2f} sec".format(name, timer['elapsed'] / timer['count']))
 
 
-def _hashcat_benchmark_async(benchmark_filepath):
+def _hashcat_benchmark_async():
     """
     Called in background process.
     """
@@ -232,7 +233,7 @@ def _hashcat_benchmark_async(benchmark_filepath):
         total_speed += device_speed
     if total_speed > 0:
         snapshot = "{date},{speed}\n".format(date=date_formatted(), speed=total_speed)
-        with lock_app, open(benchmark_filepath, 'a') as f:
+        with lock_app, open(BENCHMARK_FILE, 'a') as f:
             f.write(snapshot)
 
 
@@ -246,9 +247,11 @@ class HashcatWorker(object):
         self.workers = 1
         self.app = app
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.workers)
-        self.futures = []
-        self.status_timer = self.app.config['HASHCAT_STATUS_TIMER']
+        self.futures = {}
         self.locks = {}
+        self.last_benchmark_call = datetime.datetime.now()
+        if not os.path.exists(BENCHMARK_FILE):
+            self.benchmark()
 
     def find_task_and_lock(self, job_id_query: int):
         task_id, lock = None, None
@@ -288,25 +291,44 @@ class HashcatWorker(object):
         :param timeout: brute force timeout in minutes
         """
         lock = ProgressLock()
-        attack = Attack(uploaded_task, lock=lock, timeout=timeout, status_timer=self.status_timer)
+        attack = Attack(uploaded_task, lock=lock, timeout=timeout)
         future = self.executor.submit(_crack_async, attack=attack)
         job_id = id(future)
         self.locks[uploaded_task.id] = JobLock(job_id=job_id, lock=lock)
         future.add_done_callback(self.callback_attack)
-        self.futures.append(future)
+        self.futures[job_id] = future
 
     def benchmark(self):
         """
         Run hashcat WPA benchmark.
         """
-        future = self.executor.submit(_hashcat_benchmark_async, benchmark_filepath=self.app.config['BENCHMARK_FILE'])
-        self.futures.append(future)
+        self.last_benchmark_call = datetime.datetime.now()
+        self.executor.submit(_hashcat_benchmark_async)
 
     def terminate(self):
         futures_active = iter(future for future in self.futures if not future.done())
         for future in futures_active:
             future.cancel()
         subprocess_call(["pkill", "hashcat"])
+
+    def cancel(self, task_id: int):
+        # todo terminate pid
+        if task_id not in self.locks:
+            return False
+        job_id, lock = self.locks[task_id]
+        future = self.futures.get(job_id, None)
+        if future is None:
+            return False
+        cancelled = future.cancel()
+        if cancelled:
+            task = UploadedTask.query.get(task_id)
+            with lock:
+                task.status = lock.status = "Cancelled"
+                task.completed = lock.completed = True
+                task.progress = lock.progress
+                task.found_key = lock.key
+            db.session.commit()
+        return cancelled
 
     def __del__(self):
         self.executor.shutdown(wait=False)

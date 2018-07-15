@@ -1,4 +1,8 @@
 .idea
+__pycache__
+ignored
+migrations
+database/
 .git
 bash
 captures
@@ -9,3 +13,4 @@ nvidia-docker-compose.yml
 rsync.exclude
 app/run.py
 app/__pycache__
+app/benchmark.csv

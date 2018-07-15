@@ -6,34 +6,35 @@
     Last update: {{ benchmark.date }}
     <button onclick="updateBenchmark()">Update</button>
 </p>
-<form action="" method="post">
-    <table>
-        <tr>
-            <th>#</th>
-            <th>Filename</th>
-            <th>Date</th>
-            <th>Progress</th>
-            <th>Duration</th>
-            <th>Wordlist</th>
-            <th>Rule</th>
-            <th>Status</th>
-            <th>Found Key</th>
-        </tr>
-        {%- for row_id, task in enumerate(tasks) %}
-        <tr id="task{{ task.id }}">
-            <td>{{ row_id }}</td>
-            <td>{{ basename(task.filepath) }}</td>
-            <td>{{ task.uploaded_time.strftime('%Y-%m-%d %H:%M') }}</td>
-            <td class="progress">{{ task.progress }} %</td>
-            <td>{{ task.duration }}</td>
-            <td>{{ task.wordlist }}</td>
-            <td>{{ task.rule }}</td>
-            <td class="status">{{ task.status }}</td>
-            <td class="found_key">{{ task.found_key }}</td>
-        </tr>
-        {%- endfor %}
-    </table>
-</form>
+<table>
+    <tr>
+        <th>#</th>
+        <th>Filename</th>
+        <th>Date</th>
+        <th>Progress</th>
+        <th>Duration</th>
+        <th>Wordlist</th>
+        <th>Rule</th>
+        <th>Status</th>
+        <th>Found Key</th>
+    </tr>
+    {%- for row_id, task in enumerate(tasks) %}
+    <tr id="task{{ task.id }}">
+        <td>{{ row_id }}</td>
+        <td>{{ basename(task.filepath) }}</td>
+        <td>{{ task.uploaded_time.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td class="progress">{{ task.progress }} %</td>
+        <td>{{ task.duration }}</td>
+        <td>{{ task.wordlist }}</td>
+        <td>{{ task.rule }}</td>
+        <td class="status">{{ task.status }}</td>
+        <td class="found_key">{{ task.found_key }}</td>
+        {% if not task.completed %}
+        <td><button onclick="cancelTask({{ task.id }})">Cancel</button></td>
+        {% endif %}
+    </tr>
+    {%- endfor %}
+</table>
 {% endblock %}
 
 
@@ -42,11 +43,18 @@
 <script>
     function updateBenchmark() {
        $.get('/benchmark').done(function(message) {
-            alert(message)
+            alert(message);
+       })
+    }
+
+    function cancelTask(task_id) {
+        $.get('/cancel/' + task_id).done(function(message) {
+            alert(message);
        })
     }
 
     $(document).ready(function() {
+        {% if current_user.is_active and current_user.is_authenticated %}
         $.get('/progress').done(function(response) {
             $.each(response, function(index, data) {
                 var $task_row = $("#task" + data.task_id);
@@ -58,6 +66,7 @@
                 }
             });
         })
+        {% endif %}
         setTimeout(arguments.callee, 10000);
     });
 </script>

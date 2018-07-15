@@ -1,5 +1,8 @@
 .git/
 .idea/
+ignored/
+migrations/
+database/
 captures/
 bash/
 env/
@@ -8,3 +11,4 @@ server_keys_backup/
 wordlists/
 temp.py
 rsync.exclude
+app/benchmark.csv

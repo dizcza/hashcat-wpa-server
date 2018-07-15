@@ -11,16 +11,17 @@
             Hashcat WPA/WPA2 server:
             <a href="{{ url_for('index') }}">Home</a>
             {% if current_user.is_anonymous %}
-            <a href="{{ url_for('login') }}">Login or Register</a>
+            <a href="{{ url_for('login') }}">Sign in or Sing up</a>
             {% else %}
-            <a href="{{ url_for('logout') }}">Logout</a>
+            <a href="{{ url_for('logout') }}">Sign out</a>
             {% endif %}
             <a href="{{ url_for('upload') }}">Upload .cap file</a>
             <a href="{{ url_for('user_profile') }}">User profile</a>
         </div>
-            {% if current_user.is_active %}
-            <p>You're logged in as <b>{{ current_user.username }}</b>. Privileges: {{ current_user.roles }}</p>
-            {% endif %}
+        <p><a href="{{ url_for('register_admin') }}">Register a new user (Admin only)</a></p>
+        {% if current_user.is_active %}
+        <p>You're logged in as <b>{{ current_user.username }}</b>. Privileges: {{ current_user.roles }}</p>
+        {% endif %}
         <hr>
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}

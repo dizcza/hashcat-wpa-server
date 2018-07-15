@@ -12,6 +12,8 @@ from app.login import User, RoleEnum, register_user, create_first_users, Role, r
 from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks
 from app.utils import is_safe_url, str_to_date, is_mime_valid, read_last_benchmark
 from app.worker import HashcatWorker
+from app.config import BENCHMARK_UPDATE_PERIOD, BENCHMARK_FILE
+from http import HTTPStatus
 
 hashcat_worker = HashcatWorker(app)
 
@@ -93,8 +95,22 @@ def progress():
 @app.route('/delete_lock/<int:task_id>')
 @login_required
 def delete_lock(task_id):
-    if task_id in hashcat_worker.locks:
-        del hashcat_worker.locks[task_id]
+    deleted = False
+    task = UploadedTask.query.get(task_id)
+    if task is None:
+        return flask.Response(status=HTTPStatus.BAD_REQUEST)
+    if task.user_id != current_user.id:
+        return flask.Response(status=HTTPStatus.FORBIDDEN)
+    if task.id in hashcat_worker.locks:
+        job_id, lock = hashcat_worker.locks[task.id]
+        with lock:
+            if lock.completed:
+                del hashcat_worker.locks[task.id]
+                deleted = True
+    if deleted:
+        return flask.Response("Deleted", status=HTTPStatus.OK)
+    else:
+        return flask.Response(status=HTTPStatus.BAD_REQUEST)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -127,7 +143,7 @@ def register():
         flask.flash("You have been successfully registered as {role} '{name}'.".format(role=RoleEnum.GUEST.value,
                                                                                        name=user.username))
         return proceed_login(user)
-    return render_template('register.html', title='Register', form=form)
+    return render_template('register.html', title='Sign up', form=form)
 
 
 @app.route('/register_admin', methods=['GET', 'POST'])
@@ -140,25 +156,35 @@ def register_admin():
         flask.flash("You have successfully registered the new {role} '{name}'.".format(role=RoleEnum.USER.value,
                                                                                        name=user.username))
         return redirect(url_for('index'))
-    return render_template('register.html', title='Register', form=form)
+    return render_template('register.html', title='Admin register', form=form)
 
 
 @app.route("/benchmark")
 @login_required
 def benchmark():
-    benchmark_last = read_last_benchmark()
-    since_last_update = datetime.datetime.now() - str_to_date(benchmark_last.date)
-    wait_time = app.config['BENCHMARK_UPDATE_PERIOD'] - since_last_update.seconds
-    if benchmark_last.speed == 0 or wait_time < 0:
+    def start_benchmark():
         hashcat_worker.benchmark()
         return jsonify("Started benchmark.")
+
+    if not os.path.exists(BENCHMARK_FILE):
+        return start_benchmark()
+    since_last_update = datetime.datetime.now() - hashcat_worker.last_benchmark_call
+    wait_time = BENCHMARK_UPDATE_PERIOD - since_last_update.seconds
+    if wait_time > 0:
+        return jsonify("Wait {wait_time} seconds for the next benchmark update.".format(wait_time=wait_time))
     else:
-        message = "Wait {wait_time} seconds for the next benchmark update.".format(wait_time=wait_time)
-        return jsonify(message)
+        return start_benchmark()
 
 
-@app.route("/terminate")
+@app.route("/cancel/<int:task_id>")
 @login_required
-def terminate_workers():
-    hashcat_worker.terminate()
-    return jsonify("Terminated")
+def cancel(task_id):
+    task = UploadedTask.query.get(task_id)
+    if task is None:
+        return flask.Response(status=HTTPStatus.BAD_REQUEST)
+    if task.user_id != current_user.id:
+        return flask.Response(status=HTTPStatus.FORBIDDEN)
+    if hashcat_worker.cancel(task.id):
+        return jsonify("Canceled")
+    else:
+        return jsonify("Couldn't cancel the task")
