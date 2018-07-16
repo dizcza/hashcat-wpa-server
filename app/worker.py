@@ -53,11 +53,8 @@ class Attack(object):
         self.wordlist = None if uploaded_task.wordlist == NONE_ENUM else WordList(uploaded_task.wordlist)
         self.rule = None if uploaded_task.rule == NONE_ENUM else Rule(uploaded_task.rule)
         self.hashcat_status = HashcatStatus(timeout)
-        self.response = {
-            'capture': self.capture_path,
-            'status': "Running",
-        }
         self.essid = None
+        self.n_handshakes = 0
         self.key_file = with_suffix(self.capture_path, 'key')
         self.hcap_file = with_suffix(self.capture_path, 'hccapx')
         self.new_cmd = partial(HashcatCmd, hcap_file=self.hcap_file, outfile=self.key_file)
@@ -73,23 +70,20 @@ class Attack(object):
                 return essid
         return None
 
-    def is_already_cracked(self):
-        return os.path.exists(self.key_file)
-
-    def is_attack_needed(self):
-        return os.path.exists(self.hcap_file) and not self.is_already_cracked()
+    def is_attack_needed(self) -> bool:
+        cap2hccapx_success = self.n_handshakes > 0
+        key_already_found = os.path.exists(self.key_file)
+        return cap2hccapx_success and not key_already_found
 
     def read_key(self):
         key_password = None
-        status = "Completed"
         if os.path.exists(self.key_file):
             key_password = read_plain_key(self.key_file)
-        elif not os.path.exists(self.hcap_file):
-            status = "0 WPA handshakes captured"
         with self.lock:
-            self.lock.status = status
             self.lock.key = key_password
             self.lock.progress = 100
+            if self.n_handshakes == 0:
+                self.lock.status = "No hashes loaded"
 
     def cap2hccapx(self):
         """
@@ -99,6 +93,14 @@ class Attack(object):
             self.lock.status = "Converting .cap to .hccapx"
         out, err = subprocess_call(['cap2hccapx', self.capture_path, self.hcap_file])
         self.essid = self.parse_essid(out)
+        if not os.path.exists(self.hcap_file):
+            with self.lock:
+                self.lock.status = "cap2hccapx failed"
+        else:
+            cap2hccapx_status = re.search("Written \d WPA Handshakes", out)
+            if cap2hccapx_status:
+                cap2hccapx_status = cap2hccapx_status.group()
+                self.n_handshakes = int(cap2hccapx_status.split()[1])
 
     def run_essid_attack(self):
         """
