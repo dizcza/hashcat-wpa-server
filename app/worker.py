@@ -11,7 +11,7 @@ from app import db, lock_app
 from app.app_logger import logger
 from app.config import BENCHMARK_FILE
 from app.domain import Rule, WordList, NONE_ENUM, ProgressLock, JobLock
-from app.hashcat_cmd import HashcatStatus, HashcatCmd
+from app.hashcat_cmd import HashcatCmd, run_with_status
 from app.nvidia_smi import set_cuda_visible_devices
 from app.uploader import UploadedTask
 from app.utils import split_uppercase, read_plain_key, date_formatted, with_suffix
@@ -49,10 +49,10 @@ class Attack(object):
 
     def __init__(self, uploaded_task: UploadedTask, lock: ProgressLock, timeout: int):
         self.lock = lock
+        self.timeout = timeout
         self.capture_path = uploaded_task.filepath
         self.wordlist = None if uploaded_task.wordlist == NONE_ENUM else WordList(uploaded_task.wordlist)
         self.rule = None if uploaded_task.rule == NONE_ENUM else Rule(uploaded_task.rule)
-        self.hashcat_status = HashcatStatus(timeout)
         self.essid = None
         self.n_handshakes = 0
         self.key_file = with_suffix(self.capture_path, 'key')
@@ -73,7 +73,9 @@ class Attack(object):
     def is_attack_needed(self) -> bool:
         cap2hccapx_success = self.n_handshakes > 0
         key_already_found = os.path.exists(self.key_file)
-        return cap2hccapx_success and not key_already_found
+        with self.lock:
+            cancelled = self.lock.cancelled
+        return not cancelled and cap2hccapx_success and not key_already_found
 
     def read_key(self):
         key_password = None
@@ -81,7 +83,6 @@ class Attack(object):
             key_password = read_plain_key(self.key_file)
         with self.lock:
             self.lock.key = key_password
-            self.lock.progress = 100
             if self.n_handshakes == 0:
                 self.lock.status = "No hashes loaded"
 
@@ -201,9 +202,7 @@ class Attack(object):
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlist(self.wordlist)
         hashcat_cmd.add_rule(self.rule)
-        for progress in self.hashcat_status.run_with_status(hashcat_cmd):
-            with self.lock:
-                self.lock.progress = progress
+        run_with_status(hashcat_cmd, lock=self.lock, timeout_minutes=self.timeout)
 
 
 def _crack_async(attack: Attack):
@@ -275,13 +274,10 @@ class HashcatWorker(object):
         with lock:
             if exception is not None:
                 lock.status = repr(exception)
-            elif future.cancelled():
-                lock.status = "Canceled"
             task.status = lock.status
             task.progress = lock.progress
             task.found_key = lock.key
-            lock.completed = True
-        task.completed = True
+            task.completed = lock.completed = True
         task.duration = datetime.datetime.now() - task.uploaded_time
         db.session.commit()
 
@@ -322,14 +318,9 @@ class HashcatWorker(object):
         if future is None:
             return False
         cancelled = future.cancel()
-        if cancelled:
-            task = UploadedTask.query.get(task_id)
+        if lock is not None:
             with lock:
-                task.status = lock.status = "Cancelled"
-                task.completed = lock.completed = True
-                task.progress = lock.progress
-                task.found_key = lock.key
-            db.session.commit()
+                cancelled = lock.cancel()
         return cancelled
 
     def __del__(self):

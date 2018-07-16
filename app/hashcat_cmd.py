@@ -3,7 +3,7 @@ import os
 import subprocess
 
 from app.nvidia_smi import set_cuda_visible_devices
-from app.domain import Rule, WordList
+from app.domain import Rule, WordList, ProgressLock
 from app.config import HASHCAT_STATUS_TIMER
 
 HASHCAT_WARNINGS = (
@@ -87,31 +87,35 @@ class HashcatCmd(object):
         self.custom_args.append(argument)
 
 
-class HashcatStatus(object):
-    def __init__(self, timeout_minutes: int):
-        self.timeout = timeout_minutes * 60
-
-    def run_with_status(self, hashcat_cmd: HashcatCmd):
-        start = time.time()
-        hashcat_cmd_list = hashcat_cmd.build()
-        process = subprocess.Popen(hashcat_cmd_list,
-                                   universal_newlines=True,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
-        for line in iter(process.stdout.readline, ''):
-            time_spent = time.time() - start
-            if time_spent > self.timeout:
+def run_with_status(hashcat_cmd: HashcatCmd, lock: ProgressLock, timeout_minutes: int):
+    timeout_seconds = timeout_minutes * 60
+    start = time.time()
+    hashcat_cmd_list = hashcat_cmd.build()
+    process = subprocess.Popen(hashcat_cmd_list,
+                               universal_newlines=True,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    for line in iter(process.stdout.readline, ''):
+        with lock:
+            if lock.cancelled:
                 process.terminate()
-                raise TimeoutError("Timed out {} sec".format(self.timeout))
-            if line.startswith("STATUS"):
-                parts = line.split()
-                try:
-                    progress_index = parts.index("PROGRESS")
-                    tried_keys = parts[progress_index + 1]
-                    total_keys = parts[progress_index + 2]
-                    progress = 100. * int(tried_keys) / int(total_keys)
-                    yield progress
-                except ValueError or IndexError:
-                    # ignore this update
-                    pass
-        yield 100
+                return
+        time_spent = time.time() - start
+        if time_spent > timeout_seconds:
+            process.terminate()
+            raise TimeoutError("Timed out {} sec".format(timeout_seconds))
+        if line.startswith("STATUS"):
+            parts = line.split()
+            try:
+                progress_index = parts.index("PROGRESS")
+                tried_keys = parts[progress_index + 1]
+                total_keys = parts[progress_index + 2]
+                progress = 100. * int(tried_keys) / int(total_keys)
+                with lock:
+                    lock.progress = progress
+            except ValueError or IndexError:
+                # ignore this update
+                pass
+    with lock:
+        lock.progress = 100
+        lock.status = "Completed"

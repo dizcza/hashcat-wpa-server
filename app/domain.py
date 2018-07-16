@@ -38,6 +38,12 @@ class ProgressLock(object):
         self.status = "Scheduled"
         self.key = None
         self.completed = False
+        self.cancelled = False
+
+    def cancel(self):
+        self.cancelled = True
+        self.status = "Cancelled"
+        return True
 
     def __enter__(self):
         self._lock.acquire()

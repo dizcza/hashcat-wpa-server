@@ -9,7 +9,7 @@ RULES_DIR = os.path.join(ROOT_DIR, "rules")
 DATABASE_PATH = os.path.join(ROOT_DIR, "database", "hashcat_wpa.db")
 
 # Hashcat
-HASHCAT_STATUS_TIMER = 20 * 60  # seconds
+HASHCAT_STATUS_TIMER = 20  # seconds
 BENCHMARK_FILE = os.path.join(APP_DIR, "benchmark.csv")
 BENCHMARK_UPDATE_PERIOD = 60  # seconds
 

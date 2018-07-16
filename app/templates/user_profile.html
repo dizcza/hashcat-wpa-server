@@ -23,7 +23,7 @@
         <td>{{ row_id }}</td>
         <td>{{ basename(task.filepath) }}</td>
         <td>{{ task.uploaded_time.strftime('%Y-%m-%d %H:%M') }}</td>
-        <td class="progress">{{ task.progress }} %</td>
+        <td class="progress">{{ "{:.1f}".format(task.progress) }} %</td>
         <td>{{ task.duration }}</td>
         <td>{{ task.wordlist }}</td>
         <td>{{ task.rule }}</td>
