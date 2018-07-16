@@ -3,6 +3,7 @@
 import datetime
 import os
 import subprocess
+from functools import wraps
 from urllib.parse import urlparse, urljoin
 
 from flask import request
@@ -10,6 +11,7 @@ from flask import request
 from app import lock_app
 from app.config import Config, BENCHMARK_FILE
 from app.domain import Rule, WordList, Benchmark
+from app.nvidia_smi import NvidiaSmi
 
 DATE_FORMAT = "%Y-%m-%d %H:%M"
 
@@ -98,3 +100,11 @@ def read_last_benchmark():
         last_line = f.readlines()[-1]
     date_str, speed = last_line.rstrip().split(',')
     return Benchmark(date=date_str, speed=speed)
+
+
+def wrap_render_template(render_template):
+    @wraps(render_template)
+    def wrapper(*args, **kwargs):
+        kwargs.update(gpus=NvidiaSmi.get_gpus())
+        return render_template(*args, **kwargs)
+    return wrapper

@@ -22,6 +22,7 @@
         {% if current_user.is_active %}
         <p>You're logged in as <b>{{ current_user.username }}</b>. Privileges: {{ current_user.roles }}</p>
         {% endif %}
+        <p>Available GPUs: {{ gpus }} </p>
         <hr>
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}

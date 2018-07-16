@@ -1,5 +1,6 @@
 import datetime
 import os
+from http import HTTPStatus
 
 import flask
 from flask import request, render_template, redirect, url_for
@@ -7,15 +8,15 @@ from flask.json import jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 
 from app import app, db
+from app.config import BENCHMARK_UPDATE_PERIOD, BENCHMARK_FILE
 from app.login import LoginForm, RegistrationForm
 from app.login import User, RoleEnum, register_user, create_first_users, Role, roles_required, user_has_roles
 from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks
-from app.utils import is_safe_url, str_to_date, is_mime_valid, read_last_benchmark
+from app.utils import is_safe_url, is_mime_valid, read_last_benchmark, wrap_render_template
 from app.worker import HashcatWorker
-from app.config import BENCHMARK_UPDATE_PERIOD, BENCHMARK_FILE
-from http import HTTPStatus
 
 hashcat_worker = HashcatWorker(app)
+render_template = wrap_render_template(render_template)
 
 
 def proceed_login(user: User, remember=False):

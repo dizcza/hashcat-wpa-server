@@ -2,6 +2,7 @@ import subprocess
 import os
 
 from app.app_logger import logger
+from app.caching import Cache
 
 
 class GpuInfo(object):
@@ -30,9 +31,17 @@ class GpuInfo(object):
 
 
 class NvidiaSmi(object):
-    def __init__(self):
+
+    @staticmethod
+    @Cache(name="NvidiaSmi", timeout=10)
+    def get_gpus(min_free_memory=0., max_load=1.):
+        """
+        :param min_free_memory: filter GPUs with free memory no less than specified, between 0 and 1
+        :param max_load: max gpu utilization load, between 0 and 1
+        :return: list of available GpuInfo's
+        """
         command = "nvidia-smi --query-gpu=index,memory.total,memory.used,utilization.gpu --format=csv,noheader,nounits".split()
-        self.gpus = []
+        gpus = []
         try:
             process = subprocess.Popen(command,
                                        universal_newlines=True,
@@ -41,19 +50,14 @@ class NvidiaSmi(object):
             for line in stdout.splitlines():
                 index, memory_total, memory_used, gpu_load = line.split(', ')
                 gpu = GpuInfo(index, memory_total, memory_used, gpu_load)
-                self.gpus.append(gpu)
+                gpus.append(gpu)
         except FileNotFoundError:
             # No GPU is detected. Try running `nvidia-smi` in a terminal."
             pass
 
-    def get_gpus(self, min_free_memory=0., max_load=1.):
-        """
-        :param min_free_memory: filter GPUs with free memory no less than specified, between 0 and 1
-        :param max_load: max gpu utilization load, between 0 and 1
-        :return: list of available GpuInfo's
-        """
-        gpus = [gpu for gpu in self.gpus if gpu.get_available_memory_portion() >= min_free_memory and
+        gpus = [gpu for gpu in gpus if gpu.get_available_memory_portion() >= min_free_memory and
                 gpu.gpu_load <= max_load]
+
         return gpus
 
 
@@ -64,7 +68,8 @@ def set_cuda_visible_devices(limit_devices=int(1e9), min_free_memory=0.4, max_lo
     :param min_free_memory: filter GPUs with free memory no less than specified, between 0 and 1
     :param max_load: max gpu utilization load, between 0 and 1
     """
-    gpus = NvidiaSmi().get_gpus(min_free_memory, max_load)
+    Cache.clear_cache("NvidiaSmi")
+    gpus = NvidiaSmi.get_gpus(min_free_memory, max_load)
     gpus.sort(key=lambda gpu: gpu.get_available_memory_portion(), reverse=True)
     limit_devices = min(limit_devices, len(gpus))
     gpus = gpus[:limit_devices]
