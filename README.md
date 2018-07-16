@@ -1,7 +1,14 @@
 [![Docker Hub](http://dockeri.co/image/dizcza/hashcat-wpa-server)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/)
 
-[![](https://images.microbadger.com/badges/version/dizcza/hashcat-wpa-server.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server)
-[![](https://images.microbadger.com/badges/image/dizcza/hashcat-wpa-server.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server)
+[![](https://images.microbadger.com/badges/version/dizcza/hashcat-wpa-server:intel-cpu.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:intel-cpu)
+[![](https://images.microbadger.com/badges/image/dizcza/hashcat-wpa-server:intel-cpu.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:intel-cpu)
+
+[![](https://images.microbadger.com/badges/version/dizcza/hashcat-wpa-server:nvidia.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:nvidia)
+[![](https://images.microbadger.com/badges/image/dizcza/hashcat-wpa-server:nvidia.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:nvidia)
+
+[![](https://images.microbadger.com/badges/version/dizcza/hashcat-wpa-server:nvidia-full.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:nvidia-full)
+[![](https://images.microbadger.com/badges/image/dizcza/hashcat-wpa-server:nvidia-full.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:nvidia-full)
+
 
 # Hashcat WPA/WPA2 server
 
@@ -22,16 +29,28 @@ docker-compose up -d
 That's all! Navigate to [localhost:9111](localhost:9111). SQLite database with all users and uploaded tasks will be located at `$HOME/hashcat_database/hashcat_wpa.db` in your host machine.
 
 
-#### Using docker hub
+#### Using docker hub. Nvidia GPU
 
-Alternatively, you can just pull the container from the docker hub and pass all arguments from docker-compose mannualy.
+Make sure you've installed [nvidia-docker2](https://github.com/NVIDIA/nvidia-docker).
+
+Then run `:nvidia` or `:nvidia-full` docker container from the [docker hub](https://hub.docker.com/r/dizcza/hashcat-wpa-server/): 
 
 ```
-docker run -d -e HASHCAT_ADMIN_USER=admin -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> -v /home/dizcza/hashcat_database:/hashcat-wpa-server/database -p 9111:80 dizcza/hashcat-wpa-server
+docker run --runtime=nvidia -d -e HASHCAT_ADMIN_USER=admin -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> -v /home/dizcza/hashcat_database:/hashcat-wpa-server/database -p 9111:80 dizcza/hashcat-wpa-server:nvidia-full
 ```
 
-## Nvidia GPU
+Or build your own image with Nvidia support: 
 
-1. Make sure you've installed [nvidia-docker2](https://github.com/NVIDIA/nvidia-docker).
-2. Build image with Nvidia support: `docker build --build-arg branch=nvidia-full -t hashcat-wpa-server:nvidia-full -f Dockerfile .`
-3. Run docker container: `docker run --runtime=nvidia -d -e HASHCAT_ADMIN_USER=admin -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> -v /home/dizcza/hashcat_database:/hashcat-wpa-server/database -p 9111:80 hashcat-wpa-server:nvidia-full`
+```
+docker build --build-arg branch=nvidia-full -t hashcat-wpa-server:nvidia-full -f Dockerfile .
+```
+
+Then run your `hashcat-wpa-server:nvidia-full` docker image instead of `dizcza/hashcat-wpa-server:nvidia-full`. You'll still need [nvidia-docker2](https://github.com/NVIDIA/nvidia-docker) package installed to start containers.
+
+#### Using docker hub. Intel CPU
+
+For those who don't have GPUs, use `:intel-cpu` tag (suitable for AWS free tier instances):
+
+```
+docker run -d -e HASHCAT_ADMIN_USER=admin -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> -v /home/dizcza/hashcat_database:/hashcat-wpa-server/database -p 9111:80 dizcza/hashcat-wpa-server:intel-cpu
+```
