@@ -24,7 +24,8 @@ class WordList(Enum):
     PHPBB = "phpbb.txt"
     DIGITS_8 = "digits_8.txt"
     DIGITS_APPEND = "digits_append.txt"
-    WEAK = "conficker_elitehacker_john_riskypass_top1000.txt"
+    TOP4K = "top4k.txt"
+    TOP304k = "top304k.txt"
     ESSID = "essid.txt"
 
     def get_path(self):

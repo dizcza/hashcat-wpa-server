@@ -10,7 +10,7 @@ from flask import request
 
 from app import lock_app
 from app.config import Config, BENCHMARK_FILE
-from app.domain import Rule, WordList, Benchmark, ProgressLock
+from app.domain import Rule, WordList, Benchmark
 from app.nvidia_smi import NvidiaSmi
 
 DATE_FORMAT = "%Y-%m-%d %H:%M"
@@ -76,13 +76,6 @@ def date_formatted() -> str:
 
 def str_to_date(date_str: str) -> datetime.datetime:
     return datetime.datetime.strptime(date_str, DATE_FORMAT)
-
-
-def with_suffix(path: str, suffix: str) -> str:
-    # todo use pathlib
-    base = os.path.splitext(os.path.basename(path))[0]
-    new_file = os.path.join(os.path.dirname(path), "{}.{}".format(base, suffix))
-    return new_file
 
 
 def is_mime_valid(file_path: str) -> bool:

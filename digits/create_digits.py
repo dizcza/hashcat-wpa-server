@@ -126,7 +126,7 @@ def create_digits_mobile(flashback_years=50):
         digits.update(_create_digits_mask(masks, alphabet=alphabet, alphabet_size_max=1))
     digits.update(_create_digits_cycle(password_length_max=10))
     digits.update(_create_days(flashback_years, date_fmt=("%d%m%Y",)))
-    with open(os.path.join('wordlists', 'conficker_elitehacker_john_riskypass_top1000.txt')) as f:
+    with open(os.path.join('wordlists', 'top4k.txt')) as f:
         weak = f.read().splitlines()
         weak = filter(lambda password: len(password) >= 8, weak)
         digits.update(weak)

@@ -2,62 +2,30 @@ import concurrent.futures
 import datetime
 import os
 import re
-import subprocess
-import time
-from collections import defaultdict
-from functools import partial
+from pathlib import Path
 
 from app import db, lock_app
 from app.app_logger import logger
+from app.attack.base_attack import BaseAttack, subprocess_call, monitor_timer
+from app.attack.hashcat_cmd import run_with_status
 from app.config import BENCHMARK_FILE
 from app.domain import Rule, WordList, NONE_ENUM, ProgressLock, JobLock
-from app.hashcat_cmd import HashcatCmd, run_with_status
 from app.nvidia_smi import set_cuda_visible_devices
 from app.uploader import UploadedTask
-from app.utils import split_uppercase, read_plain_key, date_formatted, with_suffix
+from app.utils import read_plain_key, date_formatted
 
 
-def subprocess_call(args):
-    """
-    Called in background process.
-    :param args: shell args
-    """
-    logger.debug(">>> {}".format(' '.join(args)))
-    process = subprocess.Popen(args,
-                               universal_newlines=True,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    out, err = process.communicate()
-    return out, err
-
-
-def monitor_timer(func):
-    def wrapped(*args, **kwargs):
-        start = time.time()
-        res = func(*args, **kwargs)
-        elapsed_sec = time.time() - start
-        timer = Attack.timers[func.__name__]
-        timer['count'] += 1
-        timer['elapsed'] += elapsed_sec
-        return res
-    return wrapped
-
-
-class Attack(object):
-
-    timers = defaultdict(lambda: dict(count=0, elapsed=1e-6))
+class CapAttack(BaseAttack):
 
     def __init__(self, uploaded_task: UploadedTask, lock: ProgressLock, timeout: int):
+        capture_path = Path(uploaded_task.filepath)
+        super().__init__(hcap_file=capture_path.with_suffix('.hccapx'))
         self.lock = lock
         self.timeout = timeout
-        self.capture_path = uploaded_task.filepath
+        self.capture_path = capture_path
         self.wordlist = None if uploaded_task.wordlist == NONE_ENUM else WordList(uploaded_task.wordlist)
         self.rule = None if uploaded_task.rule == NONE_ENUM else Rule(uploaded_task.rule)
         self.essid = None
-        self.key_file = with_suffix(self.capture_path, 'key')
-        self.hcap_file = with_suffix(self.capture_path, 'hccapx')
-        session = os.path.basename(self.capture_path)
-        self.new_cmd = partial(HashcatCmd, hcap_file=self.hcap_file, outfile=self.key_file, session=session)
 
     @staticmethod
     def parse_essid(stdout: str):
@@ -68,7 +36,7 @@ class Attack(object):
                 end = line.index(" (Length:", start)
                 essid = line[start: end]
                 return essid
-        return None
+        raise ValueError("Could not parse ESSID")
 
     def is_attack_needed(self) -> bool:
         key_already_found = os.path.exists(self.key_file)
@@ -92,7 +60,7 @@ class Attack(object):
         """
         with self.lock:
             self.lock.status = "Converting .cap to .hccapx"
-        out, err = subprocess_call(['cap2hccapx', self.capture_path, self.hcap_file])
+        out, err = subprocess_call(['cap2hccapx', str(self.capture_path), str(self.hcap_file)])
         self.essid = self.parse_essid(out)
         if not os.path.exists(self.hcap_file):
             raise FileNotFoundError("cap2hccapx failed")
@@ -109,87 +77,37 @@ class Attack(object):
         Run ESSID + digits_append.txt combinator attack.
         Run ESSID + best64.rule attack.
         """
-        if self.essid is None:
-            return
         if not self.is_attack_needed():
             return
-
-        def modify_case(word):
-            return {word, word.lower(), word.upper(), word.capitalize(), word.lower().capitalize()}
-
         with self.lock:
             self.lock.status = "Running ESSID attack"
-        essid_parts = {self.essid}
-        regex_non_char = re.compile('[^a-zA-Z]')
-        essid_parts.update(regex_non_char.split(self.essid))
-        essid_parts.update(split_uppercase(self.essid))
-        essids_case_insensitive = set()
-        for essid in essid_parts:
-            essid = regex_non_char.sub('', essid)
-            essids_case_insensitive.update(modify_case(essid))
-        essids_case_insensitive.update(modify_case(self.essid))
-        essids_case_insensitive = filter(len, essids_case_insensitive)
-        with open(WordList.ESSID.get_path(), 'w') as f:
-            f.writelines([essid + '\n' for essid in essids_case_insensitive])
-        self._run_essid_digits()
-        self._run_essid_rule()
+        self.write_essid_wordlist(self.essid)
+        self._run_essid_digits(hcap_fpath=self.hcap_file)
+        self._run_essid_rule(hcap_fpath=self.hcap_file)
 
     @monitor_timer
-    def _run_essid_digits(self):
-        """
-        Run ESSID + digits_append.txt combinator attack.
-        """
-        hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlist(WordList.ESSID)
-        hashcat_cmd.add_wordlist(WordList.DIGITS_APPEND)
-        hashcat_cmd.add_custom_argument("-a1")
-        subprocess_call(hashcat_cmd.build())
+    def run_top4k(self):
+        if not self.is_attack_needed():
+            return
+        with self.lock:
+            self.lock.status = "Running top4k with rules"
+        super().run_top4k()
 
     @monitor_timer
-    def _run_essid_rule(self):
-        """
-        Run ESSID + best64.rule attack.
-        """
-        hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlist(WordList.ESSID)
-        hashcat_cmd.add_rule(Rule.BEST_64)
-        hashcat_cmd.pipe_word_candidates = True
-        hashcat_cmd = ' '.join(hashcat_cmd.build())
-        os.system(hashcat_cmd)
+    def run_top304k(self):
+        if not self.is_attack_needed():
+            return
+        with self.lock:
+            self.lock.status = "Running top304k"
+        super().run_top304k()
 
     @monitor_timer
     def run_digits8(self):
-        """
-        Run digits8+ attack. This includes:
-        - birthdays 100 years backward
-        - simple digits like 88888888, 12345678, etc.
-        For more information refer to `digits/create_digits.py`
-        """
         if not self.is_attack_needed():
             return
         with self.lock:
             self.lock.status = "Running digits8"
-        hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlist(WordList.DIGITS_8)
-        subprocess_call(hashcat_cmd.build())
-
-    @monitor_timer
-    def run_weak_passwords(self):
-        """
-        Run weak password attack, using a very shallow yet commonly used dictionaries:
-        - john.txt
-        - conficker.txt
-        """
-        if not self.is_attack_needed():
-            return
-        with self.lock:
-            self.lock.status = "Running weak passwords"
-        hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlist(WordList.WEAK)
-        hashcat_cmd.add_rule(Rule.BEST_64)
-        hashcat_cmd.pipe_word_candidates = True
-        hashcat_cmd = ' '.join(hashcat_cmd.build())
-        os.system(hashcat_cmd)
+        super().run_digits8()
 
     @monitor_timer
     def run_main_wordlist(self):
@@ -206,14 +124,15 @@ class Attack(object):
         run_with_status(hashcat_cmd, lock=self.lock, timeout_minutes=self.timeout)
 
 
-def _crack_async(attack: Attack):
+def _crack_async(attack: CapAttack):
     """
     Called in background process.
     :param attack: hashcat attack to crack uploaded capture
     """
     attack.cap2hccapx()
     attack.run_essid_attack()
-    attack.run_weak_passwords()
+    attack.run_top4k()
+    attack.run_top304k()
     attack.run_digits8()
     attack.run_main_wordlist()
     attack.read_key()
@@ -290,7 +209,7 @@ class HashcatWorker(object):
         :param timeout: brute force timeout in minutes
         """
         lock = ProgressLock()
-        attack = Attack(uploaded_task, lock=lock, timeout=timeout)
+        attack = CapAttack(uploaded_task, lock=lock, timeout=timeout)
         future = self.executor.submit(_crack_async, attack=attack)
         job_id = id(future)
         self.locks[uploaded_task.id] = JobLock(job_id=job_id, lock=lock)

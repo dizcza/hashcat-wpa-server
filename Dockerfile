@@ -11,11 +11,15 @@ RUN wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O /tmp/get
 
 # wordlists
 RUN mkdir -p /hashcat-wpa-server/wordlists
+COPY ./rules /hashcat-wpa-server/rules
 WORKDIR /hashcat-wpa-server/wordlists
 RUN for dict in phpbb.txt.bz2 rockyou.txt.bz2; do \
     wget -q --no-check-certificate http://downloads.skullsecurity.org/passwords/${dict} && \
     bzip2 -d ${dict}; done
-RUN wget --no-check-certificate https://www.dropbox.com/s/6439rfwfy6qaz3h/conficker_elitehacker_john_riskypass_top1000.txt?dl=1 -O conficker_elitehacker_john_riskypass_top1000.txt
+RUN wget --no-check-certificate https://www.dropbox.com/s/6439rfwfy6qaz3h/conficker_elitehacker_john_riskypass_top1000.txt?dl=1 -O top4k.txt
+RUN wget --no-check-certificate https://raw.githubusercontent.com/berzerk0/Probable-Wordlists/master/Real-Passwords/Top304Thousand-probable-v2.txt -O top304k.txt
+RUN ["/bin/bash", "-c", "comm -23 <(sort /hashcat-wpa-server/wordlists/top304k.txt) <(sort <(hashcat --stdout -r /hashcat-wpa-server/rules/best64.rule /hashcat-wpa-server/wordlists/top4k.txt)) > /tmp/tmp"]
+RUN mv /tmp/tmp /hashcat-wpa-server/wordlists/top304k.txt
 
 RUN mkdir -p /hashcat-wpa-server/captures
 

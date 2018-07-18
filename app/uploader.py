@@ -1,6 +1,7 @@
 import datetime
 import os
 from enum import Enum
+from pathlib import Path
 
 from flask_uploads import UploadSet, configure_uploads
 from flask_wtf import FlaskForm
@@ -10,7 +11,7 @@ from wtforms.validators import DataRequired
 
 from app import app, db
 from app.domain import WordList, Rule, NONE_ENUM
-from app.utils import with_suffix, read_plain_key
+from app.utils import read_plain_key
 
 EXTENSIONS = ('cap',)
 TIMEOUT_HASHCAT_MINUTES = 120
@@ -29,7 +30,7 @@ def _choices_from(*enums: Enum):
 
 def check_incomplete_tasks():
     for task in UploadedTask.query.filter_by(completed=False):
-        key_path = with_suffix(task.filepath, 'key')
+        key_path = Path(task.filepath).with_suffix('.key')
         if os.path.exists(key_path):
             task.found_key = read_plain_key(key_path)
             task.status = "Completed"
