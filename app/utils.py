@@ -10,7 +10,7 @@ from flask import request
 
 from app import lock_app
 from app.config import Config, BENCHMARK_FILE
-from app.domain import Rule, WordList, Benchmark
+from app.domain import Rule, WordList, Benchmark, ProgressLock
 from app.nvidia_smi import NvidiaSmi
 
 DATE_FORMAT = "%Y-%m-%d %H:%M"

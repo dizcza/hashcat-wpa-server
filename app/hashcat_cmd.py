@@ -1,10 +1,12 @@
-import time
 import os
 import subprocess
+import time
+from pathlib import Path
+from typing import Union
 
-from app.nvidia_smi import set_cuda_visible_devices
-from app.domain import Rule, WordList, ProgressLock
 from app.config import HASHCAT_STATUS_TIMER
+from app.domain import Rule, WordList, ProgressLock
+from app.nvidia_smi import set_cuda_visible_devices
 
 HASHCAT_WARNINGS = (
     "nvmlDeviceGetCurrPcieLinkWidth",
@@ -39,9 +41,10 @@ def split_warnings_errors(stderr: str):
 
 
 class HashcatCmd(object):
-    def __init__(self, hcap_file: str, outfile: str):
-        self.hcap_file = hcap_file
-        self.outfile = outfile
+    def __init__(self, hcap_file: Union[str, Path], outfile: Union[str, Path], session=None):
+        self.hcap_file = str(hcap_file)
+        self.outfile = str(outfile)
+        self.session = session
         self.rules = []
         self.wordlists = []
         self.custom_args = []
@@ -65,6 +68,8 @@ class HashcatCmd(object):
         command.append("--status")
         command.append("--status-timer={}".format(HASHCAT_STATUS_TIMER))
         command.append("--machine-readable")
+        if self.session is not None:
+            command.append("--session={}".format(self.session))
         for arg in self.custom_args:
             command.append(arg)
         command.append(self.hcap_file)
@@ -99,7 +104,7 @@ def run_with_status(hashcat_cmd: HashcatCmd, lock: ProgressLock, timeout_minutes
         with lock:
             if lock.cancelled:
                 process.terminate()
-                return
+                raise InterruptedError("Cancelled")
         time_spent = time.time() - start
         if time_spent > timeout_seconds:
             process.terminate()
@@ -116,6 +121,3 @@ def run_with_status(hashcat_cmd: HashcatCmd, lock: ProgressLock, timeout_minutes
             except ValueError or IndexError:
                 # ignore this update
                 pass
-    with lock:
-        lock.progress = 100
-        lock.status = "Completed"
