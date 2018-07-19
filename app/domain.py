@@ -26,7 +26,10 @@ class WordList(Enum):
     DIGITS_APPEND = "digits_append.txt"
     TOP4K = "top4k.txt"
     TOP304k = "top304k.txt"
+
+    # temporary file holders
     ESSID = "essid.txt"
+    BSSID = "mac_ap.txt"
 
     def get_path(self):
         return os.path.join(WORDLISTS_DIR, self.value)

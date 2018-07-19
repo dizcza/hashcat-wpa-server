@@ -57,6 +57,24 @@ class BaseAttack(object):
         """
         raise NotImplementedError()
 
+    def run_bssid_attack(self, mac_ap: str, hcap_fpath: Path):
+        """
+        Some routers, for example, TP-LINK, use last 8 MAC AP characters as the default password.
+        :param mac_ap: MAC AP (BSSID)
+        :param hcap_fpath: path to .hccapx
+        """
+        mac_ap = mac_ap.strip(':\n')
+        password_len = 8
+        mac_ap_candidates = {mac_ap + '\n'}
+        for start in range(len(mac_ap) - password_len):
+            mac_ap_chunk = mac_ap[start: start + password_len]
+            mac_ap_candidates.add(mac_ap_chunk + '\n')
+        with open(WordList.BSSID.get_path(), 'w') as f:
+            f.writelines(mac_ap_candidates)
+        hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=hcap_fpath.with_suffix('.key'), session=self.session)
+        hashcat_cmd.add_wordlist(WordList.BSSID)
+        subprocess_call(hashcat_cmd.build())
+
     @staticmethod
     def collect_essid_parts(essid_origin: str):
         def modify_case(word: str):

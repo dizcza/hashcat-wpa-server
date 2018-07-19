@@ -1,4 +1,5 @@
 import argparse
+import binascii
 from pathlib import Path
 from typing import Union
 
@@ -31,16 +32,18 @@ class HccapxAttack(BaseAttack):
             essid_len = capture[9]
             try:
                 essid_unique = capture[10: 10 + essid_len].decode('ascii')
+                mac_ap = binascii.hexlify(capture[59: 65]).decode('ascii')
             except UnicodeDecodeError:
                 # skip non-ascii ESSIDs
                 continue
-            print(f"ESSID {essid_unique}")
+            print(f"BSSID={mac_ap} ESSID={essid_unique}")
             hcap_fpath_essid = self.hcap_split_dir.joinpath(essid_unique + '.hccapx')
             with open(hcap_fpath_essid, 'wb') as f:
                 f.write(capture)
             self.write_essid_wordlist(essid_unique)
             self._run_essid_digits(hcap_fpath_essid)
             self._run_essid_rule(hcap_fpath_essid)
+            self.run_bssid_attack(mac_ap=mac_ap, hcap_fpath=hcap_fpath_essid)
 
 
 def crack_hccapx():

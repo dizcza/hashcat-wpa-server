@@ -25,17 +25,21 @@ class CapAttack(BaseAttack):
         self.capture_path = capture_path
         self.wordlist = None if uploaded_task.wordlist == NONE_ENUM else WordList(uploaded_task.wordlist)
         self.rule = None if uploaded_task.rule == NONE_ENUM else Rule(uploaded_task.rule)
+        self.bssid = None
         self.essid = None
 
     @staticmethod
-    def parse_essid(stdout: str):
+    def parse_bssid_essid(stdout: str):
         essid_key = "ESSID="
+        bssid_key = "BSSID="
+        mac_ap_len = 17
         for line in stdout.splitlines():
-            if essid_key in line:
-                start = line.index(essid_key) + len(essid_key)
-                end = line.index(" (Length:", start)
-                essid = line[start: end]
-                return essid
+            if bssid_key in line:
+                bssid_start = line.index(bssid_key) + mac_ap_len
+                bssid = line[bssid_start: bssid_start + mac_ap_len]
+                essid_start = line.index(essid_key) + len(essid_key)
+                essid = line[essid_start: line.index(" (Length:", essid_start)]
+                return bssid, essid
         raise ValueError("Could not parse ESSID")
 
     def is_attack_needed(self) -> bool:
@@ -61,7 +65,7 @@ class CapAttack(BaseAttack):
         with self.lock:
             self.lock.status = "Converting .cap to .hccapx"
         out, err = subprocess_call(['cap2hccapx', str(self.capture_path), str(self.hcap_file)])
-        self.essid = self.parse_essid(out)
+        self.bssid, self.essid = self.parse_bssid_essid(out)
         if not os.path.exists(self.hcap_file):
             raise FileNotFoundError("cap2hccapx failed")
         else:
@@ -131,6 +135,7 @@ def _crack_async(attack: CapAttack):
     """
     attack.cap2hccapx()
     attack.run_essid_attack()
+    attack.run_bssid_attack(mac_ap=attack.bssid, hcap_fpath=attack.hcap_file)
     attack.run_top4k()
     attack.run_top304k()
     attack.run_digits8()
