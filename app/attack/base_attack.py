@@ -5,7 +5,8 @@ import time
 from collections import defaultdict
 from functools import partial
 from pathlib import Path
-from typing import Union
+from tempfile import NamedTemporaryFile
+from typing import Union, List
 
 from app.app_logger import logger
 from app.attack.hashcat_cmd import HashcatCmd
@@ -69,14 +70,15 @@ class BaseAttack(object):
         for start in range(len(mac_ap) - password_len):
             mac_ap_chunk = mac_ap[start: start + password_len]
             mac_ap_candidates.add(mac_ap_chunk + '\n')
-        with open(WordList.BSSID.get_path(), 'w') as f:
-            f.writelines(mac_ap_candidates)
         hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=hcap_fpath.with_suffix('.key'), session=self.session)
-        hashcat_cmd.add_wordlist(WordList.BSSID)
-        subprocess_call(hashcat_cmd.build())
+        with NamedTemporaryFile(mode='w') as f:
+            f.writelines(mac_ap_candidates)
+            f.seek(0)
+            hashcat_cmd.add_wordlist(f.name)
+            subprocess_call(hashcat_cmd.build())
 
     @staticmethod
-    def collect_essid_parts(essid_origin: str):
+    def collect_essid_parts(essid_origin: str) -> List[str]:
         def modify_case(word: str):
             return {word, word.lower(), word.upper(), word.capitalize(), word.lower().capitalize()}
         regex_non_char = re.compile('[^a-zA-Z]')
@@ -89,32 +91,27 @@ class BaseAttack(object):
             essids_case_insensitive.update(modify_case(essid))
         essids_case_insensitive.update(modify_case(essid_origin))
         essids_case_insensitive = filter(len, essids_case_insensitive)
-        return essids_case_insensitive
-
-    @staticmethod
-    def write_essid_wordlist(essid_origin: str):
-        essids_case_insensitive = BaseAttack.collect_essid_parts(essid_origin)
-        with open(WordList.ESSID.get_path(), 'w') as f:
-            f.writelines([essid + '\n' for essid in essids_case_insensitive])
+        essids_new_line = list(essid + '\n' for essid in essids_case_insensitive)
+        return essids_new_line
 
     @monitor_timer
-    def _run_essid_digits(self, hcap_fpath: Path):
+    def _run_essid_digits(self, hcap_fpath: Path, essid_wordlist_path: str):
         """
         Run ESSID + digits_append.txt combinator attack.
         """
         hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=hcap_fpath.with_suffix('.key'), session=self.session)
-        hashcat_cmd.add_wordlist(WordList.ESSID)
+        hashcat_cmd.add_wordlist(essid_wordlist_path)
         hashcat_cmd.add_wordlist(WordList.DIGITS_APPEND)
         hashcat_cmd.add_custom_argument("-a1")
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
-    def _run_essid_rule(self, hcap_fpath: Path):
+    def _run_essid_rule(self, hcap_fpath: Path, essid_wordlist_path: str):
         """
         Run ESSID + best64.rule attack.
         """
         hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=hcap_fpath.with_suffix('.key'), session=self.session)
-        hashcat_cmd.add_wordlist(WordList.ESSID)
+        hashcat_cmd.add_wordlist(essid_wordlist_path)
         hashcat_cmd.add_rule(Rule.BEST_64)
         hashcat_cmd.pipe_word_candidates = True
         hashcat_cmd = ' '.join(hashcat_cmd.build())

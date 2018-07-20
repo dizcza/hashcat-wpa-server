@@ -80,13 +80,15 @@ class HashcatCmd(object):
 
     def _append_wordlists(self, command: list):
         for word_list in self.wordlists:
-            command.append(word_list.get_path())
+            command.append(word_list)
 
     def add_rule(self, rule: Rule):
         self.rules.append(rule)
 
-    def add_wordlist(self, wordlist: WordList):
-        self.wordlists.append(wordlist)
+    def add_wordlist(self, wordlist: Union[WordList, str, Path]):
+        if isinstance(wordlist, WordList):
+            wordlist = wordlist.get_path()
+        self.wordlists.append(str(wordlist))
 
     def add_custom_argument(self, argument: str):
         self.custom_args.append(argument)

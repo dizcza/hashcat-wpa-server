@@ -12,7 +12,7 @@
 
 # Hashcat WPA/WPA2 server
 
-Yet another WPA/WPA2 hashes cracker. Powered by [hashcat](https://hashcat.net/hashcat/). It uses the most common wordlists and rules.
+Yet another WPA/WPA2 hashes cracker. Powered by [hashcat](https://hashcat.net/hashcat/). It uses the most common wordlists and rules. Written in Python 3.6.
 
 Check out running server on AWS free tier instance: [http://ec2-34-227-113-244.compute-1.amazonaws.com:9111](http://ec2-34-227-113-244.compute-1.amazonaws.com:9111). To surf the site, login with the `guest:guest` credentials. (Yes, you don't have the permissions to start jobs. Contact me if necessary.)
 

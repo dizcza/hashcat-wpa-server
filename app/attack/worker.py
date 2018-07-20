@@ -3,6 +3,7 @@ import datetime
 import os
 import re
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from app import db, lock_app
 from app.app_logger import logger
@@ -85,9 +86,11 @@ class CapAttack(BaseAttack):
             return
         with self.lock:
             self.lock.status = "Running ESSID attack"
-        self.write_essid_wordlist(self.essid)
-        self._run_essid_digits(hcap_fpath=self.hcap_file)
-        self._run_essid_rule(hcap_fpath=self.hcap_file)
+        with NamedTemporaryFile(mode='w') as f:
+            f.writelines(self.collect_essid_parts(self.essid))
+            f.seek(0)
+            self._run_essid_digits(hcap_fpath=self.hcap_file, essid_wordlist_path=f.name)
+            self._run_essid_rule(hcap_fpath=self.hcap_file, essid_wordlist_path=f.name)
 
     @monitor_timer
     def run_top4k(self):

@@ -1,6 +1,7 @@
 import argparse
 import binascii
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Union
 
 from tqdm import trange
@@ -40,9 +41,11 @@ class HccapxAttack(BaseAttack):
             hcap_fpath_essid = self.hcap_split_dir.joinpath(essid_unique + '.hccapx')
             with open(hcap_fpath_essid, 'wb') as f:
                 f.write(capture)
-            self.write_essid_wordlist(essid_unique)
-            self._run_essid_digits(hcap_fpath_essid)
-            self._run_essid_rule(hcap_fpath_essid)
+            with NamedTemporaryFile(mode='w') as f:
+                f.writelines(self.collect_essid_parts(essid_unique))
+                f.seek(0)
+                self._run_essid_digits(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=f.name)
+                self._run_essid_rule(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=f.name)
             self.run_bssid_attack(mac_ap=mac_ap, hcap_fpath=hcap_fpath_essid)
 
 
