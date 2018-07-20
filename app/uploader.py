@@ -31,7 +31,7 @@ def _choices_from(*enums: Enum):
 def check_incomplete_tasks():
     for task in UploadedTask.query.filter_by(completed=False):
         key_path = Path(task.filepath).with_suffix('.key')
-        if os.path.exists(key_path):
+        if key_path.exists():
             task.found_key = read_plain_key(key_path)
             task.status = "Completed"
         else:

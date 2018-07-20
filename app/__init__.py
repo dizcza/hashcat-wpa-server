@@ -11,7 +11,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     os.makedirs(app.config['CAPTURES_DIR'], exist_ok=True)
-    os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
+    DATABASE_PATH.parent.mkdir(exist_ok=True)
     return app
 
 

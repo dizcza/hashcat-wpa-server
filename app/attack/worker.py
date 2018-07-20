@@ -1,6 +1,5 @@
 import concurrent.futures
 import datetime
-import os
 import re
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -44,7 +43,7 @@ class CapAttack(BaseAttack):
         raise ValueError("Could not parse ESSID")
 
     def is_attack_needed(self) -> bool:
-        key_already_found = os.path.exists(self.key_file)
+        key_already_found = self.key_file.exists()
         with self.lock:
             if self.lock.cancelled:
                 raise InterruptedError("Cancelled")
@@ -52,7 +51,7 @@ class CapAttack(BaseAttack):
 
     def read_key(self):
         key_password = None
-        if os.path.exists(self.key_file):
+        if self.key_file.exists():
             key_password = read_plain_key(self.key_file)
         with self.lock:
             self.lock.key = key_password
@@ -67,7 +66,7 @@ class CapAttack(BaseAttack):
             self.lock.status = "Converting .cap to .hccapx"
         out, err = subprocess_call(['cap2hccapx', str(self.capture_path), str(self.hcap_file)])
         self.bssid, self.essid = self.parse_bssid_essid(out)
-        if not os.path.exists(self.hcap_file):
+        if not self.hcap_file.exists():
             raise FileNotFoundError("cap2hccapx failed")
         else:
             cap2hccapx_status = re.search("Written \d WPA Handshakes", out)
@@ -179,7 +178,7 @@ class HashcatWorker(object):
         self.futures = {}
         self.locks = {}
         self.last_benchmark_call = datetime.datetime.now()
-        if not os.path.exists(BENCHMARK_FILE):
+        if not BENCHMARK_FILE.exists():
             self.benchmark()
 
     def find_task_and_lock(self, job_id_query: int):
@@ -249,6 +248,7 @@ class HashcatWorker(object):
         if lock is not None:
             with lock:
                 cancelled = lock.cancel()
+                lock.completed = True
         return cancelled
 
     def __del__(self):

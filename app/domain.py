@@ -15,7 +15,7 @@ class Rule(Enum):
     BEST_64 = "best64.rule"
 
     def get_path(self):
-        return os.path.join(RULES_DIR, self.value)
+        return RULES_DIR / self.value
 
 
 @unique
@@ -28,7 +28,7 @@ class WordList(Enum):
     TOP304k = "top304k.txt"
 
     def get_path(self):
-        return os.path.join(WORDLISTS_DIR, self.value)
+        return WORDLISTS_DIR / self.value
 
 
 class ProgressLock(object):

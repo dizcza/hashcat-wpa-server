@@ -48,7 +48,7 @@ class BaseAttack(object):
     def __init__(self, hcap_file: Union[str, Path]):
         self.hcap_file = Path(hcap_file)
         self.key_file = self.hcap_file.with_suffix('.key')
-        self.session = os.path.basename(self.hcap_file)
+        self.session = self.hcap_file.name
         self.new_cmd = partial(HashcatCmd, hcap_file=self.hcap_file, outfile=self.key_file, session=self.session)
 
     def run_essid_attack(self):

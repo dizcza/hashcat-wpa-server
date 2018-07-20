@@ -1,6 +1,7 @@
 import datetime
 import os
 from http import HTTPStatus
+from pathlib import Path
 
 import flask
 from flask import request, render_template, redirect, url_for
@@ -53,9 +54,9 @@ def upload():
         if not user_has_roles(current_user, RoleEnum.USER):
             return flask.abort(403, description="You do not have the permission to start jobs.")
         filename = cap_uploads.save(request.files['capture'], folder=current_user.username)
-        filepath = os.path.join(app.config['CAPTURES_DIR'], filename)
+        filepath = Path(app.config['CAPTURES_DIR']) / filename
         if is_mime_valid(filepath):
-            new_task = UploadedTask(user_id=current_user.id, filepath=filepath, wordlist=form.wordlist.data,
+            new_task = UploadedTask(user_id=current_user.id, filepath=str(filepath), wordlist=form.wordlist.data,
                                     rule=form.rule.data)
             db.session.add(new_task)
             db.session.commit()
@@ -167,7 +168,7 @@ def benchmark():
         hashcat_worker.benchmark()
         return jsonify("Started benchmark.")
 
-    if not os.path.exists(BENCHMARK_FILE):
+    if not BENCHMARK_FILE.exists():
         return start_benchmark()
     since_last_update = datetime.datetime.now() - hashcat_worker.last_benchmark_call
     wait_time = BENCHMARK_UPDATE_PERIOD - since_last_update.seconds

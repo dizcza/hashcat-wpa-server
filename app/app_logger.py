@@ -2,11 +2,11 @@ import logging
 import os
 import time
 
-from app.config import ROOT_DIR
+from app.config import LOGS_DIR
 
 
 def create_logger(logging_level=logging.DEBUG):
-    logs_dir = os.path.join(ROOT_DIR, "logs")
+    LOGS_DIR.mkdir(exist_ok=True)
     new_logger = logging.getLogger(__name__)
     new_logger.setLevel(logging_level)
 
@@ -19,9 +19,7 @@ def create_logger(logging_level=logging.DEBUG):
         console_handler.setFormatter(formatter)
         new_logger.addHandler(console_handler)
 
-    log_path = os.path.join(logs_dir, time.strftime('%Y-%b-%d.log'))
-    if not os.path.exists(logs_dir):
-        os.makedirs(logs_dir)
+    log_path = LOGS_DIR / time.strftime('%Y-%b-%d.log')
     file_handler = logging.FileHandler(log_path)
     file_handler.setLevel(logging_level)
     file_handler.setFormatter(formatter)

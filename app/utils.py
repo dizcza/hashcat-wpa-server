@@ -5,6 +5,8 @@ import os
 import subprocess
 from functools import wraps
 from urllib.parse import urlparse, urljoin
+from typing import Union
+from pathlib import Path
 
 from flask import request
 
@@ -78,8 +80,9 @@ def str_to_date(date_str: str) -> datetime.datetime:
     return datetime.datetime.strptime(date_str, DATE_FORMAT)
 
 
-def is_mime_valid(file_path: str) -> bool:
-    if not os.path.exists(file_path):
+def is_mime_valid(file_path: Union[str, Path]) -> bool:
+    file_path = Path(file_path)
+    if not file_path.exists():
         return False
     with open(file_path, 'rb') as f:
         data = f.read()
@@ -87,7 +90,7 @@ def is_mime_valid(file_path: str) -> bool:
 
 
 def read_last_benchmark():
-    if not os.path.exists(BENCHMARK_FILE):
+    if not BENCHMARK_FILE.exists():
         return Benchmark(date="(Never)", speed=0)
     with lock_app, open(BENCHMARK_FILE) as f:
         last_line = f.readlines()[-1]
