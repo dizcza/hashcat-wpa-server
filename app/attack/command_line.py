@@ -28,6 +28,7 @@ class HccapxAttack(BaseAttack):
             data = f.read()
         n_captures = len(data) // HCCAPX_BYTES
         assert n_captures * HCCAPX_BYTES == len(data), "Invalid .hccapx file"
+        macs_tried = set()
         for capture_id in trange(n_captures, desc="ESSID attack"):
             capture = data[capture_id * HCCAPX_BYTES: (capture_id + 1) * HCCAPX_BYTES]
             essid_len = capture[9]
@@ -37,6 +38,9 @@ class HccapxAttack(BaseAttack):
             except UnicodeDecodeError:
                 # skip non-ascii ESSIDs
                 continue
+            if mac_ap in macs_tried:
+                continue
+            macs_tried.add(mac_ap)
             print(f"BSSID={mac_ap} ESSID={essid_unique}")
             hcap_fpath_essid = self.hcap_split_dir.joinpath(essid_unique + '.hccapx')
             with open(hcap_fpath_essid, 'wb') as f:
