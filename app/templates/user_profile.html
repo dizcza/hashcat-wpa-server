@@ -13,6 +13,8 @@
         <th>Date</th>
         <th>Progress</th>
         <th>Duration</th>
+        <th>BSSID</th>
+        <th>ESSID</th>
         <th>Wordlist</th>
         <th>Rule</th>
         <th>Status</th>
@@ -25,6 +27,8 @@
         <td>{{ task.uploaded_time.strftime('%Y-%m-%d %H:%M') }}</td>
         <td class="progress">{{ "{:.1f}".format(task.progress) }} %</td>
         <td>{{ task.duration }}</td>
+        <td>{{ task.bssid }}</td>
+        <td>{{ task.essid }}</td>
         <td>{{ task.wordlist }}</td>
         <td>{{ task.rule }}</td>
         <td class="status">{{ task.status }}</td>

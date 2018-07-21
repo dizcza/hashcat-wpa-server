@@ -39,6 +39,8 @@ class ProgressLock(object):
         self.key = None
         self.completed = False
         self.cancelled = False
+        self.essid = None
+        self.bssid = None
 
     def cancel(self):
         self.cancelled = True

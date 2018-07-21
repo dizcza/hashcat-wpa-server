@@ -1,18 +1,25 @@
+import argparse
+import binascii
 import os
 import re
+import shutil
 import subprocess
+import tempfile
 import time
 from collections import defaultdict
 from functools import partial
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 from typing import Union, List
+
+from tqdm import trange
 
 from app.app_logger import logger
 from app.attack.hashcat_cmd import HashcatCmd
 from app.domain import Rule
 from app.domain import WordList
 from app.utils import split_uppercase
+
+HCCAPX_BYTES = 393
 
 
 def subprocess_call(args):
@@ -51,12 +58,42 @@ class BaseAttack(object):
         self.session = self.hcap_file.name
         self.new_cmd = partial(HashcatCmd, hcap_file=self.hcap_file, outfile=self.key_file, session=self.session)
 
-    def run_essid_attack(self):
+    def run_essid_attack(self, verbose=False):
         """
         Run ESSID + digits_append.txt combinator attack.
         Run ESSID + best64.rule attack.
         """
-        raise NotImplementedError()
+        with open(self.hcap_file, 'rb') as f:
+            data = f.read()
+        n_captures = len(data) // HCCAPX_BYTES
+        assert n_captures > 0, "No hashes loaded"
+        assert n_captures * HCCAPX_BYTES == len(data), "Invalid .hccapx file"
+        hcap_split_dir = Path(tempfile.mkdtemp())
+        mac_essid = {}
+        for capture_id in trange(n_captures, desc="ESSID attack", disable=not verbose):
+            capture = data[capture_id * HCCAPX_BYTES: (capture_id + 1) * HCCAPX_BYTES]
+            essid_len = capture[9]
+            try:
+                essid_unique = capture[10: 10 + essid_len].decode('ascii')
+                mac_ap = binascii.hexlify(capture[59: 65]).decode('ascii')
+            except UnicodeDecodeError:
+                # skip non-ascii ESSIDs
+                continue
+            if mac_ap in mac_essid:
+                continue
+            mac_essid[mac_ap] = essid_unique
+            print(f"BSSID={mac_ap} ESSID={essid_unique}")
+            hcap_fpath_essid = hcap_split_dir.joinpath(essid_unique + '.hccapx')
+            with open(hcap_fpath_essid, 'wb') as f:
+                f.write(capture)
+            with tempfile.NamedTemporaryFile(mode='w') as f:
+                f.writelines(self.collect_essid_parts(essid_unique))
+                f.seek(0)
+                self._run_essid_digits(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=f.name)
+                self._run_essid_rule(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=f.name)
+            self.run_bssid_attack(mac_ap=mac_ap, hcap_fpath=hcap_fpath_essid)
+        shutil.rmtree(hcap_split_dir)
+        return mac_essid
 
     def run_bssid_attack(self, mac_ap: str, hcap_fpath: Path):
         """
@@ -71,7 +108,7 @@ class BaseAttack(object):
             mac_ap_chunk = mac_ap[start: start + password_len]
             mac_ap_candidates.add(mac_ap_chunk + '\n')
         hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=hcap_fpath.with_suffix('.key'), session=self.session)
-        with NamedTemporaryFile(mode='w') as f:
+        with tempfile.NamedTemporaryFile(mode='w') as f:
             f.writelines(mac_ap_candidates)
             f.seek(0)
             hashcat_cmd.add_wordlist(f.name)
@@ -154,3 +191,21 @@ class BaseAttack(object):
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlist(WordList.TOP304k)
         subprocess_call(hashcat_cmd.build())
+
+
+def crack_hccapx():
+    """
+    Crack .hhcapx in command line.
+    """
+    parser = argparse.ArgumentParser(description='Check weak passwords')
+    parser.add_argument('hccapx', help='path to .hccapx')
+    args = parser.parse_args()
+    attack = BaseAttack(hcap_file=args.hccapx)
+    attack.run_essid_attack(verbose=True)
+    attack.run_top4k()
+    attack.run_top304k()
+    attack.run_digits8()
+
+
+if __name__ == '__main__':
+    crack_hccapx()

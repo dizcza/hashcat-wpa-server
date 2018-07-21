@@ -2,7 +2,6 @@ import concurrent.futures
 import datetime
 import re
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 
 from app import db, lock_app
 from app.app_logger import logger
@@ -25,22 +24,6 @@ class CapAttack(BaseAttack):
         self.capture_path = capture_path
         self.wordlist = None if uploaded_task.wordlist == NONE_ENUM else WordList(uploaded_task.wordlist)
         self.rule = None if uploaded_task.rule == NONE_ENUM else Rule(uploaded_task.rule)
-        self.bssid = None
-        self.essid = None
-
-    @staticmethod
-    def parse_bssid_essid(stdout: str):
-        essid_key = "ESSID="
-        bssid_key = "BSSID="
-        mac_ap_len = 17
-        for line in stdout.splitlines():
-            if bssid_key in line:
-                bssid_start = line.index(bssid_key) + mac_ap_len
-                bssid = line[bssid_start: bssid_start + mac_ap_len]
-                essid_start = line.index(essid_key) + len(essid_key)
-                essid = line[essid_start: line.index(" (Length:", essid_start)]
-                return bssid, essid
-        raise ValueError("Could not parse ESSID")
 
     def is_attack_needed(self) -> bool:
         key_already_found = self.key_file.exists()
@@ -65,7 +48,6 @@ class CapAttack(BaseAttack):
         with self.lock:
             self.lock.status = "Converting .cap to .hccapx"
         out, err = subprocess_call(['cap2hccapx', str(self.capture_path), str(self.hcap_file)])
-        self.bssid, self.essid = self.parse_bssid_essid(out)
         if not self.hcap_file.exists():
             raise FileNotFoundError("cap2hccapx failed")
         else:
@@ -76,7 +58,7 @@ class CapAttack(BaseAttack):
                 if n_handshakes == 0:
                     raise Exception("No hashes loaded")
 
-    def run_essid_attack(self):
+    def run_essid_attack(self, verbose=False):
         """
         Run ESSID + digits_append.txt combinator attack.
         Run ESSID + best64.rule attack.
@@ -85,11 +67,10 @@ class CapAttack(BaseAttack):
             return
         with self.lock:
             self.lock.status = "Running ESSID attack"
-        with NamedTemporaryFile(mode='w') as f:
-            f.writelines(self.collect_essid_parts(self.essid))
-            f.seek(0)
-            self._run_essid_digits(hcap_fpath=self.hcap_file, essid_wordlist_path=f.name)
-            self._run_essid_rule(hcap_fpath=self.hcap_file, essid_wordlist_path=f.name)
+        mac_essid = super().run_essid_attack(verbose=verbose)
+        with self.lock:
+            self.lock.bssid = ', '.join(mac_essid.keys())
+            self.lock.essid = ', '.join(mac_essid.values())
 
     @monitor_timer
     def run_top4k(self):
@@ -137,7 +118,6 @@ def _crack_async(attack: CapAttack):
     """
     attack.cap2hccapx()
     attack.run_essid_attack()
-    attack.run_bssid_attack(mac_ap=attack.bssid, hcap_fpath=attack.hcap_file)
     attack.run_top4k()
     attack.run_top304k()
     attack.run_digits8()
@@ -205,6 +185,8 @@ class HashcatWorker(object):
             task.progress = lock.progress
             task.found_key = lock.key
             task.completed = lock.completed = True
+            task.essid = lock.essid
+            task.bssid = lock.bssid
         task.duration = datetime.datetime.now() - task.uploaded_time
         db.session.commit()
 

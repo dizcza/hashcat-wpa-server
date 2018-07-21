@@ -53,6 +53,8 @@ class UploadedTask(db.Model):
     progress = db.Column(db.Float, default=0)
     found_key = db.Column(db.String(256))
     completed = db.Column(db.Boolean, default=False)
+    essid = db.Column(db.String(64))
+    bssid = db.Column(db.String(64))
 
 
 class UploadForm(FlaskForm):
