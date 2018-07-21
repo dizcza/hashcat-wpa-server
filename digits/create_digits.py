@@ -1,10 +1,14 @@
 import itertools
-import os
 import string
 from datetime import date
+from pathlib import Path
 from typing import Union, Iterable
 
 from dateutil.rrule import rrule, DAILY
+
+ROOT_DIR = Path(__file__).parent.parent
+WORDLISTS_DIR = ROOT_DIR / "wordlists"
+DIGITS_DIR = ROOT_DIR / "digits"
 
 LETTER_ALPHABETS = (string.ascii_lowercase, string.ascii_uppercase, 'zxcvbnm', 'asdfghjkl', 'qwertyuiop')
 
@@ -92,9 +96,9 @@ def _save_digits(digits: Union[set, list], path_to: str):
 
 
 def create_digits_8(flashback_years=100, password_length_max=20):
-    digits_wordlist_path = os.path.join("wordlists", "digits_8.txt")
+    digits_wordlist_path = WORDLISTS_DIR / "digits_8.txt"
     digits = _create_days(flashback_years)
-    masks = _read_mask(os.path.join("digits", "mask_8.txt"))
+    masks = _read_mask(DIGITS_DIR / "mask_8.txt")
     digits.extend(_create_digits_mask(masks, alphabet=string.digits, alphabet_size_max=4))
     for alphabet in LETTER_ALPHABETS:
         digits.extend(_create_digits_mask(masks, alphabet=alphabet, alphabet_size_max=2))
@@ -103,14 +107,14 @@ def create_digits_8(flashback_years=100, password_length_max=20):
 
 
 def create_digits_append(flashback_years=50):
-    digits_wordlist_path = os.path.join("wordlists", "digits_append.txt")
+    digits_wordlist_path = WORDLISTS_DIR / "digits_append.txt"
     digits = set()
     curr_year = date.today().year
     for year in range(curr_year, curr_year-flashback_years-1, -1):
         year = str(year)
         digits.add(year)
         digits.add(year[-2:])
-    masks = _read_mask(os.path.join("digits", "mask_append.txt"))
+    masks = _read_mask(DIGITS_DIR / "mask_append.txt")
     digits.update(_create_digits_mask(masks, alphabet=string.digits, alphabet_size_max=2))
     for alphabet in LETTER_ALPHABETS:
         digits.update(_create_digits_mask(masks, alphabet=alphabet, alphabet_size_max=1))
@@ -119,14 +123,14 @@ def create_digits_append(flashback_years=50):
 
 def create_digits_mobile(flashback_years=50):
     digits = set()
-    digits_wordlist_path = os.path.join("wordlists", "digits_mobile.txt")
-    masks = _read_mask(os.path.join("digits", "mask_8.txt"))
+    digits_wordlist_path = WORDLISTS_DIR / "digits_mobile.txt"
+    masks = _read_mask(ROOT_DIR / "digits" / "mask_8.txt")
     digits.update(_create_digits_mask(masks, alphabet=string.digits, alphabet_size_max=3))
     for alphabet in LETTER_ALPHABETS:
         digits.update(_create_digits_mask(masks, alphabet=alphabet, alphabet_size_max=1))
     digits.update(_create_digits_cycle(password_length_max=10))
     digits.update(_create_days(flashback_years, date_fmt=("%d%m%Y",)))
-    with open(os.path.join('wordlists', 'top4k.txt')) as f:
+    with open(WORDLISTS_DIR / 'top4k.txt') as f:
         weak = f.read().splitlines()
         weak = filter(lambda password: len(password) >= 8, weak)
         digits.update(weak)
@@ -134,6 +138,7 @@ def create_digits_mobile(flashback_years=50):
 
 
 if __name__ == '__main__':
+    WORDLISTS_DIR.mkdir(exist_ok=True)
     create_digits_8()
     create_digits_append()
     create_digits_mobile()
