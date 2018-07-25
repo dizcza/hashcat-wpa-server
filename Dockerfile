@@ -11,7 +11,6 @@ RUN wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O /tmp/get
 
 # wordlists
 RUN mkdir -p /hashcat-wpa-server/wordlists
-COPY ./rules /hashcat-wpa-server/rules
 WORKDIR /hashcat-wpa-server/wordlists
 RUN for dict in phpbb.txt.bz2 rockyou.txt.bz2; do \
     wget -q --no-check-certificate http://downloads.skullsecurity.org/passwords/${dict} && \

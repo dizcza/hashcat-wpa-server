@@ -10,3 +10,4 @@ Werkzeug==0.14.1
 WTForms==2.2.1
 python-dateutil==2.7.3
 gunicorn==19.9.0
+tqdm==4.23.4

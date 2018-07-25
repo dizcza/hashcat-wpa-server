@@ -9,7 +9,7 @@ import time
 from collections import defaultdict
 from functools import partial
 from pathlib import Path
-from typing import Union, List
+from typing import Union, List, Dict
 
 from tqdm import trange
 
@@ -58,7 +58,7 @@ class BaseAttack(object):
         self.session = self.hcap_file.name
         self.new_cmd = partial(HashcatCmd, hcap_file=self.hcap_file, outfile=self.key_file, session=self.session)
 
-    def run_essid_attack(self, verbose=False):
+    def run_essid_attack(self, verbose=False) -> Dict[str, str]:
         """
         Run ESSID + digits_append.txt combinator attack.
         Run ESSID + best64.rule attack.
@@ -69,31 +69,31 @@ class BaseAttack(object):
         assert n_captures > 0, "No hashes loaded"
         assert n_captures * HCCAPX_BYTES == len(data), "Invalid .hccapx file"
         hcap_split_dir = Path(tempfile.mkdtemp())
-        mac_essid = {}
+        mac_essid_dict = {}
         for capture_id in trange(n_captures, desc="ESSID attack", disable=not verbose):
             capture = data[capture_id * HCCAPX_BYTES: (capture_id + 1) * HCCAPX_BYTES]
             essid_len = capture[9]
             try:
-                essid_unique = capture[10: 10 + essid_len].decode('ascii')
+                essid = capture[10: 10 + essid_len].decode('ascii')
                 mac_ap = binascii.hexlify(capture[59: 65]).decode('ascii')
             except UnicodeDecodeError:
                 # skip non-ascii ESSIDs
                 continue
-            if mac_ap in mac_essid:
-                continue
-            mac_essid[mac_ap] = essid_unique
-            print(f"BSSID={mac_ap} ESSID={essid_unique}")
-            hcap_fpath_essid = hcap_split_dir.joinpath(essid_unique + '.hccapx')
-            with open(hcap_fpath_essid, 'wb') as f:
+            mac_essid_dict[mac_ap] = essid
+            print(f"BSSID={mac_ap} ESSID={essid}")
+            hcap_fpath_essid = hcap_split_dir.joinpath(essid + '.hccapx')
+            with open(hcap_fpath_essid, 'ab') as f:
                 f.write(capture)
+        for mac_ap, essid in mac_essid_dict.items():
+            hcap_fpath_essid = hcap_split_dir.joinpath(essid + '.hccapx')
             with tempfile.NamedTemporaryFile(mode='w') as f:
-                f.writelines(self.collect_essid_parts(essid_unique))
+                f.writelines(self.collect_essid_parts(essid))
                 f.seek(0)
                 self._run_essid_digits(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=f.name)
                 self._run_essid_rule(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=f.name)
             self.run_bssid_attack(mac_ap=mac_ap, hcap_fpath=hcap_fpath_essid)
         shutil.rmtree(hcap_split_dir)
-        return mac_essid
+        return mac_essid_dict
 
     def run_bssid_attack(self, mac_ap: str, hcap_fpath: Path):
         """
