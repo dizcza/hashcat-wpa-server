@@ -81,12 +81,12 @@ class CapAttack(BaseAttack):
         super().run_top4k()
 
     @monitor_timer
-    def run_top304k(self):
+    def run_top1m(self):
         if not self.is_attack_needed():
             return
         with self.lock:
             self.lock.status = "Running top304k"
-        super().run_top304k()
+        super().run_top1m()
 
     @monitor_timer
     def run_digits8(self):
@@ -119,7 +119,7 @@ def _crack_async(attack: CapAttack):
     attack.cap2hccapx()
     attack.run_essid_attack()
     attack.run_top4k()
-    attack.run_top304k()
+    attack.run_top1m()
     attack.run_digits8()
     attack.run_main_wordlist()
     attack.read_key()

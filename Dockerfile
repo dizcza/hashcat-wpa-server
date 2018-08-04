@@ -16,7 +16,8 @@ RUN for dict in phpbb.txt.bz2 rockyou.txt.bz2; do \
     wget -q --no-check-certificate http://downloads.skullsecurity.org/passwords/${dict} && \
     bzip2 -d ${dict}; done
 RUN wget --no-check-certificate https://www.dropbox.com/s/6439rfwfy6qaz3h/conficker_elitehacker_john_riskypass_top1000.txt?dl=1 -O top4k.txt
-RUN wget --no-check-certificate https://raw.githubusercontent.com/berzerk0/Probable-Wordlists/master/Real-Passwords/Top304Thousand-probable-v2.txt -O top304k.txt
+RUN wget --no-check-certificate https://www.dropbox.com/s/16p2x91gxqdd2dc/Top1pt6Million-probable-v2.7z?dl=0 -O /tmp/Top1pt6Million-probable-v2.7z
+RUN 7zr x /tmp/Top1pt6Million-probable-v2.7z && rm /tmp/Top1pt6Million-probable-v2.7z
 
 RUN mkdir -p /hashcat-wpa-server/captures
 
@@ -25,7 +26,10 @@ RUN pip3 install -r /hashcat-wpa-server/requirements.txt
 
 COPY ./digits /hashcat-wpa-server/digits
 WORKDIR /hashcat-wpa-server
+ENV PYTHONPATH=.:$PYTHONPATH
 RUN python3 digits/create_digits.py
+RUN python3 digits/probable.py
+RUN rm /hashcat-wpa-server/wordlists/Top1pt6Million-probable-v2.txt
 
 COPY ./nginx.conf /etc/nginx/nginx.conf
 

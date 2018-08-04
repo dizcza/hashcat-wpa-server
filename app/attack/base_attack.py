@@ -184,12 +184,12 @@ class BaseAttack(object):
         os.system(hashcat_cmd)
 
     @monitor_timer
-    def run_top304k(self):
+    def run_top1m(self):
         """
-        - Top304Thousand-probable-v2.txt
+        - Top1m-probable-v2.txt with digits
         """
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlist(WordList.TOP304k)
+        hashcat_cmd.add_wordlist(WordList.TOP1M_WITH_DIGITS)
         subprocess_call(hashcat_cmd.build())
 
 
@@ -203,7 +203,7 @@ def crack_hccapx():
     attack = BaseAttack(hcap_file=args.hccapx)
     attack.run_essid_attack(verbose=True)
     attack.run_top4k()
-    attack.run_top304k()
+    attack.run_top1m()
     attack.run_digits8()
 
 

@@ -25,7 +25,7 @@ class WordList(Enum):
     DIGITS_8 = "digits_8.txt"
     DIGITS_APPEND = "digits_append.txt"
     TOP4K = "top4k.txt"
-    TOP304k = "top304k.txt"
+    TOP1M_WITH_DIGITS = "top1m_with_digits.txt"
 
     def get_path(self):
         return WORDLISTS_DIR / self.value
