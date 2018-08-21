@@ -10,7 +10,7 @@ from wtforms import RadioField, IntegerField, SubmitField
 from wtforms.validators import DataRequired
 
 from app import app, db
-from app.domain import WordList, Rule, NONE_ENUM
+from app.domain import WordList, Rule, NONE_ENUM, TaskInfoStatus
 from app.utils import read_plain_key
 
 EXTENSIONS = ('cap',)
@@ -33,9 +33,9 @@ def check_incomplete_tasks():
         key_path = Path(task.filepath).with_suffix('.key')
         if key_path.exists():
             task.found_key = read_plain_key(key_path)
-            task.status = "Completed"
+            task.status = TaskInfoStatus.COMPETED
         else:
-            task.status = "Aborted"
+            task.status = TaskInfoStatus.ABORTED
             task.completed = True
     db.session.commit()
 
@@ -49,7 +49,7 @@ class UploadedTask(db.Model):
     rule = db.Column(db.String(128))
     uploaded_time = db.Column(db.DateTime, index=True, default=datetime.datetime.now)
     duration = db.Column(db.Interval, default=datetime.timedelta)
-    status = db.Column(db.String(256), default="Scheduled")
+    status = db.Column(db.String(256), default=TaskInfoStatus.SCHEDULED)
     progress = db.Column(db.Float, default=0)
     found_key = db.Column(db.String(256))
     completed = db.Column(db.Boolean, default=False)

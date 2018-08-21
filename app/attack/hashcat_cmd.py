@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Union
 
 from app.config import HASHCAT_STATUS_TIMER
-from app.domain import Rule, WordList, ProgressLock
+from app.domain import Rule, WordList, ProgressLock, TaskInfoStatus
 from app.nvidia_smi import set_cuda_visible_devices
 
 HASHCAT_WARNINGS = (
@@ -108,7 +108,7 @@ def run_with_status(hashcat_cmd: HashcatCmd, lock: ProgressLock, timeout_minutes
         with lock:
             if lock.cancelled:
                 process.terminate()
-                raise InterruptedError("Cancelled")
+                raise InterruptedError(TaskInfoStatus.CANCELED)
         time_spent = time.time() - start
         if time_spent > timeout_seconds:
             process.terminate()

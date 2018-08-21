@@ -9,7 +9,7 @@ from app.app_logger import logger
 from app.attack.base_attack import BaseAttack, subprocess_call, monitor_timer
 from app.attack.hashcat_cmd import run_with_status
 from app.config import BENCHMARK_FILE
-from app.domain import Rule, WordList, NONE_ENUM, ProgressLock, JobLock
+from app.domain import Rule, WordList, NONE_ENUM, ProgressLock, JobLock, TaskInfoStatus
 from app.nvidia_smi import set_cuda_visible_devices
 from app.uploader import UploadedTask
 from app.utils import read_plain_key, date_formatted
@@ -30,7 +30,7 @@ class CapAttack(BaseAttack):
         key_already_found = self.key_file.exists()
         with self.lock:
             if self.lock.cancelled:
-                raise InterruptedError("Cancelled")
+                raise InterruptedError(TaskInfoStatus.CANCELED)
         return not key_already_found
 
     def read_key(self):
@@ -39,7 +39,7 @@ class CapAttack(BaseAttack):
             key_password = read_plain_key(self.key_file)
         with self.lock:
             self.lock.key = key_password
-            self.lock.status = "Completed"
+            self.lock.status = TaskInfoStatus.COMPETED
             self.lock.progress = 100
 
     def cap2hccapx(self):
@@ -205,7 +205,7 @@ class HashcatWorker(object):
         try:
             attack = CapAttack(uploaded_task, lock=lock, timeout=timeout)
         except ValueError:
-            uploaded_task.status = "Rejected"
+            uploaded_task.status = TaskInfoStatus.REJECTED
             uploaded_task.completed = True
             db.session.commit()
             return

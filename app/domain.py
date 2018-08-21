@@ -31,11 +31,19 @@ class WordList(Enum):
         return WORDLISTS_DIR / self.value
 
 
+class TaskInfoStatus(object):
+    SCHEDULED = "Scheduled"  # added to tasks queue
+    COMPETED = "Completed"  # all attacks run
+    CANCELED = "Cancelled"  # user cancelled
+    REJECTED = "Rejected"  # invalid request
+    ABORTED = "Aborted"  # task was interrupted due to server issues
+
+
 class ProgressLock(object):
     def __init__(self):
         self._lock = threading.RLock()
         self.progress = 0
-        self.status = "Scheduled"
+        self.status = TaskInfoStatus.SCHEDULED
         self.key = None
         self.completed = False
         self.cancelled = False
@@ -44,7 +52,7 @@ class ProgressLock(object):
 
     def cancel(self):
         self.cancelled = True
-        self.status = "Cancelled"
+        self.status = TaskInfoStatus.CANCELED
         return True
 
     def __enter__(self):
