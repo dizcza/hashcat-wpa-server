@@ -2,6 +2,7 @@ import argparse
 import binascii
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -17,7 +18,7 @@ from app.app_logger import logger
 from app.attack.hashcat_cmd import HashcatCmd
 from app.domain import Rule
 from app.domain import WordList
-from app.utils import split_uppercase
+from app.utils import split_uppercase, read_plain_key
 
 HCCAPX_BYTES = 393
 
@@ -53,7 +54,7 @@ class BaseAttack(object):
     timers = defaultdict(lambda: dict(count=0, elapsed=1e-6))
 
     def __init__(self, hcap_file: Union[str, Path]):
-        self.hcap_file = Path(hcap_file)
+        self.hcap_file = Path(shlex.quote(str(hcap_file)))
         self.key_file = self.hcap_file.with_suffix('.key')
         self.session = self.hcap_file.name
         self.new_cmd = partial(HashcatCmd, hcap_file=self.hcap_file, outfile=self.key_file, session=self.session)
@@ -192,6 +193,15 @@ class BaseAttack(object):
         hashcat_cmd.add_wordlist(WordList.TOP1M_WITH_DIGITS)
         subprocess_call(hashcat_cmd.build())
 
+    def run_all(self):
+        """
+        Run all attacks.
+        """
+        self.run_essid_attack(verbose=True)
+        self.run_top4k()
+        self.run_top1m()
+        self.run_digits8()
+
 
 def crack_hccapx():
     """
@@ -201,10 +211,12 @@ def crack_hccapx():
     parser.add_argument('hccapx', help='path to .hccapx')
     args = parser.parse_args()
     attack = BaseAttack(hcap_file=args.hccapx)
-    attack.run_essid_attack(verbose=True)
-    attack.run_top4k()
-    attack.run_top1m()
-    attack.run_digits8()
+    attack.run_all()
+    if attack.key_file.exists():
+        key_password = read_plain_key(attack.key_file)
+        print("WPA key is found!\n", key_password)
+    else:
+        print("WPA key is not found.")
 
 
 if __name__ == '__main__':

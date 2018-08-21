@@ -1,4 +1,5 @@
 import os
+import shlex
 import subprocess
 import time
 from pathlib import Path
@@ -55,13 +56,14 @@ class HashcatCmd(object):
         command = ["hashcat"]
         for rule in self.rules:
             if rule is not None:
-                command.append("--rules={}".format(rule.get_path()))
+                rule_path = str(rule.get_path())
+                command.append("--rules={}".format(shlex.quote(rule_path)))
         if self.pipe_word_candidates:
             self._append_wordlists(command)
             command.extend(["--stdout", '|', "hashcat", "-w3"])
         command.append("-m2500")
         command.append("--weak-hash-threshold=0")
-        command.append("--outfile={}".format(self.outfile))
+        command.append("--outfile={}".format(shlex.quote(self.outfile)))
         if not os.getenv('PRODUCTION', False):
             # localhost debug mode
             command.append("--potfile-disable")
@@ -69,7 +71,7 @@ class HashcatCmd(object):
         command.append("--status-timer={}".format(HASHCAT_STATUS_TIMER))
         command.append("--machine-readable")
         if self.session is not None:
-            command.append("--session={}".format(self.session))
+            command.append("--session={}".format(shlex.quote(self.session)))
         for arg in self.custom_args:
             command.append(arg)
         command.append(self.hcap_file)
@@ -80,7 +82,7 @@ class HashcatCmd(object):
 
     def _append_wordlists(self, command: list):
         for word_list in self.wordlists:
-            command.append(word_list)
+            command.append(shlex.quote(word_list))
 
     def add_rule(self, rule: Rule):
         self.rules.append(rule)

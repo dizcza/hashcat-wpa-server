@@ -1,6 +1,7 @@
 import concurrent.futures
 import datetime
 import re
+import shlex
 from pathlib import Path
 
 from app import db, lock_app
@@ -17,7 +18,7 @@ from app.utils import read_plain_key, date_formatted
 class CapAttack(BaseAttack):
 
     def __init__(self, uploaded_task: UploadedTask, lock: ProgressLock, timeout: int):
-        capture_path = Path(uploaded_task.filepath)
+        capture_path = Path(shlex.quote(uploaded_task.filepath))
         super().__init__(hcap_file=capture_path.with_suffix('.hccapx'))
         self.lock = lock
         self.timeout = timeout
@@ -110,6 +111,13 @@ class CapAttack(BaseAttack):
         hashcat_cmd.add_rule(self.rule)
         run_with_status(hashcat_cmd, lock=self.lock, timeout_minutes=self.timeout)
 
+    def run_all(self):
+        """
+        Run all attacks.
+        """
+        super().run_all()
+        self.run_main_wordlist()
+
 
 def _crack_async(attack: CapAttack):
     """
@@ -117,11 +125,7 @@ def _crack_async(attack: CapAttack):
     :param attack: hashcat attack to crack uploaded capture
     """
     attack.cap2hccapx()
-    attack.run_essid_attack()
-    attack.run_top4k()
-    attack.run_top1m()
-    attack.run_digits8()
-    attack.run_main_wordlist()
+    attack.run_all()
     attack.read_key()
     logger.info("Finished cracking {}".format(attack.capture_path))
     for name, timer in attack.timers.items():
@@ -190,7 +194,7 @@ class HashcatWorker(object):
         task.duration = datetime.datetime.now() - task.uploaded_time
         db.session.commit()
 
-    def crack_capture(self, uploaded_task: UploadedTask, timeout: int):
+    def submit_capture(self, uploaded_task: UploadedTask, timeout: int):
         """
         Called in main process.
         Starts cracking .cap file in parallel process.
@@ -198,7 +202,13 @@ class HashcatWorker(object):
         :param timeout: brute force timeout in minutes
         """
         lock = ProgressLock()
-        attack = CapAttack(uploaded_task, lock=lock, timeout=timeout)
+        try:
+            attack = CapAttack(uploaded_task, lock=lock, timeout=timeout)
+        except ValueError:
+            uploaded_task.status = "Rejected"
+            uploaded_task.completed = True
+            db.session.commit()
+            return
         future = self.executor.submit(_crack_async, attack=attack)
         job_id = id(future)
         self.locks[uploaded_task.id] = JobLock(job_id=job_id, lock=lock)
