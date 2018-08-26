@@ -34,9 +34,9 @@ def create_digits_append(flashback_years=50, cycle_length_max=4):
     write_digits(digits, digits_wordlist_path)
 
 
-def create_digits_mobile(flashback_years=50, cycle_length_max=10):
+def create_digits_short(flashback_years=50, cycle_length_max=10):
     digits = set()
-    digits_wordlist_path = WORDLISTS_DIR / "digits_mobile.txt"
+    digits_wordlist_path = WORDLISTS_DIR / "digits_short.txt"
     masks = read_mask(Mask.MASK_8.path)
     digits.update(create_digits_mask(masks, alphabet=string.digits, alphabet_size_max=3))
     for alphabet in LETTER_ALPHABETS:
@@ -54,4 +54,4 @@ def create_digits_mobile(flashback_years=50, cycle_length_max=10):
 if __name__ == '__main__':
     create_digits_8()
     create_digits_append()
-    create_digits_mobile()
+    create_digits_short()
