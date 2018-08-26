@@ -25,6 +25,7 @@ def create_digits_append(flashback_years=50, cycle_length_max=4):
         year = str(year)
         digits.add(year)
         digits.add(year[-2:])
+    digits.update(create_days(flashback_years=1, date_fmt=('%m%d', '%d%m')))
     masks = read_mask(Mask.MASK_1.path)
     digits.update(create_digits_mask(masks, alphabet=string.digits, alphabet_size_max=2))
     for password_length in range(1, cycle_length_max+1):

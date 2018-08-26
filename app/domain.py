@@ -1,9 +1,8 @@
-import os
 import threading
-from enum import Enum, unique
 from collections import namedtuple
-from app.config import WORDLISTS_DIR, RULES_DIR
+from enum import Enum, unique
 
+from app.config import WORDLISTS_DIR, RULES_DIR, MASKS_DIR
 
 NONE_ENUM = str(None)
 Benchmark = namedtuple('Benchmark', ('date', 'speed'))
@@ -14,7 +13,8 @@ JobLock = namedtuple('JobLock', ('job_id', 'lock'))
 class Rule(Enum):
     BEST_64 = "best64.rule"
 
-    def get_path(self):
+    @property
+    def path(self):
         return RULES_DIR / self.value
 
 
@@ -27,8 +27,18 @@ class WordList(Enum):
     TOP4K = "top4k.txt"
     TOP1M_WITH_DIGITS = "top1m_with_digits.txt"
 
-    def get_path(self):
+    @property
+    def path(self):
         return WORDLISTS_DIR / self.value
+
+
+@unique
+class Mask(Enum):
+    MOBILE_UA = "mobile.ua"
+
+    @property
+    def path(self):
+        return MASKS_DIR / self.value
 
 
 class TaskInfoStatus(object):

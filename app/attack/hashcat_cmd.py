@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Union
 
 from app.config import HASHCAT_STATUS_TIMER
-from app.domain import Rule, WordList, ProgressLock, TaskInfoStatus
+from app.domain import Rule, WordList, ProgressLock, TaskInfoStatus, Mask
 from app.nvidia_smi import set_cuda_visible_devices
 
 HASHCAT_WARNINGS = (
@@ -50,17 +50,18 @@ class HashcatCmd(object):
         self.wordlists = []
         self.custom_args = []
         self.pipe_word_candidates = False
+        self.mask = None
 
     def build(self) -> list:
         set_cuda_visible_devices()
         command = ["hashcat"]
         for rule in self.rules:
             if rule is not None:
-                rule_path = str(rule.get_path())
+                rule_path = str(rule.path)
                 command.append("--rules={}".format(shlex.quote(rule_path)))
         if self.pipe_word_candidates:
             self._append_wordlists(command)
-            command.extend(["--stdout", '|', "hashcat", "-w3"])
+            command.extend(["--stdout", '|', "hashcat"])
         command.append("-m2500")
         command.append("--weak-hash-threshold=0")
         command.append("--outfile={}".format(shlex.quote(self.outfile)))
@@ -77,7 +78,11 @@ class HashcatCmd(object):
         command.append(self.hcap_file)
         if not self.pipe_word_candidates:
             assert '|' not in command
-            self._append_wordlists(command)
+            # masks are not compatible with wordlists
+            if self.mask is not None:
+                command.extend(['-a3', self.mask])
+            else:
+                self._append_wordlists(command)
         return command
 
     def _append_wordlists(self, command: list):
@@ -89,8 +94,11 @@ class HashcatCmd(object):
 
     def add_wordlist(self, wordlist: Union[WordList, str, Path]):
         if isinstance(wordlist, WordList):
-            wordlist = wordlist.get_path()
+            wordlist = wordlist.path
         self.wordlists.append(str(wordlist))
+
+    def set_mask(self, mask: Mask):
+        self.mask = str(mask.path)
 
     def add_custom_argument(self, argument: str):
         self.custom_args.append(argument)

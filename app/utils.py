@@ -1,38 +1,19 @@
 # encoding=utf-8
 
 import datetime
-import os
-import subprocess
 from functools import wraps
-from urllib.parse import urlparse, urljoin
-from typing import Union
 from pathlib import Path
+from typing import Union
+from urllib.parse import urlparse, urljoin
 
 from flask import request
 
 from app import lock_app
 from app.config import Config, BENCHMARK_FILE
-from app.domain import Rule, WordList, Benchmark
+from app.domain import Benchmark
 from app.nvidia_smi import NvidiaSmi
 
 DATE_FORMAT = "%Y-%m-%d %H:%M"
-
-
-def count_rules(rule: Rule) -> int:
-    with open(rule.get_path()) as f:
-        rules = f.readlines()
-    rules = [line[:-1] for line in rules]
-    rules = filter(len, rules)
-    rules = filter(lambda line: not line.startswith("#"), rules)
-    return len(list(rules))
-
-
-def count_words(wordlist: WordList) -> int:
-    out, err_ignored = subprocess.Popen(["wc", "-l", wordlist.get_path()],
-                                        universal_newlines=True,
-                                        stdout=subprocess.PIPE).communicate()
-    count = int(out.split(' ')[0])
-    return count
 
 
 def split_uppercase(word: str) -> set:

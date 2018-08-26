@@ -16,8 +16,7 @@ from tqdm import trange
 
 from app.app_logger import logger
 from app.attack.hashcat_cmd import HashcatCmd
-from app.domain import Rule
-from app.domain import WordList
+from app.domain import Rule, WordList, Mask
 from app.utils import split_uppercase, read_plain_key
 
 HCCAPX_BYTES = 393
@@ -108,7 +107,7 @@ class BaseAttack(object):
         for start in range(len(mac_ap) - password_len):
             mac_ap_chunk = mac_ap[start: start + password_len]
             mac_ap_candidates.add(mac_ap_chunk + '\n')
-        hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=hcap_fpath.with_suffix('.key'), session=self.session)
+        hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=self.key_file, session=self.session)
         with tempfile.NamedTemporaryFile(mode='w') as f:
             f.writelines(mac_ap_candidates)
             f.seek(0)
@@ -137,18 +136,27 @@ class BaseAttack(object):
         """
         Run ESSID + digits_append.txt combinator attack.
         """
-        hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=hcap_fpath.with_suffix('.key'), session=self.session)
-        hashcat_cmd.add_wordlist(essid_wordlist_path)
-        hashcat_cmd.add_wordlist(WordList.DIGITS_APPEND)
+        hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=self.key_file, session=self.session)
         hashcat_cmd.add_custom_argument("-a1")
-        subprocess_call(hashcat_cmd.build())
+        wordlists_combine = (essid_wordlist_path, WordList.DIGITS_APPEND)
+
+        def run_combined(wordlists=wordlists_combine, reverse=False):
+            hashcat_cmd.wordlists.clear()
+            if reverse:
+                wordlists = reversed(wordlists)
+            for wordlist in wordlists:
+                hashcat_cmd.add_wordlist(wordlist)
+            subprocess_call(hashcat_cmd.build())
+
+        run_combined(reverse=False)
+        run_combined(reverse=True)
 
     @monitor_timer
     def _run_essid_rule(self, hcap_fpath: Path, essid_wordlist_path: str):
         """
         Run ESSID + best64.rule attack.
         """
-        hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=hcap_fpath.with_suffix('.key'), session=self.session)
+        hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=self.key_file, session=self.session)
         hashcat_cmd.add_wordlist(essid_wordlist_path)
         hashcat_cmd.add_rule(Rule.BEST_64)
         hashcat_cmd.pipe_word_candidates = True
@@ -193,6 +201,12 @@ class BaseAttack(object):
         hashcat_cmd.add_wordlist(WordList.TOP1M_WITH_DIGITS)
         subprocess_call(hashcat_cmd.build())
 
+    @monitor_timer
+    def run_phone_mobile(self):
+        hashcat_cmd = self.new_cmd()
+        hashcat_cmd.set_mask(Mask.MOBILE_UA)
+        subprocess_call(hashcat_cmd.build())
+
     def run_all(self):
         """
         Run all attacks.
@@ -212,6 +226,7 @@ def crack_hccapx():
     args = parser.parse_args()
     attack = BaseAttack(hcap_file=args.hccapx)
     attack.run_all()
+    attack.run_phone_mobile()
     if attack.key_file.exists():
         key_password = read_plain_key(attack.key_file)
         print("WPA key is found!\n", key_password)

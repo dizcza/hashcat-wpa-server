@@ -7,6 +7,7 @@ APP_DIR = Path(__file__).parent
 ROOT_DIR = APP_DIR.parent
 WORDLISTS_DIR = ROOT_DIR / "wordlists"
 RULES_DIR = ROOT_DIR / "rules"
+MASKS_DIR = ROOT_DIR / "masks"
 LOGS_DIR = ROOT_DIR / "logs"
 DATABASE_PATH = ROOT_DIR / "database" / "hashcat_wpa.db"
 
