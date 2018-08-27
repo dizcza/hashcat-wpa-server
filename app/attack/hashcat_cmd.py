@@ -65,7 +65,7 @@ class HashcatCmd(object):
         command.append("-m2500")
         command.append("--weak-hash-threshold=0")
         command.append("--outfile={}".format(shlex.quote(self.outfile)))
-        if not os.getenv('PRODUCTION', False):
+        if int(os.getenv('DISABLE_POTFILE', 0)):
             # localhost debug mode
             command.append("--potfile-disable")
         command.append("--status")

@@ -4,6 +4,7 @@ import os
 import re
 import shlex
 import shutil
+import string
 import subprocess
 import tempfile
 import time
@@ -12,7 +13,7 @@ from functools import partial
 from pathlib import Path
 from typing import Union, List, Dict
 
-from tqdm import trange
+from tqdm import tqdm
 
 from app.app_logger import logger
 from app.attack.hashcat_cmd import HashcatCmd
@@ -63,14 +64,19 @@ class BaseAttack(object):
         Run ESSID + digits_append.txt combinator attack.
         Run ESSID + best64.rule attack.
         """
+        hcap_split_dir = Path(tempfile.mkdtemp())
+
+        def get_essid_temp_path(essid: str):
+            essid = re.sub(r'\W+', '', essid)  # strip all except digits, letters and '_'
+            return hcap_split_dir.joinpath(essid + '.hccapx')
+
         with open(self.hcap_file, 'rb') as f:
             data = f.read()
         n_captures = len(data) // HCCAPX_BYTES
         assert n_captures > 0, "No hashes loaded"
         assert n_captures * HCCAPX_BYTES == len(data), "Invalid .hccapx file"
-        hcap_split_dir = Path(tempfile.mkdtemp())
         mac_essid_dict = {}
-        for capture_id in trange(n_captures, desc="ESSID attack", disable=not verbose):
+        for capture_id in range(n_captures):
             capture = data[capture_id * HCCAPX_BYTES: (capture_id + 1) * HCCAPX_BYTES]
             essid_len = capture[9]
             try:
@@ -80,12 +86,12 @@ class BaseAttack(object):
                 # skip non-ascii ESSIDs
                 continue
             mac_essid_dict[mac_ap] = essid
-            print(f"BSSID={mac_ap} ESSID={essid}")
-            hcap_fpath_essid = hcap_split_dir.joinpath(essid + '.hccapx')
+            hcap_fpath_essid = get_essid_temp_path(essid)
             with open(hcap_fpath_essid, 'ab') as f:
                 f.write(capture)
-        for mac_ap, essid in mac_essid_dict.items():
-            hcap_fpath_essid = hcap_split_dir.joinpath(essid + '.hccapx')
+        for mac_ap, essid in tqdm(mac_essid_dict.items(), desc="ESSID attack", disable=not verbose):
+            logger.info(f"BSSID={mac_ap} ESSID={essid}")
+            hcap_fpath_essid = get_essid_temp_path(essid)
             with tempfile.NamedTemporaryFile(mode='w') as f:
                 f.writelines(self.collect_essid_parts(essid))
                 f.seek(0)
@@ -226,7 +232,7 @@ def crack_hccapx():
     args = parser.parse_args()
     attack = BaseAttack(hcap_file=args.hccapx)
     attack.run_all()
-    attack.run_phone_mobile()
+    # attack.run_phone_mobile()
     if attack.key_file.exists():
         key_password = read_plain_key(attack.key_file)
         print("WPA key is found!\n", key_password)

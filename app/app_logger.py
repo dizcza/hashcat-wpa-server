@@ -12,7 +12,7 @@ def create_logger(logging_level=logging.DEBUG):
 
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(message)s')
 
-    if not os.getenv('PRODUCTION', False):
+    if int(os.getenv('LOG_CONSOLE', 0)):
         # local mode: write to console
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging_level)
