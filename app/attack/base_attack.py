@@ -67,15 +67,14 @@ class BaseAttack:
             with open(essid_filepath, 'w') as f:
                 f.write(essid_candidates)
             self._run_essid_rule(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=essid_filepath)
-            wordlist_order = [str(essid_filepath), str(WordList.DIGITS_APPEND.path)]
+            wordlist_order = [essid_filepath, WordList.DIGITS_APPEND.path]
             for reverse in range(2):
-                with tempfile.NamedTemporaryFile(mode='w') as f:
-                    if self.verbose:
-                        logger.debug(f"ESSID={essid}, candidates={f.name}")
-                    subprocess.run(['hashcat', '--stdout', '-a1', *wordlist_order], stdout=f)
-                    hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath_essid, outfile=self.key_file, session=self.session)
-                    hashcat_cmd.add_wordlist(f.name)
-                    subprocess_call(hashcat_cmd.build())
+                hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath_essid, outfile=self.key_file, session=self.session)
+                for wlist in wordlist_order:
+                    hashcat_cmd.add_wordlist(wlist)
+                hashcat_cmd.pipe_word_candidates = True
+                hashcat_cmd = ' '.join(hashcat_cmd.build())
+                os.system(hashcat_cmd)
                 wordlist_order = wordlist_order[::-1]
         shutil.rmtree(essid_split_dir)
         shutil.rmtree(hcap_split_dir)

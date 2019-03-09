@@ -49,7 +49,7 @@ class HashcatCmd:
         self.rules = []
         self.wordlists = []
         self.custom_args = []
-        self.pipe_word_candidates = False
+        self.pipe_word_candidates = False  # set to True on small dictionaries with rules
         self.mask = None
 
     def build(self) -> list:
