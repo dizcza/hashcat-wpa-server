@@ -126,7 +126,9 @@ class BaseAttack:
         hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=self.key_file, session=self.session)
         hashcat_cmd.add_wordlist(essid_wordlist_path)
         hashcat_cmd.add_rule(Rule.BEST_64)
-        subprocess_call(hashcat_cmd.build())
+        hashcat_cmd.pipe_word_candidates = True
+        hashcat_cmd = ' '.join(hashcat_cmd.build())
+        os.system(hashcat_cmd)
 
     @monitor_timer
     def run_digits8(self):
@@ -148,7 +150,9 @@ class BaseAttack:
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlist(WordList.TOP1K)
         hashcat_cmd.add_rule(Rule.BEST_64)
-        subprocess_call(hashcat_cmd.build())
+        hashcat_cmd.pipe_word_candidates = True
+        hashcat_cmd = ' '.join(hashcat_cmd.build())
+        os.system(hashcat_cmd)
 
     @monitor_timer
     def run_top304k(self):

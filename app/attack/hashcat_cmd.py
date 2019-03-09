@@ -49,6 +49,7 @@ class HashcatCmd:
         self.rules = []
         self.wordlists = []
         self.custom_args = []
+        self.pipe_word_candidates = False
         self.mask = None
 
     def build(self) -> list:
@@ -58,6 +59,9 @@ class HashcatCmd:
             if rule is not None:
                 rule_path = str(rule.path)
                 command.append("--rules={}".format(shlex.quote(rule_path)))
+        if self.pipe_word_candidates:
+            self._append_wordlists(command)
+            command.extend(["--stdout", '|', "hashcat"])
         command.append("-m2500")
         command.append("--outfile={}".format(shlex.quote(self.outfile)))
         if int(os.getenv('DISABLE_POTFILE', 0)):
@@ -71,13 +75,18 @@ class HashcatCmd:
         for arg in self.custom_args:
             command.append(arg)
         command.append(self.hcap_file)
-        if self.mask is not None:
+        if not self.pipe_word_candidates:
+            assert '|' not in command
             # masks are not compatible with wordlists
-            command.extend(['-a3', self.mask])
-        else:
-            for word_list in self.wordlists:
-                command.append(shlex.quote(word_list))
+            if self.mask is not None:
+                command.extend(['-a3', self.mask])
+            else:
+                self._append_wordlists(command)
         return command
+
+    def _append_wordlists(self, command: list):
+        for word_list in self.wordlists:
+            command.append(shlex.quote(word_list))
 
     def add_rule(self, rule: Rule):
         self.rules.append(rule)
