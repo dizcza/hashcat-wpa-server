@@ -80,20 +80,20 @@ class CapAttack(BaseAttack):
             self.lock.essid = ', '.join(essids)
 
     @monitor_timer
-    def run_top4k(self):
+    def run_top1k(self):
         if not self.is_attack_needed():
             return
         with self.lock:
-            self.lock.status = "Running top4k with rules"
-        super().run_top4k()
+            self.lock.status = "Running top1k with rules"
+        super().run_top1k()
 
     @monitor_timer
-    def run_top1m(self):
+    def run_top304k(self):
         if not self.is_attack_needed():
             return
         with self.lock:
             self.lock.status = "Running top304k"
-        super().run_top1m()
+        super().run_top304k()
 
     @monitor_timer
     def run_digits8(self):

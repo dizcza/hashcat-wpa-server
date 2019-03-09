@@ -151,27 +151,22 @@ class BaseAttack(object):
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
-    def run_top4k(self):
+    def run_top1k(self):
         """
-        Run weak password attack, using a very shallow yet commonly used dictionaries:
-        - john.txt
-        - conficker.txt
-        - elitehacker.txt
-        - riskypass_top1000.txt
-        - Top1575-probable-v2.txt
+        - Top1575-probable-v2.txt with best64 rules
         """
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlist(WordList.TOP4K)
+        hashcat_cmd.add_wordlist(WordList.TOP1K)
         hashcat_cmd.add_rule(Rule.BEST_64)
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
-    def run_top1m(self):
+    def run_top304k(self):
         """
         - Top1m-probable-v2.txt with digits
         """
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlist(WordList.TOP1M_WITH_DIGITS)
+        hashcat_cmd.add_wordlist(WordList.TOP304K)
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
@@ -186,8 +181,8 @@ class BaseAttack(object):
         """
         self.run_essid_attack()
         self.run_bssid_attack()
-        self.run_top4k()
-        self.run_top1m()
+        self.run_top1k()
+        self.run_top304k()
         self.run_digits8()
 
 

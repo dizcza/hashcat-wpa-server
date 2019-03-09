@@ -24,8 +24,8 @@ class WordList(Enum):
     PHPBB = "phpbb.txt"
     DIGITS_8 = "digits_8.txt"
     DIGITS_APPEND = "digits_append.txt"
-    TOP4K = "top4k.txt"
-    TOP1M_WITH_DIGITS = "top1m_with_digits.txt"
+    TOP1K = "Top1575-probable-v2.txt"
+    TOP304K = "Top304Thousand-probable-v2.txt"
 
     @property
     def path(self):
