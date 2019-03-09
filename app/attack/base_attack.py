@@ -33,7 +33,7 @@ def monitor_timer(func):
     return wrapped
 
 
-class BaseAttack(object):
+class BaseAttack:
 
     timers = defaultdict(lambda: dict(count=0, elapsed=1e-6))
 

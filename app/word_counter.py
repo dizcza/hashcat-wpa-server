@@ -5,7 +5,7 @@ from app.utils import subprocess_call
 from digits.common import read_mask
 
 
-class WordCounter(object):
+class WordCounter:
 
     def __init__(self):
         self.wordlists = {}

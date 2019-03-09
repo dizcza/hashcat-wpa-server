@@ -2,7 +2,7 @@ import time
 from functools import wraps
 
 
-class Cache(object):
+class Cache:
 
     _caches = {}
 

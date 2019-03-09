@@ -5,7 +5,7 @@ from app.app_logger import logger
 from app.caching import Cache
 
 
-class GpuInfo(object):
+class GpuInfo:
     def __init__(self, index, memory_total, memory_used, gpu_load):
         """
         :param index: GPU index
@@ -30,7 +30,7 @@ class GpuInfo(object):
         return (self.memory_total - self.memory_used) / self.memory_total
 
 
-class NvidiaSmi(object):
+class NvidiaSmi:
 
     @staticmethod
     @Cache(name="NvidiaSmi", timeout=10)

@@ -155,7 +155,7 @@ def _hashcat_benchmark_async():
             f.write(snapshot)
 
 
-class HashcatWorker(object):
+class HashcatWorker:
     def __init__(self, app):
         """
         Called in main process.

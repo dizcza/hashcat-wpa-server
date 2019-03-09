@@ -41,7 +41,7 @@ class Mask(Enum):
         return MASKS_DIR / self.value
 
 
-class TaskInfoStatus(object):
+class TaskInfoStatus:
     SCHEDULED = "Scheduled"  # added to tasks queue
     COMPETED = "Completed"  # all attacks run
     CANCELED = "Cancelled"  # user cancelled
@@ -49,7 +49,7 @@ class TaskInfoStatus(object):
     ABORTED = "Aborted"  # task was interrupted due to server issues
 
 
-class ProgressLock(object):
+class ProgressLock:
     def __init__(self):
         self._lock = threading.RLock()
         self.progress = 0

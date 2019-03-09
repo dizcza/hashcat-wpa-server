@@ -41,7 +41,7 @@ def split_warnings_errors(stderr: str):
     return warn, err
 
 
-class HashcatCmd(object):
+class HashcatCmd:
     def __init__(self, hcap_file: Union[str, Path], outfile: Union[str, Path], session=None):
         self.hcap_file = str(hcap_file)
         self.outfile = str(outfile)
