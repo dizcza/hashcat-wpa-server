@@ -4,6 +4,7 @@ import os
 import re
 import shlex
 import shutil
+import subprocess
 import tempfile
 import time
 from collections import defaultdict
@@ -55,19 +56,28 @@ class BaseAttack:
         Run ESSID + best64.rule attack.
         """
         hcap_split_dir = Path(tempfile.mkdtemp())
+        essid_split_dir = Path(tempfile.mkdtemp())
         subprocess_call(['wlanhcx2ssid', '-i', self.hcap_file, '-p', hcap_split_dir, '-e'])
         files = list(hcap_split_dir.iterdir())
         for hcap_fpath_essid in tqdm(files, desc="ESSID attack", disable=not self.verbose):
             essid = wlanhcxinfo(hcap_fpath_essid, mode='-e')
             essid = next(iter(essid))  # should be only 1 item
-            with tempfile.NamedTemporaryFile(mode='w') as f:
-                if self.verbose:
-                    logger.debug(f"ESSID={essid}, candidates={f.name}")
-                essid_candidates = '\n'.join(self.collect_essid_parts(essid))
+            essid_candidates = '\n'.join(self.collect_essid_parts(essid))
+            essid_filepath = essid_split_dir / essid
+            with open(essid_filepath, 'w') as f:
                 f.write(essid_candidates)
-                f.seek(0)
-                self._run_essid_digits(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=f.name)
-                self._run_essid_rule(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=f.name)
+            self._run_essid_rule(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=essid_filepath)
+            wordlist_order = [str(essid_filepath), str(WordList.DIGITS_APPEND.path)]
+            for reverse in range(2):
+                with tempfile.NamedTemporaryFile(mode='w') as f:
+                    if self.verbose:
+                        logger.debug(f"ESSID={essid}, candidates={f.name}")
+                    subprocess.run(['hashcat', '--stdout', '-a1', *wordlist_order], stdout=f)
+                    hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath_essid, outfile=self.key_file, session=self.session)
+                    hashcat_cmd.add_wordlist(f.name)
+                    subprocess_call(hashcat_cmd.build())
+                wordlist_order = wordlist_order[::-1]
+        shutil.rmtree(essid_split_dir)
         shutil.rmtree(hcap_split_dir)
 
     def run_bssid_attack(self):
@@ -107,26 +117,6 @@ class BaseAttack:
         essids_case_insensitive.update(modify_case(essid_origin))
         essids_case_insensitive = filter(len, essids_case_insensitive)
         return essids_case_insensitive
-
-    @monitor_timer
-    def _run_essid_digits(self, hcap_fpath: Path, essid_wordlist_path: str):
-        """
-        Run ESSID + digits_append.txt combinator attack.
-        """
-        hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=self.key_file, session=self.session)
-        hashcat_cmd.add_custom_argument("-a1")
-        wordlists_combine = (essid_wordlist_path, WordList.DIGITS_APPEND)
-
-        def run_combined(wordlists=wordlists_combine, reverse=False):
-            hashcat_cmd.wordlists.clear()
-            if reverse:
-                wordlists = reversed(wordlists)
-            for wordlist in wordlists:
-                hashcat_cmd.add_wordlist(wordlist)
-            subprocess_call(hashcat_cmd.build())
-
-        run_combined(reverse=False)
-        run_combined(reverse=True)
 
     @monitor_timer
     def _run_essid_rule(self, hcap_fpath: Path, essid_wordlist_path: str):
