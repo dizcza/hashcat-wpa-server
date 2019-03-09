@@ -18,6 +18,7 @@ from app.app_logger import logger
 from app.attack.hashcat_cmd import HashcatCmd
 from app.domain import Rule, WordList, Mask
 from app.utils import split_uppercase, read_plain_key, subprocess_call, wlanhcxinfo
+from app.config import ESSID_TRIED
 
 HCCAPX_BYTES = 393
 
@@ -55,17 +56,26 @@ class BaseAttack:
         Run ESSID + digits_append.txt combinator attack.
         Run ESSID + best64.rule attack.
         """
+        ESSID_TRIED.parent.mkdir(parents=True, exist_ok=True)
         hcap_split_dir = Path(tempfile.mkdtemp())
         essid_split_dir = Path(tempfile.mkdtemp())
         subprocess_call(['wlanhcx2ssid', '-i', self.hcap_file, '-p', hcap_split_dir, '-e'])
         files = list(hcap_split_dir.iterdir())
+        bssid_essid_tried = set()
+        if ESSID_TRIED.exists():
+            with open(ESSID_TRIED, 'r') as f:
+                bssid_essid_tried = set(f.read().splitlines())
         for hcap_fpath_essid in tqdm(files, desc="ESSID attack", disable=not self.verbose):
-            essid = wlanhcxinfo(hcap_fpath_essid, mode='-e')
-            essid = next(iter(essid))  # should be only 1 item
-            essid_candidates = '\n'.join(self.collect_essid_parts(essid))
-            essid_filepath = essid_split_dir / essid
+            bssid_essid = wlanhcxinfo(hcap_fpath_essid, mode='-ae')
+            if len(bssid_essid) > 1:
+                logger.warn(f"Expected 1 unique BSSID:ESSID in {bssid_essid}.")
+            bssid_essid = next(iter(bssid_essid))  # should be only 1 item
+            if bssid_essid in bssid_essid_tried:
+                continue
+            bssid, essid = bssid_essid.split(':', maxsplit=1)
+            essid_filepath = essid_split_dir / re.sub(r'\W+', '', essid)  # strip all except digits, letters and '_'
             with open(essid_filepath, 'w') as f:
-                f.write(essid_candidates)
+                f.write('\n'.join(self.collect_essid_parts(essid)))
             self._run_essid_rule(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=essid_filepath)
             wordlist_order = [essid_filepath, WordList.DIGITS_APPEND.path]
             for reverse in range(2):
@@ -76,6 +86,8 @@ class BaseAttack:
                 hashcat_cmd = ' '.join(hashcat_cmd.build())
                 os.system(hashcat_cmd)
                 wordlist_order = wordlist_order[::-1]
+            with open(ESSID_TRIED, 'a') as f:
+                f.write(bssid_essid + '\n')
         shutil.rmtree(essid_split_dir)
         shutil.rmtree(hcap_split_dir)
 

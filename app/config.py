@@ -9,7 +9,10 @@ WORDLISTS_DIR = ROOT_DIR / "wordlists"
 RULES_DIR = ROOT_DIR / "rules"
 MASKS_DIR = ROOT_DIR / "masks"
 LOGS_DIR = ROOT_DIR / "logs"
-DATABASE_PATH = ROOT_DIR / "database" / "hashcat_wpa.db"
+
+DATABASE_DIR = ROOT_DIR / "database"
+ESSID_TRIED = DATABASE_DIR / "essid_tried"
+DATABASE_PATH = DATABASE_DIR / "hashcat_wpa.db"
 
 # Hashcat
 HASHCAT_STATUS_TIMER = 20  # seconds
