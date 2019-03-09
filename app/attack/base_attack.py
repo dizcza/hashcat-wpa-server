@@ -4,8 +4,6 @@ import os
 import re
 import shlex
 import shutil
-import string
-import subprocess
 import tempfile
 import time
 from collections import defaultdict
@@ -18,23 +16,9 @@ from tqdm import tqdm
 from app.app_logger import logger
 from app.attack.hashcat_cmd import HashcatCmd
 from app.domain import Rule, WordList, Mask
-from app.utils import split_uppercase, read_plain_key
+from app.utils import split_uppercase, read_plain_key, subprocess_call
 
 HCCAPX_BYTES = 393
-
-
-def subprocess_call(args):
-    """
-    Called in background process.
-    :param args: shell args
-    """
-    logger.debug(">>> {}".format(' '.join(args)))
-    process = subprocess.Popen(args,
-                               universal_newlines=True,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    out, err = process.communicate()
-    return out, err
 
 
 def monitor_timer(func):

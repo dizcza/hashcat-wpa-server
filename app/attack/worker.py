@@ -6,13 +6,13 @@ from pathlib import Path
 
 from app import db, lock_app
 from app.app_logger import logger
-from app.attack.base_attack import BaseAttack, subprocess_call, monitor_timer
+from app.attack.base_attack import BaseAttack, monitor_timer
 from app.attack.hashcat_cmd import run_with_status
 from app.config import BENCHMARK_FILE
 from app.domain import Rule, WordList, NONE_ENUM, ProgressLock, JobLock, TaskInfoStatus
 from app.nvidia_smi import set_cuda_visible_devices
 from app.uploader import UploadedTask
-from app.utils import read_plain_key, date_formatted
+from app.utils import read_plain_key, date_formatted, subprocess_call
 
 
 class CapAttack(BaseAttack):

@@ -63,7 +63,6 @@ class HashcatCmd(object):
             self._append_wordlists(command)
             command.extend(["--stdout", '|', "hashcat"])
         command.append("-m2500")
-        command.append("--weak-hash-threshold=0")
         command.append("--outfile={}".format(shlex.quote(self.outfile)))
         if int(os.getenv('DISABLE_POTFILE', 0)):
             # localhost debug mode

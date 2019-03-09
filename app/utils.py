@@ -1,19 +1,34 @@
 # encoding=utf-8
 
 import datetime
+import subprocess
 from functools import wraps
 from pathlib import Path
-from typing import Union
+from typing import Union, List
 from urllib.parse import urlparse, urljoin
 
 from flask import request
 
 from app import lock_app
+from app.app_logger import logger
 from app.config import Config, BENCHMARK_FILE
 from app.domain import Benchmark
 from app.nvidia_smi import NvidiaSmi
 
 DATE_FORMAT = "%Y-%m-%d %H:%M"
+
+
+def subprocess_call(args: List[str]):
+    """
+    :param args: shell args
+    """
+    logger.debug(">>> {}".format(' '.join(args)))
+    process = subprocess.Popen(args,
+                               universal_newlines=True,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    out, err = process.communicate()
+    return out, err
 
 
 def split_uppercase(word: str) -> set:
