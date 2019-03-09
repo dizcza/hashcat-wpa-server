@@ -75,5 +75,4 @@ def set_cuda_visible_devices(limit_devices=int(1e9), min_free_memory=0.4, max_lo
     gpus = gpus[:limit_devices]
     gpus_id = [str(gpu.index) for gpu in gpus]
     os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(gpus_id)
-    logger.debug("'CUDA_VISIBLE_DEVICES' is set to '{}'".format(os.environ["CUDA_VISIBLE_DEVICES"]))
     return gpus

@@ -12,14 +12,14 @@ from app.config import BENCHMARK_FILE
 from app.domain import Rule, WordList, NONE_ENUM, ProgressLock, JobLock, TaskInfoStatus
 from app.nvidia_smi import set_cuda_visible_devices
 from app.uploader import UploadedTask
-from app.utils import read_plain_key, date_formatted, subprocess_call
+from app.utils import read_plain_key, date_formatted, subprocess_call, wlanhcxinfo
 
 
 class CapAttack(BaseAttack):
 
     def __init__(self, uploaded_task: UploadedTask, lock: ProgressLock, timeout: int):
         capture_path = Path(shlex.quote(uploaded_task.filepath))
-        super().__init__(hcap_file=capture_path.with_suffix('.hccapx'))
+        super().__init__(hcap_file=capture_path.with_suffix('.hccapx'), verbose=False)
         self.lock = lock
         self.timeout = timeout
         self.capture_path = capture_path
@@ -59,7 +59,7 @@ class CapAttack(BaseAttack):
                 if n_handshakes == 0:
                     raise Exception("No hashes loaded")
 
-    def run_essid_attack(self, verbose=False):
+    def run_essid_attack(self):
         """
         Run ESSID + digits_append.txt combinator attack.
         Run ESSID + best64.rule attack.
@@ -68,10 +68,16 @@ class CapAttack(BaseAttack):
             return
         with self.lock:
             self.lock.status = "Running ESSID attack"
-        mac_essid = super().run_essid_attack(verbose=verbose)
+        super().run_essid_attack()
+        bssid_essid_pairs = wlanhcxinfo(self.hcap_file, '-ae')
+        bssids, essids = [], []
+        for bssid_essid in bssid_essid_pairs:
+            _bssid, _essid = bssid_essid.split(':')
+            bssids.append(_bssid)
+            essids.append(_essid)
         with self.lock:
-            self.lock.bssid = ', '.join(mac_essid.keys())
-            self.lock.essid = ', '.join(mac_essid.values())
+            self.lock.bssid = ', '.join(bssids)
+            self.lock.essid = ', '.join(essids)
 
     @monitor_timer
     def run_top4k(self):

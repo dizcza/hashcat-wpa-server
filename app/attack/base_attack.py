@@ -9,14 +9,14 @@ import time
 from collections import defaultdict
 from functools import partial
 from pathlib import Path
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Iterable
 
 from tqdm import tqdm
 
 from app.app_logger import logger
 from app.attack.hashcat_cmd import HashcatCmd
 from app.domain import Rule, WordList, Mask
-from app.utils import split_uppercase, read_plain_key, subprocess_call
+from app.utils import split_uppercase, read_plain_key, subprocess_call, wlanhcxinfo
 
 HCCAPX_BYTES = 393
 
@@ -37,75 +37,63 @@ class BaseAttack(object):
 
     timers = defaultdict(lambda: dict(count=0, elapsed=1e-6))
 
-    def __init__(self, hcap_file: Union[str, Path]):
+    def __init__(self, hcap_file: Union[str, Path], verbose=True):
+        """
+        :param hcap_file: .hccapx hashcat capture file path
+        :param verbose: show (True) or hide (False) tqdm
+        """
         self.hcap_file = Path(shlex.quote(str(hcap_file)))
+        assert self.hcap_file.suffix == '.hccapx'
+        self.verbose = verbose
         self.key_file = self.hcap_file.with_suffix('.key')
         self.session = self.hcap_file.name
         self.new_cmd = partial(HashcatCmd, hcap_file=self.hcap_file, outfile=self.key_file, session=self.session)
 
-    def run_essid_attack(self, verbose=False) -> Dict[str, str]:
+    def run_essid_attack(self):
         """
         Run ESSID + digits_append.txt combinator attack.
         Run ESSID + best64.rule attack.
         """
         hcap_split_dir = Path(tempfile.mkdtemp())
-
-        def get_essid_temp_path(essid: str):
-            essid = re.sub(r'\W+', '', essid)  # strip all except digits, letters and '_'
-            return hcap_split_dir.joinpath(essid + '.hccapx')
-
-        with open(self.hcap_file, 'rb') as f:
-            data = f.read()
-        n_captures = len(data) // HCCAPX_BYTES
-        assert n_captures > 0, "No hashes loaded"
-        assert n_captures * HCCAPX_BYTES == len(data), "Invalid .hccapx file"
-        mac_essid_dict = {}
-        for capture_id in range(n_captures):
-            capture = data[capture_id * HCCAPX_BYTES: (capture_id + 1) * HCCAPX_BYTES]
-            essid_len = capture[9]
-            try:
-                essid = capture[10: 10 + essid_len].decode('ascii')
-                mac_ap = binascii.hexlify(capture[59: 65]).decode('ascii')
-            except UnicodeDecodeError:
-                # skip non-ascii ESSIDs
-                continue
-            mac_essid_dict[mac_ap] = essid
-            hcap_fpath_essid = get_essid_temp_path(essid)
-            with open(hcap_fpath_essid, 'ab') as f:
-                f.write(capture)
-        for mac_ap, essid in tqdm(mac_essid_dict.items(), desc="ESSID attack", disable=not verbose):
-            logger.info(f"BSSID={mac_ap} ESSID={essid}")
-            hcap_fpath_essid = get_essid_temp_path(essid)
+        subprocess_call(['wlanhcx2ssid', '-i', self.hcap_file, '-p', hcap_split_dir, '-e'])
+        files = list(hcap_split_dir.iterdir())
+        for hcap_fpath_essid in tqdm(files, desc="ESSID attack", disable=not self.verbose):
+            essid = wlanhcxinfo(hcap_fpath_essid, mode='-e')
+            essid = next(iter(essid))  # should be only 1 item
             with tempfile.NamedTemporaryFile(mode='w') as f:
-                f.writelines(self.collect_essid_parts(essid))
+                if self.verbose:
+                    logger.debug(f"ESSID={essid}, candidates={f.name}")
+                essid_candidates = '\n'.join(self.collect_essid_parts(essid))
+                f.write(essid_candidates)
                 f.seek(0)
                 self._run_essid_digits(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=f.name)
                 self._run_essid_rule(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=f.name)
-            self.run_bssid_attack(mac_ap=mac_ap, hcap_fpath=hcap_fpath_essid)
         shutil.rmtree(hcap_split_dir)
-        return mac_essid_dict
 
-    def run_bssid_attack(self, mac_ap: str, hcap_fpath: Path):
+    def run_bssid_attack(self):
         """
         Some routers, for example, TP-LINK, use last 8 MAC AP characters as the default password.
-        :param mac_ap: MAC AP (BSSID)
-        :param hcap_fpath: path to .hccapx
         """
-        mac_ap = mac_ap.strip(':\n')
+        bssids = wlanhcxinfo(self.hcap_file, mode='-a')
         password_len = 8
-        mac_ap_candidates = {mac_ap + '\n'}
-        for start in range(len(mac_ap) - password_len):
-            mac_ap_chunk = mac_ap[start: start + password_len]
-            mac_ap_candidates.add(mac_ap_chunk + '\n')
-        hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=self.key_file, session=self.session)
+        mac_ap_candidates = set()
+        for mac_ap in bssids:
+            mac_ap_candidates.add(mac_ap)
+            for start in range(len(mac_ap) - password_len):
+                mac_ap_chunk = mac_ap[start: start + password_len]
+                mac_ap_candidates.add(mac_ap_chunk)
+        if self.verbose:
+            logger.debug(f"BSSID candidates: {mac_ap_candidates}")
+        hashcat_cmd = self.new_cmd()
+        mac_ap_candidates = '\n'.join(mac_ap_candidates)
         with tempfile.NamedTemporaryFile(mode='w') as f:
-            f.writelines(mac_ap_candidates)
+            f.write(mac_ap_candidates)
             f.seek(0)
             hashcat_cmd.add_wordlist(f.name)
             subprocess_call(hashcat_cmd.build())
 
     @staticmethod
-    def collect_essid_parts(essid_origin: str) -> List[str]:
+    def collect_essid_parts(essid_origin: str):
         def modify_case(word: str):
             return {word, word.lower(), word.upper(), word.capitalize(), word.lower().capitalize()}
         regex_non_char = re.compile('[^a-zA-Z]')
@@ -118,8 +106,7 @@ class BaseAttack(object):
             essids_case_insensitive.update(modify_case(essid))
         essids_case_insensitive.update(modify_case(essid_origin))
         essids_case_insensitive = filter(len, essids_case_insensitive)
-        essids_new_line = list(essid + '\n' for essid in essids_case_insensitive)
-        return essids_new_line
+        return essids_case_insensitive
 
     @monitor_timer
     def _run_essid_digits(self, hcap_fpath: Path, essid_wordlist_path: str):
@@ -201,7 +188,8 @@ class BaseAttack(object):
         """
         Run all attacks.
         """
-        self.run_essid_attack(verbose=True)
+        self.run_essid_attack()
+        self.run_bssid_attack()
         self.run_top4k()
         self.run_top1m()
         self.run_digits8()

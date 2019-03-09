@@ -22,6 +22,7 @@ def subprocess_call(args: List[str]):
     """
     :param args: shell args
     """
+    args = list(map(str, args))
     logger.debug(">>> {}".format(' '.join(args)))
     process = subprocess.Popen(args,
                                universal_newlines=True,
@@ -29,6 +30,19 @@ def subprocess_call(args: List[str]):
                                stderr=subprocess.PIPE)
     out, err = process.communicate()
     return out, err
+
+
+def wlanhcxinfo(hcap_path: Union[Path, str], mode: str):
+    """
+    :param hcap_path: .hccapx file path
+    :param mode: '-a' list access points
+                 '-e' list essid
+    :return: access points or essid list
+    """
+    out, err = subprocess_call(['wlanhcxinfo', '-i', hcap_path, mode])
+    out = out.strip('\n')
+    out = set(out.split('\n'))
+    return out
 
 
 def split_uppercase(word: str) -> set:
