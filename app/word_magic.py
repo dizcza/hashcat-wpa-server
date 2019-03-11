@@ -50,7 +50,8 @@ def collect_essid_parts(essid_origin: str):
         essid = regex_non_char.sub('', essid)
         essids_case_insensitive.update(modify_case(essid))
     essids_case_insensitive.update(modify_case(essid_origin))
-    essids_case_insensitive = filter(len, essids_case_insensitive)
+    essids_case_insensitive = set(word for word in essids_case_insensitive if len(word) > 1)
+    essids_case_insensitive.update(modify_case(essid_origin))  # special case when ESSID is a single letter
     return essids_case_insensitive
 
 
