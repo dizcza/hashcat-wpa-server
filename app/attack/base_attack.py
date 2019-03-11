@@ -1,26 +1,22 @@
 import argparse
-import binascii
-import os
 import re
 import shlex
 import shutil
-import subprocess
 import tempfile
 import time
 from collections import defaultdict
 from functools import partial
 from pathlib import Path
-from typing import Union, List, Dict, Iterable
+from typing import Union
 
 from tqdm import tqdm
 
 from app.app_logger import logger
 from app.attack.hashcat_cmd import HashcatCmdCapture, HashcatCmdStdout
-from app.domain import Rule, WordList, Mask
-from app.utils import split_uppercase, read_plain_key, subprocess_call, wlanhcxinfo
 from app.config import ESSID_TRIED
-
-HCCAPX_BYTES = 393
+from app.domain import Rule, WordList, Mask
+from app.utils import read_plain_key, subprocess_call, wlanhcxinfo
+from app.word_magic import collect_essid_parts
 
 
 def monitor_timer(func):
@@ -75,7 +71,7 @@ class BaseAttack:
             bssid, essid = bssid_essid.split(':', maxsplit=1)
             essid_filepath = essid_split_dir / re.sub(r'\W+', '', essid)  # strip all except digits, letters and '_'
             with open(essid_filepath, 'w') as f:
-                f.write('\n'.join(self.collect_essid_parts(essid)))
+                f.write('\n'.join(collect_essid_parts(essid)))
             self._run_essid_rule(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=essid_filepath)
             wordlist_order = [essid_filepath, WordList.DIGITS_APPEND.path]
             for reverse in range(2):
@@ -113,22 +109,6 @@ class BaseAttack:
             f.write(mac_ap_candidates)
             hashcat_cmd.add_wordlists(f.name)
             subprocess_call(hashcat_cmd.build())
-
-    @staticmethod
-    def collect_essid_parts(essid_origin: str):
-        def modify_case(word: str):
-            return {word, word.lower(), word.upper(), word.capitalize(), word.lower().capitalize()}
-        regex_non_char = re.compile('[^a-zA-Z]')
-        essid_parts = {essid_origin}
-        essid_parts.update(regex_non_char.split(essid_origin))
-        essid_parts.update(split_uppercase(essid_origin))
-        essids_case_insensitive = set()
-        for essid in essid_parts:
-            essid = regex_non_char.sub('', essid)
-            essids_case_insensitive.update(modify_case(essid))
-        essids_case_insensitive.update(modify_case(essid_origin))
-        essids_case_insensitive = filter(len, essids_case_insensitive)
-        return essids_case_insensitive
 
     @monitor_timer
     def _run_essid_rule(self, hcap_fpath: Path, essid_wordlist_path: Path):

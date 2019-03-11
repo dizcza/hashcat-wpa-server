@@ -45,15 +45,6 @@ def wlanhcxinfo(hcap_path: Union[Path, str], mode: str):
     return out
 
 
-def split_uppercase(word: str) -> set:
-    pos_upper = [pos for pos, letter in enumerate(word) if letter.isupper()]
-    pos_upper.append(len(word))
-    simple_words = set([])
-    for left, right in zip(pos_upper[:-1], pos_upper[1:]):
-        simple_words.add(word[left: right])
-    return simple_words
-
-
 def is_safe_url(target):
     ref_url = urlparse(request.host_url)
     test_url = urlparse(urljoin(request.host_url, target))
