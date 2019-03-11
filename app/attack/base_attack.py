@@ -185,6 +185,12 @@ class BaseAttack:
         hashcat_cmd.set_mask(Mask.MOBILE_UA)
         subprocess_call(hashcat_cmd.build())
 
+    @monitor_timer
+    def run_keyboard_walk(self):
+        hashcat_cmd = self.new_cmd()
+        hashcat_cmd.add_wordlists(WordList.KEYBOARD_WALK_EN, WordList.KEYBOARD_WALK_RU)
+        subprocess_call(hashcat_cmd.build())
+
     def run_all(self):
         """
         Run all attacks.
@@ -194,6 +200,7 @@ class BaseAttack:
         self.run_top1k()
         self.run_top304k()
         self.run_digits8()
+        self.run_keyboard_walk()
 
 
 def crack_hccapx():

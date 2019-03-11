@@ -26,6 +26,8 @@ class WordList(Enum):
     DIGITS_APPEND = "digits_append.txt"
     TOP1K = "Top1575-probable-v2.txt"
     TOP304K = "Top304Thousand-probable-v2.txt"
+    KEYBOARD_WALK_EN = "kwp_en_2-to-10-max-3"
+    KEYBOARD_WALK_RU = "kwp_ru_2-to-10-max-3"
 
     @property
     def path(self):
