@@ -113,7 +113,7 @@ class CapAttack(BaseAttack):
         with self.lock:
             self.lock.status = "Running main wordlist"
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlist(self.wordlist)
+        hashcat_cmd.add_wordlists(self.wordlist)
         hashcat_cmd.add_rule(self.rule)
         run_with_status(hashcat_cmd, lock=self.lock, timeout_minutes=self.timeout)
 

@@ -3,7 +3,7 @@ import shlex
 import subprocess
 import time
 from pathlib import Path
-from typing import Union
+from typing import Union, List
 
 from app.config import HASHCAT_STATUS_TIMER
 from app.domain import Rule, WordList, ProgressLock, TaskInfoStatus, Mask
@@ -42,68 +42,73 @@ def split_warnings_errors(stderr: str):
 
 
 class HashcatCmd:
-    def __init__(self, hcap_file: Union[str, Path], outfile: Union[str, Path], session=None):
-        self.hcap_file = str(hcap_file)
+    def __init__(self, outfile: Union[str, Path], session=None):
         self.outfile = str(outfile)
         self.session = session
         self.rules = []
         self.wordlists = []
-        self.custom_args = []
-        self.pipe_word_candidates = False  # set to True on small dictionaries with rules
         self.mask = None
 
-    def build(self) -> list:
+    def build(self) -> List[str]:
         set_cuda_visible_devices()
-        command = ["hashcat"]
+        command = ["hashcat", "-m2500"]
         for rule in self.rules:
             if rule is not None:
                 rule_path = str(rule.path)
                 command.append("--rules={}".format(shlex.quote(rule_path)))
-        if self.pipe_word_candidates:
-            self._append_wordlists(command)
-            command.extend(["--stdout", '|', "hashcat"])
-        command.append("-m2500")
         command.append("--outfile={}".format(shlex.quote(self.outfile)))
-        if int(os.getenv('DISABLE_POTFILE', 0)):
+        if self.session is not None:
+            command.append("--session={}".format(shlex.quote(self.session)))
+        self._populate_class_specific(command)
+        if self.mask is not None:
+            # masks are not compatible with wordlists
+            command.extend(['-a3', self.mask])
+        else:
+            for word_list in self.wordlists:
+                command.append(shlex.quote(word_list))
+        return command
+
+    def add_rule(self, rule: Rule):
+        self.rules.append(rule)
+
+    def add_wordlists(self, *wordlists: Union[WordList, str, Path], combinator: str = None):
+        wordlists_new = []
+        if combinator:
+            wordlists_new.append(combinator)
+        for wlist in wordlists:
+            if isinstance(wlist, WordList):
+                wlist = wlist.path
+            wordlists_new.append(str(wlist))
+        self.wordlists.extend(wordlists_new)
+
+    def set_mask(self, mask: Mask):
+        self.mask = str(mask.path)
+
+    def _populate_class_specific(self, command: List[str]):
+        pass
+
+
+class HashcatCmdCapture(HashcatCmd):
+    def __init__(self, hcap_file: Union[str, Path], outfile: Union[str, Path], session=None):
+        super().__init__(outfile=outfile, session=session)
+        self.hcap_file = str(hcap_file)
+
+    def _populate_class_specific(self, command: List[str]):
+        if int(os.getenv('POTFILE_DISABLE', 0)):
             # localhost debug mode
             command.append("--potfile-disable")
         command.append("--status")
         command.append("--status-timer={}".format(HASHCAT_STATUS_TIMER))
         command.append("--machine-readable")
-        if self.session is not None:
-            command.append("--session={}".format(shlex.quote(self.session)))
-        for arg in self.custom_args:
-            command.append(arg)
         command.append(self.hcap_file)
-        if not self.pipe_word_candidates:
-            assert '|' not in command
-            # masks are not compatible with wordlists
-            if self.mask is not None:
-                command.extend(['-a3', self.mask])
-            else:
-                self._append_wordlists(command)
-        return command
-
-    def _append_wordlists(self, command: list):
-        for word_list in self.wordlists:
-            command.append(shlex.quote(word_list))
-
-    def add_rule(self, rule: Rule):
-        self.rules.append(rule)
-
-    def add_wordlist(self, wordlist: Union[WordList, str, Path]):
-        if isinstance(wordlist, WordList):
-            wordlist = wordlist.path
-        self.wordlists.append(str(wordlist))
-
-    def set_mask(self, mask: Mask):
-        self.mask = str(mask.path)
-
-    def add_custom_argument(self, argument: str):
-        self.custom_args.append(argument)
 
 
-def run_with_status(hashcat_cmd: HashcatCmd, lock: ProgressLock, timeout_minutes: int):
+class HashcatCmdStdout(HashcatCmd):
+    def _populate_class_specific(self, command: List[str]):
+        command.append('--stdout')
+
+
+def run_with_status(hashcat_cmd: HashcatCmdCapture, lock: ProgressLock, timeout_minutes: int):
     timeout_seconds = timeout_minutes * 60
     start = time.time()
     hashcat_cmd_list = hashcat_cmd.build()

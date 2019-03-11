@@ -15,7 +15,7 @@ from typing import Union, List, Dict, Iterable
 from tqdm import tqdm
 
 from app.app_logger import logger
-from app.attack.hashcat_cmd import HashcatCmd
+from app.attack.hashcat_cmd import HashcatCmdCapture, HashcatCmdStdout
 from app.domain import Rule, WordList, Mask
 from app.utils import split_uppercase, read_plain_key, subprocess_call, wlanhcxinfo
 from app.config import ESSID_TRIED
@@ -49,7 +49,7 @@ class BaseAttack:
         self.verbose = verbose
         self.key_file = self.hcap_file.with_suffix('.key')
         self.session = self.hcap_file.name
-        self.new_cmd = partial(HashcatCmd, hcap_file=self.hcap_file, outfile=self.key_file, session=self.session)
+        self.new_cmd = partial(HashcatCmdCapture, hcap_file=self.hcap_file, outfile=self.key_file, session=self.session)
 
     def run_essid_attack(self):
         """
@@ -79,12 +79,14 @@ class BaseAttack:
             self._run_essid_rule(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=essid_filepath)
             wordlist_order = [essid_filepath, WordList.DIGITS_APPEND.path]
             for reverse in range(2):
-                hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath_essid, outfile=self.key_file, session=self.session)
-                for wlist in wordlist_order:
-                    hashcat_cmd.add_wordlist(wlist)
-                hashcat_cmd.pipe_word_candidates = True
-                hashcat_cmd = ' '.join(hashcat_cmd.build())
-                os.system(hashcat_cmd)
+                with tempfile.NamedTemporaryFile(mode='w') as f:
+                    hashcat_cmd = HashcatCmdStdout(outfile=f.name, session=self.session)
+                    hashcat_cmd.add_wordlists(*wordlist_order, combinator='-a1')
+                    subprocess_call(hashcat_cmd.build())
+                    hashcat_cmd = HashcatCmdCapture(hcap_file=hcap_fpath_essid, outfile=self.key_file,
+                                                    session=self.session)
+                    hashcat_cmd.add_wordlists(f.name)
+                    subprocess_call(hashcat_cmd.build())
                 wordlist_order = wordlist_order[::-1]
             with open(ESSID_TRIED, 'a') as f:
                 f.write(bssid_essid + '\n')
@@ -109,8 +111,7 @@ class BaseAttack:
         mac_ap_candidates = '\n'.join(mac_ap_candidates)
         with tempfile.NamedTemporaryFile(mode='w') as f:
             f.write(mac_ap_candidates)
-            f.seek(0)
-            hashcat_cmd.add_wordlist(f.name)
+            hashcat_cmd.add_wordlists(f.name)
             subprocess_call(hashcat_cmd.build())
 
     @staticmethod
@@ -130,16 +131,18 @@ class BaseAttack:
         return essids_case_insensitive
 
     @monitor_timer
-    def _run_essid_rule(self, hcap_fpath: Path, essid_wordlist_path: str):
+    def _run_essid_rule(self, hcap_fpath: Path, essid_wordlist_path: Path):
         """
         Run ESSID + best64.rule attack.
         """
-        hashcat_cmd = HashcatCmd(hcap_file=hcap_fpath, outfile=self.key_file, session=self.session)
-        hashcat_cmd.add_wordlist(essid_wordlist_path)
-        hashcat_cmd.add_rule(Rule.BEST_64)
-        hashcat_cmd.pipe_word_candidates = True
-        hashcat_cmd = ' '.join(hashcat_cmd.build())
-        os.system(hashcat_cmd)
+        with tempfile.NamedTemporaryFile(mode='w') as f:
+            hashcat_cmd = HashcatCmdStdout(outfile=f.name, session=self.session)
+            hashcat_cmd.add_wordlists(essid_wordlist_path)
+            hashcat_cmd.add_rule(Rule.BEST_64)
+            subprocess_call(hashcat_cmd.build())
+            hashcat_cmd = HashcatCmdCapture(hcap_file=hcap_fpath, outfile=self.key_file, session=self.session)
+            hashcat_cmd.add_wordlists(f.name)
+            subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
     def run_digits8(self):
@@ -150,7 +153,7 @@ class BaseAttack:
         For more information refer to `digits/create_digits.py`
         """
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlist(WordList.DIGITS_8)
+        hashcat_cmd.add_wordlists(WordList.DIGITS_8)
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
@@ -158,12 +161,14 @@ class BaseAttack:
         """
         - Top1575-probable-v2.txt with best64 rules
         """
-        hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlist(WordList.TOP1K)
-        hashcat_cmd.add_rule(Rule.BEST_64)
-        hashcat_cmd.pipe_word_candidates = True
-        hashcat_cmd = ' '.join(hashcat_cmd.build())
-        os.system(hashcat_cmd)
+        with tempfile.NamedTemporaryFile(mode='w') as f:
+            hashcat_cmd = HashcatCmdStdout(outfile=f.name, session=self.session)
+            hashcat_cmd.add_wordlists(WordList.TOP1K)
+            hashcat_cmd.add_rule(Rule.BEST_64)
+            subprocess_call(hashcat_cmd.build())
+            hashcat_cmd = self.new_cmd()
+            hashcat_cmd.add_wordlists(f.name)
+            subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
     def run_top304k(self):
@@ -171,7 +176,7 @@ class BaseAttack:
         - Top1m-probable-v2.txt with digits
         """
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlist(WordList.TOP304K)
+        hashcat_cmd.add_wordlists(WordList.TOP304K)
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
