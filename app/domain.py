@@ -12,6 +12,7 @@ JobLock = namedtuple('JobLock', ('job_id', 'lock'))
 @unique
 class Rule(Enum):
     BEST_64 = "best64.rule"
+    ESSID = "essid.rule"
 
     @property
     def path(self):

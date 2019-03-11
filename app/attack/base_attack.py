@@ -118,7 +118,7 @@ class BaseAttack:
         with tempfile.NamedTemporaryFile(mode='w') as f:
             hashcat_cmd = HashcatCmdStdout(outfile=f.name, session=self.session)
             hashcat_cmd.add_wordlists(essid_wordlist_path)
-            hashcat_cmd.add_rule(Rule.BEST_64)
+            hashcat_cmd.add_rule(Rule.ESSID)
             subprocess_call(hashcat_cmd.build())
             hashcat_cmd = HashcatCmdCapture(hcap_file=hcap_fpath, outfile=self.key_file, session=self.session)
             hashcat_cmd.add_wordlists(f.name)
