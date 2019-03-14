@@ -42,16 +42,18 @@ def split_warnings_errors(stderr: str):
 
 
 class HashcatCmd:
-    def __init__(self, outfile: Union[str, Path], session=None):
+    def __init__(self, outfile: Union[str, Path], hashcat_args=(), session=None):
         self.outfile = str(outfile)
         self.session = session
         self.rules = []
         self.wordlists = []
         self.mask = None
+        self.hashcat_args = hashcat_args
 
     def build(self) -> List[str]:
         set_cuda_visible_devices()
-        command = ["hashcat", "-m2500"]
+        hashcat_mode = os.getenv('HASHCAT_MODE', '2500')
+        command = ["hashcat", f"-m{hashcat_mode}", *self.hashcat_args]
         for rule in self.rules:
             if rule is not None:
                 rule_path = str(rule.path)
@@ -89,8 +91,8 @@ class HashcatCmd:
 
 
 class HashcatCmdCapture(HashcatCmd):
-    def __init__(self, hcap_file: Union[str, Path], outfile: Union[str, Path], session=None):
-        super().__init__(outfile=outfile, session=session)
+    def __init__(self, hcap_file: Union[str, Path], outfile: Union[str, Path], hashcat_args=(), session=None):
+        super().__init__(outfile=outfile, hashcat_args=hashcat_args, session=session)
         self.hcap_file = str(hcap_file)
 
     def _populate_class_specific(self, command: List[str]):

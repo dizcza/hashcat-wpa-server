@@ -5,7 +5,6 @@ import shutil
 import tempfile
 import time
 from collections import defaultdict
-from functools import partial
 from pathlib import Path
 from typing import Union
 
@@ -28,24 +27,30 @@ def monitor_timer(func):
         timer['count'] += 1
         timer['elapsed'] += elapsed_sec
         return res
+
     return wrapped
 
 
 class BaseAttack:
-
     timers = defaultdict(lambda: dict(count=0, elapsed=1e-6))
 
-    def __init__(self, hcap_file: Union[str, Path], verbose=True):
+    def __init__(self, hcap_file: Union[str, Path], hashcat_args=(), verbose=True):
         """
         :param hcap_file: .hccapx hashcat capture file path
         :param verbose: show (True) or hide (False) tqdm
         """
         self.hcap_file = Path(shlex.quote(str(hcap_file)))
-        assert self.hcap_file.suffix == '.hccapx'
         self.verbose = verbose
+        self.hashcat_args = hashcat_args
+        assert self.hcap_file.suffix == '.hccapx'
         self.key_file = self.hcap_file.with_suffix('.key')
         self.session = self.hcap_file.name
-        self.new_cmd = partial(HashcatCmdCapture, hcap_file=self.hcap_file, outfile=self.key_file, session=self.session)
+
+    def new_cmd(self, hcap_file: Union[str, Path] = None):
+        if hcap_file is None:
+            hcap_file = self.hcap_file
+        return HashcatCmdCapture(hcap_file=hcap_file, outfile=self.key_file, hashcat_args=self.hashcat_args,
+                                 session=self.session)
 
     def run_essid_attack(self):
         """
@@ -76,11 +81,10 @@ class BaseAttack:
             wordlist_order = [essid_filepath, WordList.DIGITS_APPEND.path]
             for reverse in range(2):
                 with tempfile.NamedTemporaryFile(mode='w') as f:
-                    hashcat_cmd = HashcatCmdStdout(outfile=f.name, session=self.session)
+                    hashcat_cmd = HashcatCmdStdout(outfile=f.name)
                     hashcat_cmd.add_wordlists(*wordlist_order, combinator='-a1')
                     subprocess_call(hashcat_cmd.build())
-                    hashcat_cmd = HashcatCmdCapture(hcap_file=hcap_fpath_essid, outfile=self.key_file,
-                                                    session=self.session)
+                    hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
                     hashcat_cmd.add_wordlists(f.name)
                     subprocess_call(hashcat_cmd.build())
                 wordlist_order = wordlist_order[::-1]
@@ -116,11 +120,11 @@ class BaseAttack:
         Run ESSID + best64.rule attack.
         """
         with tempfile.NamedTemporaryFile(mode='w') as f:
-            hashcat_cmd = HashcatCmdStdout(outfile=f.name, session=self.session)
+            hashcat_cmd = HashcatCmdStdout(outfile=f.name)
             hashcat_cmd.add_wordlists(essid_wordlist_path)
             hashcat_cmd.add_rule(Rule.ESSID)
             subprocess_call(hashcat_cmd.build())
-            hashcat_cmd = HashcatCmdCapture(hcap_file=hcap_fpath, outfile=self.key_file, session=self.session)
+            hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath)
             hashcat_cmd.add_wordlists(f.name)
             subprocess_call(hashcat_cmd.build())
 
@@ -142,7 +146,7 @@ class BaseAttack:
         - Top1575-probable-v2.txt with best64 rules
         """
         with tempfile.NamedTemporaryFile(mode='w') as f:
-            hashcat_cmd = HashcatCmdStdout(outfile=f.name, session=self.session)
+            hashcat_cmd = HashcatCmdStdout(outfile=f.name)
             hashcat_cmd.add_wordlists(WordList.TOP1K)
             hashcat_cmd.add_rule(Rule.BEST_64)
             subprocess_call(hashcat_cmd.build())
@@ -189,8 +193,8 @@ def crack_hccapx():
     """
     parser = argparse.ArgumentParser(description='Check weak passwords')
     parser.add_argument('hccapx', help='path to .hccapx')
-    args = parser.parse_args()
-    attack = BaseAttack(hcap_file=args.hccapx)
+    args, hashcat_args = parser.parse_known_args()
+    attack = BaseAttack(hcap_file=args.hccapx, hashcat_args=hashcat_args)
     attack.run_all()
     # attack.run_phone_mobile()
     if attack.key_file.exists():
