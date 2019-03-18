@@ -23,7 +23,7 @@ VERBOSE = 1
 class Mask(Enum):
     MASK_1 = "mask_1-4.txt"
     MASK_5 = "mask_5-7.txt"
-    MASK_8 = "mask_8-10.txt"
+    MASK_8 = "mask_8-12.txt"
 
     @property
     def path(self):

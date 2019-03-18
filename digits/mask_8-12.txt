@@ -1,0 +1,52 @@
+# same
+aaaaaaaa
+aaaaaaaaa
+aaaaaaaaaa
+aaaaaaaaaaa
+aaaaaaaaaaaa
+
+# ascending
+abcdefgh
+abcdefghi
+abcdefghij
+abcdefghijk
+abcdefghijkl
+
+# descending
+hgfedcba
+ihgfedcba
+jihgfedcba
+kjihgfedcba
+lkjihgfedcba
+
+# pairs
+aaaabbbb
+aabbccdd
+aabbaabb
+aaabbbccc
+aaabbbaaa
+aaaaabbbbb
+aabbccddee
+aabbccddeeff
+aaabbbcccddd
+
+# central mirror
+aabbbbaa
+abcddcba
+abcdedcba
+abcdeedcba
+abcdefedcba
+abcdeffedcba
+
+# repeat
+abababab
+ababababa
+ababababab
+abcabcabc
+abcdabcd
+abcdeabcde
+abcdefabcdef
+
+abbaabba
+abccbaabc
+abcddcbaabcd
