@@ -20,6 +20,14 @@ RUN for dict in Top1575-probable-v2.txt Top304Thousand-probable-v2.txt; do \
     done
 
 RUN mkdir -p /hashcat-wpa-server/captures
+RUN mkdir -p /hashcat-wpa-server/wordlists
+
+RUN kwp /hashcat/kwprocessor/basechars/full.base \
+    /hashcat/kwprocessor/keymaps/en-us.keymap \
+    /hashcat/kwprocessor/routes/2-to-10-max-2-direction-changes-combinator.route > /hashcat-wpa-server/wordlists/kwp_en_2-to-10-max-3
+RUN kwp /hashcat/kwprocessor/basechars/full.base \
+    /hashcat/kwprocessor/keymaps/ru.keymap \
+    /hashcat/kwprocessor/routes/2-to-10-max-2-direction-changes-combinator.route > /hashcat-wpa-server/wordlists/kwp_ru_2-to-10-max-3
 
 COPY ./requirements.txt /hashcat-wpa-server/requirements.txt
 RUN pip3 install -r /hashcat-wpa-server/requirements.txt
