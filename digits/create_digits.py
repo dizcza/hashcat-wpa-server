@@ -17,7 +17,15 @@ def create_digits_8(flashback_years=100, cycle_length_max=20):
     write_digits(digits, digits_wordlist_path)
 
 
-def create_digits_append(flashback_years=50, cycle_length_max=4):
+def create_digits_append(flashback_years=100, cycle_length_max=4):
+    """
+    2019          year
+    19            year[-2:]
+    1503          %d%m
+    0315          %m%d
+    mask_1-4.txt  digits only
+    234567890     digits cycle (left and right)
+    """
     digits_wordlist_path = WORDLISTS_DIR / "digits_append.txt"
     digits = set()
     curr_year = date.today().year
@@ -30,8 +38,6 @@ def create_digits_append(flashback_years=50, cycle_length_max=4):
     digits.update(create_digits_mask(masks, alphabet=string.digits, alphabet_size_max=2))
     for password_length in range(1, max(cycle_length_max, 10) + 1):
         digits.update(create_digits_cycle(password_length))
-    for alphabet in LETTER_ALPHABETS:
-        digits.update(create_digits_mask(masks, alphabet=alphabet, alphabet_size_max=1))
     write_digits(digits, digits_wordlist_path)
 
 

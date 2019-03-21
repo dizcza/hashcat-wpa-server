@@ -82,7 +82,7 @@ class BaseAttack:
             for reverse in range(2):
                 with tempfile.NamedTemporaryFile(mode='w') as f:
                     hashcat_cmd = HashcatCmdStdout(outfile=f.name)
-                    hashcat_cmd.add_wordlists(*wordlist_order, combinator='-a1')
+                    hashcat_cmd.add_wordlists(*wordlist_order, speial_args=['-a1'])
                     subprocess_call(hashcat_cmd.build())
                     hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
                     hashcat_cmd.add_wordlists(f.name)
@@ -175,6 +175,31 @@ class BaseAttack:
         hashcat_cmd.add_wordlists(WordList.KEYBOARD_WALK_EN, WordList.KEYBOARD_WALK_RU)
         subprocess_call(hashcat_cmd.build())
 
+    @monitor_timer
+    def run_names(self):
+        with tempfile.NamedTemporaryFile(mode='w') as f:
+            hashcat_cmd = HashcatCmdStdout(outfile=f.name)
+            hashcat_cmd.add_wordlists(WordList.NAMES_UA_RU)
+            hashcat_cmd.add_rule(Rule.ESSID)
+            hashcat_cmd = self.new_cmd()
+            hashcat_cmd.add_wordlists(f.name)
+            subprocess_call(hashcat_cmd.build())
+
+    @monitor_timer
+    def run_names_with_digits(self):
+        with open(WordList.NAMES_UA_RU_WITH_DIGITS.path, 'w') as f:
+            for left in ['left', 'right']:
+                wordlist_order = [WordList.NAMES_UA_RU, WordList.DIGITS_APPEND]
+                if left == 'right':
+                    wordlist_order = wordlist_order[::-1]
+                for rule_names in ['', 'T0', 'u']:
+                    hashcat_cmd = HashcatCmdStdout(outfile=f.name)
+                    hashcat_cmd.add_wordlists(*wordlist_order, speial_args=['-a1', f'--rule-{left}={rule_names}'])
+                    subprocess_call(hashcat_cmd.build())
+        hashcat_cmd = self.new_cmd()
+        hashcat_cmd.add_wordlists(WordList.NAMES_UA_RU_WITH_DIGITS)
+        subprocess_call(hashcat_cmd.build())
+
     def run_all(self):
         """
         Run all attacks.
@@ -185,6 +210,7 @@ class BaseAttack:
         self.run_top304k()
         self.run_digits8()
         self.run_keyboard_walk()
+        self.run_names()
 
 
 def crack_hccapx():
@@ -196,7 +222,7 @@ def crack_hccapx():
     args, hashcat_args = parser.parse_known_args()
     attack = BaseAttack(hcap_file=args.hccapx, hashcat_args=hashcat_args)
     attack.run_all()
-    # attack.run_phone_mobile()
+    # attack.run_names_with_digits()
     if attack.key_file.exists():
         key_password = read_plain_key(attack.key_file)
         print("WPA key is found!\n", key_password)

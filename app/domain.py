@@ -29,6 +29,8 @@ class WordList(Enum):
     TOP304K = "Top304Thousand-probable-v2.txt"
     KEYBOARD_WALK_EN = "kwp_en_2-to-10-max-3"
     KEYBOARD_WALK_RU = "kwp_ru_2-to-10-max-3"
+    NAMES_UA_RU = "names_ua-ru.txt"
+    NAMES_UA_RU_WITH_DIGITS = "names_ua-ru_with_digits.txt"
 
     @property
     def path(self):

@@ -1,10 +1,12 @@
 .idea/
 __pycache__/
-wordlists/
+wordlists/*
 logs/
 env/
 ignored/
 database/
+
+!wordlists/names_ua-ru.txt
 
 # airdump capture
 *.cap

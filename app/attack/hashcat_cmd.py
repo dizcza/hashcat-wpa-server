@@ -73,10 +73,8 @@ class HashcatCmd:
     def add_rule(self, rule: Rule):
         self.rules.append(rule)
 
-    def add_wordlists(self, *wordlists: Union[WordList, str, Path], combinator: str = None):
-        wordlists_new = []
-        if combinator:
-            wordlists_new.append(combinator)
+    def add_wordlists(self, *wordlists: Union[WordList, str, Path], speial_args: List[str] = ()):
+        wordlists_new = list(speial_args)
         for wlist in wordlists:
             if isinstance(wlist, WordList):
                 wlist = wlist.path
