@@ -16,6 +16,7 @@ from app.config import ESSID_TRIED
 from app.domain import Rule, WordList, Mask
 from app.utils import read_plain_key, subprocess_call, wlanhcxinfo
 from app.word_magic import collect_essid_parts
+from app.hamming import hamming_ball
 
 
 def monitor_timer(func):
@@ -78,20 +79,50 @@ class BaseAttack:
             with open(essid_filepath, 'w') as f:
                 f.write('\n'.join(collect_essid_parts(essid)))
             self._run_essid_rule(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=essid_filepath)
-            wordlist_order = [essid_filepath, WordList.DIGITS_APPEND.path]
-            for reverse in range(2):
-                with tempfile.NamedTemporaryFile(mode='w') as f:
-                    hashcat_cmd = HashcatCmdStdout(outfile=f.name)
-                    hashcat_cmd.add_wordlists(*wordlist_order, speial_args=['-a1'])
-                    subprocess_call(hashcat_cmd.build())
-                    hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
-                    hashcat_cmd.add_wordlists(f.name)
-                    subprocess_call(hashcat_cmd.build())
-                wordlist_order = wordlist_order[::-1]
+            self._run_essid_digits(hcap_fpath_essid=hcap_fpath_essid, essid_wordlist_path=essid_filepath)
+            self._run_essid_hamming(hcap_fpath_essid=hcap_fpath_essid, essid=essid)
             with open(ESSID_TRIED, 'a') as f:
                 f.write(bssid_essid + '\n')
         shutil.rmtree(essid_split_dir)
         shutil.rmtree(hcap_split_dir)
+
+    @monitor_timer
+    def _run_essid_rule(self, hcap_fpath: Path, essid_wordlist_path: Path):
+        """
+        Run ESSID + best64.rule attack.
+        """
+        with tempfile.NamedTemporaryFile(mode='w') as f:
+            hashcat_cmd = HashcatCmdStdout(outfile=f.name)
+            hashcat_cmd.add_wordlists(essid_wordlist_path)
+            hashcat_cmd.add_rule(Rule.ESSID)
+            subprocess_call(hashcat_cmd.build())
+            hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath)
+            hashcat_cmd.add_wordlists(f.name)
+            subprocess_call(hashcat_cmd.build())
+
+    def _run_essid_digits(self, hcap_fpath_essid: Path, essid_wordlist_path: str):
+        wordlist_order = [essid_wordlist_path, WordList.DIGITS_APPEND.path]
+        for reverse in range(2):
+            with tempfile.NamedTemporaryFile(mode='w') as f:
+                hashcat_cmd = HashcatCmdStdout(outfile=f.name)
+                hashcat_cmd.add_wordlists(*wordlist_order, speial_args=['-a1'])
+                subprocess_call(hashcat_cmd.build())
+                hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
+                hashcat_cmd.add_wordlists(f.name)
+                subprocess_call(hashcat_cmd.build())
+            wordlist_order = wordlist_order[::-1]
+
+    @monitor_timer
+    def _run_essid_hamming(self, hcap_fpath_essid: Path, essid: str, hamming_dist_max=2):
+        with tempfile.NamedTemporaryFile(mode='w') as f:
+            essid_hamming = set()
+            essid_hamming.update(hamming_ball(s=essid, n=hamming_dist_max))
+            essid_hamming.update(hamming_ball(s=essid.lower(), n=hamming_dist_max))
+            print(f"Essid {essid} -> {len(essid_hamming)} hamming cousins with dist={hamming_dist_max}")
+            f.write('\n'.join(essid_hamming))
+            hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
+            hashcat_cmd.add_wordlists(f.name)
+            subprocess_call(hashcat_cmd.build())
 
     def run_bssid_attack(self):
         """
@@ -108,23 +139,8 @@ class BaseAttack:
         if self.verbose:
             logger.debug(f"BSSID candidates: {mac_ap_candidates}")
         hashcat_cmd = self.new_cmd()
-        mac_ap_candidates = '\n'.join(mac_ap_candidates)
         with tempfile.NamedTemporaryFile(mode='w') as f:
-            f.write(mac_ap_candidates)
-            hashcat_cmd.add_wordlists(f.name)
-            subprocess_call(hashcat_cmd.build())
-
-    @monitor_timer
-    def _run_essid_rule(self, hcap_fpath: Path, essid_wordlist_path: Path):
-        """
-        Run ESSID + best64.rule attack.
-        """
-        with tempfile.NamedTemporaryFile(mode='w') as f:
-            hashcat_cmd = HashcatCmdStdout(outfile=f.name)
-            hashcat_cmd.add_wordlists(essid_wordlist_path)
-            hashcat_cmd.add_rule(Rule.ESSID)
-            subprocess_call(hashcat_cmd.build())
-            hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath)
+            f.write('\n'.join(mac_ap_candidates))
             hashcat_cmd.add_wordlists(f.name)
             subprocess_call(hashcat_cmd.build())
 
@@ -181,6 +197,7 @@ class BaseAttack:
             hashcat_cmd = HashcatCmdStdout(outfile=f.name)
             hashcat_cmd.add_wordlists(WordList.NAMES_UA_RU)
             hashcat_cmd.add_rule(Rule.ESSID)
+            subprocess_call(hashcat_cmd.build())
             hashcat_cmd = self.new_cmd()
             hashcat_cmd.add_wordlists(f.name)
             subprocess_call(hashcat_cmd.build())
@@ -220,6 +237,7 @@ def crack_hccapx():
     parser = argparse.ArgumentParser(description='Check weak passwords')
     parser.add_argument('hccapx', help='path to .hccapx')
     args, hashcat_args = parser.parse_known_args()
+    print(f"Hashcat args: {hashcat_args}")
     attack = BaseAttack(hcap_file=args.hccapx, hashcat_args=hashcat_args)
     attack.run_all()
     # attack.run_names_with_digits()
