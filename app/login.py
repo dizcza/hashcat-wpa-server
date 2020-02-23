@@ -1,6 +1,8 @@
 import os
+import warnings
 from enum import Enum, unique
 from functools import wraps
+from typing import Iterable, Union
 
 import flask
 from flask_login import LoginManager, UserMixin, current_user
@@ -90,13 +92,16 @@ def load_user(user_id: int):
     return User.query.get(user_id)
 
 
-def register_user(form: RegistrationForm, *roles: RoleEnum):
-    user = User(username=form.username.data)
-    user.set_password(form.password.data)
+def register_user(user: str, password: str, roles: Union[RoleEnum, Iterable[RoleEnum]]):
+    user = User(username=user)
+    user.set_password(password)
+    if isinstance(roles, RoleEnum):
+        roles = [roles]
     for role_enum in roles:
         user.roles.append(Role.by_enum(role_enum))
     db.session.add(user)
     db.session.commit()
+    logger.info(f"Registered {user} user.")
     return user
 
 
@@ -107,21 +112,23 @@ def create_first_users():
             db.session.add(Role(name=role_enum))
         db.session.commit()
     if not User.query.filter(User.username == 'guest').first():
-        user = User(username='guest')
-        user.set_password('guest')
-        user.roles.append(Role.by_enum(RoleEnum.GUEST))
-        db.session.add(user)
-        db.session.commit()
-        logger.info("Registered a guest user.")
+        # no 'guest' user yet
+        register_user(user='guest', password='gust', roles=RoleEnum.GUEST)
+
+    admin_cred_env_keys = ('HASHCAT_ADMIN_USER', 'HASHCAT_ADMIN_PASSWORD')
+    for key in admin_cred_env_keys:
+        if key not in os.environ:
+            raise KeyError(f"Please set '{key}' environment.")
     admin_name = os.environ['HASHCAT_ADMIN_USER']
     if not User.query.filter(User.username == admin_name).first():
-        user = User(username=admin_name)
-        user.set_password(os.environ['HASHCAT_ADMIN_PASSWORD'])
-        user.roles.append(Role.by_enum(RoleEnum.ADMIN))
-        user.roles.append(Role.by_enum(RoleEnum.USER))
-        db.session.add(user)
-        db.session.commit()
-        logger.info("Registered Admin user.")
+        # no 'admin' user yet
+        warnings.warn("It appears that you're running hashcat-wpa-server for the first time. Please run in a terminal "
+                      "the following commands to mitigate database migration in the future:"
+                      "\n flask db init"
+                      "\n flask db migrate"
+                      "\n flask db upgrade")
+        register_user(user=admin_name, password=os.environ['HASHCAT_ADMIN_PASSWORD'],
+                      roles=(RoleEnum.ADMIN, RoleEnum.USER))
 
 
 def user_has_roles(user: User, *requirements: RoleEnum) -> bool:

@@ -46,6 +46,13 @@ class Mask(Enum):
         return MASKS_DIR / self.value
 
 
+@unique
+class Workload(Enum):
+    Low = "1"
+    Default = "2"
+    High = "3"
+
+
 class TaskInfoStatus:
     SCHEDULED = "Scheduled"  # added to tasks queue
     COMPETED = "Completed"  # all attacks run

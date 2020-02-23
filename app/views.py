@@ -57,7 +57,7 @@ def upload():
         cap_path = Path(app.config['CAPTURES_DIR']) / filename
         if is_cap_mime_valid(cap_path):
             new_task = UploadedTask(user_id=current_user.id, filepath=str(cap_path), wordlist=form.wordlist.data,
-                                    rule=form.rule.data)
+                                    rule=form.rule.data, workload=int(form.workload.data))
             db.session.add(new_task)
             db.session.commit()
             flask.flash("Uploaded {}".format(filename))
@@ -137,11 +137,13 @@ def logout():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    # register Guest by User
+    # does not make much sense except for the demonstration purpose
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     form = RegistrationForm()
     if form.validate_on_submit():
-        user = register_user(form, RoleEnum.GUEST)
+        user = register_user(user=form.username.data, password=form.password.data, roles=RoleEnum.GUEST)
         flask.flash("You have been successfully registered as {role} '{name}'.".format(role=RoleEnum.GUEST.value,
                                                                                        name=user.username))
         return proceed_login(user)
@@ -152,9 +154,10 @@ def register():
 @login_required
 @roles_required(RoleEnum.ADMIN)
 def register_admin():
+    # register User by Admin
     form = RegistrationForm()
     if form.validate_on_submit():
-        user = register_user(form, RoleEnum.USER)
+        user = register_user(user=form.username.data, password=form.password.data, roles=RoleEnum.USER)
         flask.flash("You have successfully registered the new {role} '{name}'.".format(role=RoleEnum.USER.value,
                                                                                        name=user.username))
         return redirect(url_for('index'))

@@ -9,7 +9,7 @@ from wtforms import RadioField, IntegerField, SubmitField
 from wtforms.validators import DataRequired
 
 from app import app, db
-from app.domain import WordList, Rule, NONE_ENUM, TaskInfoStatus
+from app.domain import WordList, Rule, NONE_ENUM, TaskInfoStatus, Workload
 from app.utils import read_plain_key
 from app.config import AIRODUMP_SUFFIX, HCCAPX_SUFFIX
 
@@ -18,14 +18,10 @@ TIMEOUT_HASHCAT_MINUTES = 120
 
 
 def _wordlist_choices():
-    return tuple(wordlist.value for wordlist in (WordList.ROCKYOU, WordList.PHPBB))
-
-
-def _choices_from(*enums: Enum):
-    # return a pairs of (id-value, display)
-    choices = [(NONE_ENUM, '(None)')]
-    for item in enums:
-        choices.append((item.value, item.value))
+    # return a pairs of (id-value, display: str)
+    choices = [(NONE_ENUM, "(fast)")]
+    choices.extend((wordlist.value, wordlist.value) for wordlist in (
+        WordList.ROCKYOU, WordList.PHPBB, WordList.TOP304K))
     return choices
 
 
@@ -48,6 +44,7 @@ class UploadedTask(db.Model):
     filepath = db.Column(db.String(128))
     wordlist = db.Column(db.String(128))
     rule = db.Column(db.String(128))
+    workload = db.Column(db.Integer)
     uploaded_time = db.Column(db.DateTime, index=True, default=datetime.datetime.now)
     duration = db.Column(db.Interval, default=datetime.timedelta)
     status = db.Column(db.String(256), default=TaskInfoStatus.SCHEDULED)
@@ -59,11 +56,14 @@ class UploadedTask(db.Model):
 
 
 class UploadForm(FlaskForm):
-    wordlist = RadioField('Wordlist', choices=_choices_from(WordList.ROCKYOU, WordList.PHPBB), default=NONE_ENUM)
-    rule = RadioField('Rule', choices=_choices_from(Rule.BEST_64), default=NONE_ENUM)
+    wordlist = RadioField('Wordlist', choices=_wordlist_choices(), default=NONE_ENUM)
+    rule = RadioField('Rule', choices=((NONE_ENUM, "(None)"), (Rule.BEST_64.value, Rule.BEST_64.value)),
+                      default=NONE_ENUM)
     timeout = IntegerField('Timeout (minutes)', validators=[DataRequired()], default=TIMEOUT_HASHCAT_MINUTES)
-    capture = FileField('Capture',
-                        validators=[FileRequired(), FileAllowed(CAPTURE_EXTENSIONS, message='Airodump capture files only')])
+    capture = FileField('Capture', validators=[FileRequired(), FileAllowed(CAPTURE_EXTENSIONS,
+                                                                           message='Airodump capture files only')])
+    workload = RadioField("Workload", choices=tuple((wl.value, wl.name) for wl in Workload),
+                          default=Workload.Default.value)
     submit = SubmitField('Submit')
 
 
