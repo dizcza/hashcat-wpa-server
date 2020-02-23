@@ -81,13 +81,17 @@ def str_to_date(date_str: str) -> datetime.datetime:
     return datetime.datetime.strptime(date_str, DATE_FORMAT)
 
 
-def is_mime_valid(file_path: Union[str, Path]) -> bool:
-    file_path = Path(file_path)
-    if not file_path.exists():
+def is_cap_mime_valid(cap_path: Union[str, Path]) -> bool:
+    # Checks if the capture file has valid signature
+    cap_path = Path(cap_path)
+    if not cap_path.exists():
         return False
-    with open(file_path, 'rb') as f:
-        data = f.read()
-    return data.startswith(Config.CAPTURE_MIME)
+    if cap_path.suffix not in Config.CAPTURE_MIMES:
+        return False
+    correct_signature = Config.CAPTURE_MIMES[cap_path.suffix]
+    with open(cap_path, 'rb') as f:
+        cap_data = f.read()
+    return cap_data.startswith(correct_signature)
 
 
 def read_last_benchmark():

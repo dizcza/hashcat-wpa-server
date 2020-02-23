@@ -1,5 +1,4 @@
 import datetime
-import os
 from enum import Enum
 from pathlib import Path
 
@@ -12,8 +11,9 @@ from wtforms.validators import DataRequired
 from app import app, db
 from app.domain import WordList, Rule, NONE_ENUM, TaskInfoStatus
 from app.utils import read_plain_key
+from app.config import AIRODUMP_SUFFIX, HCCAPX_SUFFIX
 
-EXTENSIONS = ('cap',)
+CAPTURE_EXTENSIONS = (AIRODUMP_SUFFIX.lstrip('.'), HCCAPX_SUFFIX.lstrip('.'))
 TIMEOUT_HASHCAT_MINUTES = 120
 
 
@@ -22,6 +22,7 @@ def _wordlist_choices():
 
 
 def _choices_from(*enums: Enum):
+    # return a pairs of (id-value, display)
     choices = [(NONE_ENUM, '(None)')]
     for item in enums:
         choices.append((item.value, item.value))
@@ -62,9 +63,9 @@ class UploadForm(FlaskForm):
     rule = RadioField('Rule', choices=_choices_from(Rule.BEST_64), default=NONE_ENUM)
     timeout = IntegerField('Timeout (minutes)', validators=[DataRequired()], default=TIMEOUT_HASHCAT_MINUTES)
     capture = FileField('Capture',
-                        validators=[FileRequired(), FileAllowed(EXTENSIONS, message='Airodump capture files only')])
+                        validators=[FileRequired(), FileAllowed(CAPTURE_EXTENSIONS, message='Airodump capture files only')])
     submit = SubmitField('Submit')
 
 
-cap_uploads = UploadSet(name='files', extensions=EXTENSIONS, default_dest=lambda app: app.config['CAPTURES_DIR'])
+cap_uploads = UploadSet(name='files', extensions=CAPTURE_EXTENSIONS, default_dest=lambda app: app.config['CAPTURES_DIR'])
 configure_uploads(app, cap_uploads)

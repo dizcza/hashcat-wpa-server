@@ -68,6 +68,7 @@ class HashcatCmd:
         else:
             for word_list in self.wordlists:
                 command.append(shlex.quote(word_list))
+        command.append("--force")
         return command
 
     def add_rule(self, rule: Rule):

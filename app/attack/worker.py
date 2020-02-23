@@ -8,7 +8,7 @@ from app import db, lock_app
 from app.app_logger import logger
 from app.attack.base_attack import BaseAttack, monitor_timer
 from app.attack.hashcat_cmd import run_with_status
-from app.config import BENCHMARK_FILE
+from app.config import BENCHMARK_FILE, AIRODUMP_SUFFIX, HCCAPX_SUFFIX
 from app.domain import Rule, WordList, NONE_ENUM, ProgressLock, JobLock, TaskInfoStatus
 from app.nvidia_smi import set_cuda_visible_devices
 from app.uploader import UploadedTask
@@ -48,16 +48,24 @@ class CapAttack(BaseAttack):
         """
         with self.lock:
             self.lock.status = "Converting .cap to .hccapx"
-        out, err = subprocess_call(['cap2hccapx', str(self.capture_path), str(self.hcap_file)])
+
+        if self.capture_path.suffix == AIRODUMP_SUFFIX:
+            subprocess_call(['cap2hccapx', str(self.capture_path), str(self.hcap_file)])
+        elif self.capture_path.suffix == HCCAPX_SUFFIX:
+            self.hcap_file = self.capture_path
+        else:
+            raise ValueError("Invalid capture file extension")
+
         if not self.hcap_file.exists():
             raise FileNotFoundError("cap2hccapx failed")
-        else:
-            cap2hccapx_status = re.search("Written \d WPA Handshakes", out)
-            if cap2hccapx_status:
-                cap2hccapx_status = cap2hccapx_status.group()
-                n_handshakes = int(cap2hccapx_status.split()[1])
-                if n_handshakes == 0:
-                    raise Exception("No hashes loaded")
+
+    def check_hccapx(self):
+        """
+        Check .hccapx file for hashes.
+        """
+        file_size = self.hcap_file.stat().st_size
+        if file_size == 0:
+            raise Exception("No hashes found")
 
     def run_essid_attack(self):
         """
@@ -131,6 +139,7 @@ def _crack_async(attack: CapAttack):
     :param attack: hashcat attack to crack uploaded capture
     """
     attack.cap2hccapx()
+    attack.check_hccapx()
     attack.run_all()
     attack.read_key()
     logger.info("Finished cracking {}".format(attack.capture_path))
@@ -143,7 +152,7 @@ def _hashcat_benchmark_async():
     Called in background process.
     """
     set_cuda_visible_devices()
-    out, err = subprocess_call(['hashcat', '-m2500', "-b", "--machine-readable", "--quiet"])
+    out, err = subprocess_call(['hashcat', '-m2500', "-b", "--machine-readable", "--quiet", "--force"])
     pattern = re.compile("\d+:2500:.*:.*:\d+\.\d+:\d+")
     total_speed = 0
     for line in filter(pattern.fullmatch, out.splitlines()):
@@ -236,6 +245,7 @@ class HashcatWorker:
 
     def cancel(self, task_id: int):
         # todo terminate pid
+        self.terminate()
         if task_id not in self.locks:
             return False
         job_id, lock = self.locks[task_id]

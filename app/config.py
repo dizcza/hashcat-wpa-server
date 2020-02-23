@@ -19,6 +19,9 @@ HASHCAT_STATUS_TIMER = 20  # seconds
 BENCHMARK_FILE = APP_DIR / "benchmark.csv"
 BENCHMARK_UPDATE_PERIOD = 60  # seconds
 
+AIRODUMP_SUFFIX = ".cap"
+HCCAPX_SUFFIX = ".hccapx"
+
 
 class Config:
     """ Flask application config """
@@ -31,4 +34,7 @@ class Config:
 
     # Airodump capture files
     CAPTURES_DIR = ROOT_DIR / "captures"
-    CAPTURE_MIME = itsdangerous.base64_decode("1MOyoQIABAAAAAAAAAAAAP//AABpAAAA")
+    CAPTURE_MIMES = {
+        AIRODUMP_SUFFIX: itsdangerous.base64_decode("1MOyoQIABAAAAAAAAAAAAP//AABpAAAA"),
+        HCCAPX_SUFFIX: b'HCPX',
+    }
