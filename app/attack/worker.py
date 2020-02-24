@@ -20,7 +20,7 @@ class CapAttack(BaseAttack):
     def __init__(self, uploaded_task: UploadedTask, lock: ProgressLock, timeout: int):
         capture_path = Path(shlex.quote(uploaded_task.filepath))
         super().__init__(hcap_file=capture_path.with_suffix('.hccapx'),
-                         hashcat_args=('--workload-profile', str(uploaded_task.workload)),
+                         hashcat_args=(f"--workload-profile={uploaded_task.workload}",),
                          verbose=False)
         self.lock = lock
         self.timeout = timeout
