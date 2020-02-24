@@ -1,4 +1,4 @@
-ARG branch=intel-cpu
+ARG branch=latest
 FROM dizcza/docker-hashcat:$branch
 
 RUN apt-get update && \

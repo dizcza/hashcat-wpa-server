@@ -1,12 +1,12 @@
 version: '2'
 services:
   app:
-    image: "hashcat-wpa-server:intel-cpu"
+    image: "hashcat-wpa-server:latest"
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        branch: intel-cpu
+        branch: latest
     ports:
      - "9111:80"
     environment:
