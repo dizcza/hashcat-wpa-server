@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-rsync -rave "ssh -i ${AWS_KEY}" --exclude-from=rsync.exclude . `whoami`@${AWS_HOST}:/home/`whoami`/hashcat-wpa-server
-rsync -ve "ssh -i ${AWS_KEY}" bash/docker_run.sh `whoami`@${AWS_HOST}:/home/`whoami`/hashcat-wpa-server
+rsync -rave "ssh" --exclude-from=rsync.exclude . root@85.217.171.57:/root/hashcat-wpa-server
+scp bash/docker_run.sh root@85.217.171.57:/root/hashcat-wpa-server/

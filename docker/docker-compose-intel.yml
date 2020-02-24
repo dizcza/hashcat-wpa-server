@@ -1,0 +1,16 @@
+version: '3.7'
+services:
+  app:
+    image: "hashcat-wpa-server:intel-cpu"
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile-intel
+    ports:
+     - "9111:80"
+    environment:
+       - "HASHCAT_ADMIN_USER=${HASHCAT_ADMIN_USER}"
+       - "HASHCAT_ADMIN_PASSWORD=${HASHCAT_ADMIN_PASSWORD}"
+       - "TERM=xterm"
+    volumes:
+      - $HOME/hashcat_database/:/hashcat-wpa-server/database/
+    restart: always

@@ -1,10 +1,10 @@
-version: '2'
+version: '3.7'
 services:
   app:
     image: "hashcat-wpa-server:latest"
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
       args:
         branch: latest
     ports:

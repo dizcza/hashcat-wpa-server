@@ -173,7 +173,7 @@ class BaseAttack:
     @monitor_timer
     def run_top304k(self):
         """
-        - Top1m-probable-v2.txt with digits
+        - Top304Thousand-probable-v2.txt
         """
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlists(WordList.TOP304K)

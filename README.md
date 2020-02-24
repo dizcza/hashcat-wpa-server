@@ -9,9 +9,28 @@
 
 # Hashcat WPA/WPA2 server
 
-Yet another WPA/WPA2 hashes cracker. Powered by [hashcat](https://hashcat.net/hashcat/). It uses the most common wordlists and rules. Written in Python 3.6.
+Yet another WPA/WPA2 hashes cracker. Powered by [hashcat](https://hashcat.net/hashcat/), written in Python 3.6.
 
-Check out running server on AWS free tier instance: http://85.217.171.57:9111. To surf the site, login with the `guest:guest` credentials. (Yes, you don't have the permissions to start jobs. Contact me if necessary.)
+Every password cracking researcher is proud of his/her wordlists and rules. Here is my strategy of checking the most
+probable passwords that require only a few minutes to run on any laptop or Raspberry Pi. They are all run in
+[`BaseAttack.run_all()`](
+https://github.com/dizcza/hashcat-wpa-server/blob/c9285676668c1c64fd5a62282366d3cb92dff969/app/attack/base_attack.py#L220)
+method:
+
+* `run_essid_attack`: ESSID + digits_append.txt combinator attack (`-a1`), ESSID + best64.rule attack.
+* `run_bssid_attack`: Some routers, i.e., TP-LINK, in the past used the last 8 MAC AP characters as the default password.
+* `run_top1k`: Top1575-probable-v2.txt + best64.rule attack.
+* `run_top304k`: Top304Thousand-probable-v2.txt attack.
+* `run_digits8`: birthdays 100 years backward, digits masks like aabbccdd (refer to ![mask_8-12.txt](digits/mask_8-12.txt)), digits cycles, and more.
+* `run_keyboard_walk`: [keyboard-walk](https://github.com/hashcat/kwprocessor) attack.
+* `run_names`: names_ua-ru.txt with ![essid.rule](rules/essid.rule) attack.
+
+Check out a running server on a CPU instance: http://85.217.171.57:9111. To surf the site, login with the `guest:guest` credentials. (Yes, you don't have the permissions to start jobs. Contact me if necessary.)
+
+'rockyou.txt' and 'phpbb.txt' classic wordlist options are for demonstration purposes only and are not recommended to
+run with, since they are not optimized as, for example, in
+[Probable-Wordlists](https://github.com/berzerk0/Probable-Wordlists).
+
 
 ## Deployment
 
@@ -39,10 +58,10 @@ docker run --runtime=nvidia -d -e HASHCAT_ADMIN_USER=admin -e HASHCAT_ADMIN_PASS
 Or build your own image with Nvidia support: 
 
 ```
-docker build --build-arg branch=latest -t hashcat-wpa-server:latest -f Dockerfile .
+docker build -t hashcat-wpa-server -f docker/Dockerfile .
 ```
 
-Then run your `hashcat-wpa-server:latest` docker image instead of `dizcza/hashcat-wpa-server:latest`. You'll still need [nvidia-docker2](https://github.com/NVIDIA/nvidia-docker) package installed to start containers.
+Then run your `hashcat-wpa-server` docker image instead of `dizcza/hashcat-wpa-server`. You'll still need [nvidia-docker2](https://github.com/NVIDIA/nvidia-docker) package installed to start containers.
 
 #### Using docker hub. Intel CPU
 
