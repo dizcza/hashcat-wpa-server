@@ -113,7 +113,7 @@ def create_first_users():
         db.session.commit()
     if not User.query.filter(User.username == 'guest').first():
         # no 'guest' user yet
-        register_user(user='guest', password='gust', roles=RoleEnum.GUEST)
+        register_user(user='guest', password='guest', roles=RoleEnum.GUEST)
 
     admin_cred_env_keys = ('HASHCAT_ADMIN_USER', 'HASHCAT_ADMIN_PASSWORD')
     for key in admin_cred_env_keys:
