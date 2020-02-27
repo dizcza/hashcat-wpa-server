@@ -1,8 +1,7 @@
 import re
+from itertools import permutations
 
-import splitter
-
-from app.config import ESSID_TRIED
+import wordninja
 
 
 def split_uppercase(word: str) -> set:
@@ -21,13 +20,11 @@ def split_word_compounds(word: str):
     """
     catonsofa -> cat, on, sofa
     """
-    compounds = splitter.split(word)
-    compounds_merged = list(compounds)
-    for start in range(len(compounds)):
-        for end in range(start + 1, len(compounds)):
-            merged_part = ''.join(compounds[start: end + 1])
-            compounds_merged.append(merged_part)
-    return compounds_merged
+    compounds = wordninja.split(word)
+    compounds_perm = list(compounds)
+    for r in range(2, len(compounds) + 1):
+        compounds_perm.extend(map(''.join, permutations(compounds, r)))
+    return compounds_perm
 
 
 def collect_essid_parts(essid_origin: str):
@@ -36,6 +33,7 @@ def collect_essid_parts(essid_origin: str):
 
     regex_non_char = re.compile('[^a-zA-Z]')
     essid_parts = {essid_origin}
+    essid_parts.update(split_word_compounds(essid_origin))
     regex_split_parts = regex_non_char.split(essid_origin)
     regex_split_parts = list(filter(len, regex_split_parts))
 
@@ -45,21 +43,16 @@ def collect_essid_parts(essid_origin: str):
 
     essid_parts.update(regex_split_parts)
     essid_parts.update(split_uppercase(essid_origin))
-    essids_case_insensitive = set()
-    for essid in essid_parts:
+    for essid in list(essid_parts):
         essid = regex_non_char.sub('', essid)
-        essids_case_insensitive.update(modify_case(essid))
-    essids_case_insensitive.update(modify_case(essid_origin))
-    essids_case_insensitive = set(word for word in essids_case_insensitive if len(word) > 1)
-    essids_case_insensitive.update(modify_case(essid_origin))  # special case when ESSID is a single letter
-    return essids_case_insensitive
+        essid_parts.update(modify_case(essid))
+    essid_parts.update(modify_case(essid_origin))
+    essid_parts = set(word for word in essid_parts if len(word) > 1)
+    essid_parts.update(modify_case(essid_origin))  # special case when ESSID is a single letter
+    return essid_parts
 
 
 if __name__ == '__main__':
-    with open(ESSID_TRIED) as f:
-        data = f.read().splitlines()
-    for bssid_essid in data:
-        essid = bssid_essid.split(':', maxsplit=1)[1]
-        print(f"{essid} compounds: {split_word_compounds(essid)}")
-        print(*collect_essid_parts(essid))
-        input("Press enter.")
+    for essid in ["Tanya007", "My_rabbit", "Myrabbit", "MyRabbit", "PetitCafe2017"]:
+        print(f"'{essid}' compounds: {sorted(split_word_compounds(essid))}")
+        print("\tcandidates: ", sorted(collect_essid_parts(essid)))

@@ -2,7 +2,7 @@ ARG branch=latest
 FROM dizcza/docker-hashcat:$branch
 
 RUN apt-get update && \
-    apt-get install -y bzip2 python3-distutils nginx supervisor enchant
+    apt-get install -y bzip2 python3-distutils nginx supervisor
 RUN useradd --no-create-home nginx
 
 RUN wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py && \

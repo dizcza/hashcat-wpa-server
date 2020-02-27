@@ -9,15 +9,20 @@
 
 # Hashcat WPA/WPA2 server
 
-Yet another WPA/WPA2 hashes cracker. Powered by [hashcat](https://hashcat.net/hashcat/), written in Python 3.6.
+Yet another WPA/WPA2 hashes cracker. Powered by [hashcat](https://hashcat.net/hashcat/), written in Python 3.6. The
+backend is implemented with Flask.
 
 Every password cracking researcher is proud of his/her wordlists and rules. Here is my strategy of checking the most
-probable passwords that require only a few minutes to run on any laptop or Raspberry Pi. They are all run in
-[`BaseAttack.run_all()`](
+probable passwords that require only a few minutes to run on any laptop or Raspberry Pi. The strategy is marked as
+`'(fast)'` among wordlist choices in UI. They are all run in [`BaseAttack.run_all()`](
 https://github.com/dizcza/hashcat-wpa-server/blob/c9285676668c1c64fd5a62282366d3cb92dff969/app/attack/base_attack.py#L220)
 method:
 
-* `run_essid_attack`: ESSID + digits_append.txt combinator attack (`-a1`), ESSID + best64.rule attack.
+* `run_essid_attack`: ESSID + digits_append.txt combinator attack (`-a1`), ESSID + best64.rule attack. It uses
+[wordninja](https://github.com/keredson/wordninja) to split ESSID in words and create all possible permutations of word
+compounds. For example "PetitCafe2017" ESSID will be split in `['2017', '2017Cafe', '2017CafePetit', '2017Petit', '2017PetitCafe', 'Cafe', 'Cafe2017', 'Cafe2017Petit', 'CafePetit', 'CafePetit2017', 'Petit', 'Petit2017', 'Petit2017Cafe', 'PetitCafe', 'PetitCafe2017']`
+which increases the chance of finding passwords of type "PetitXXXX" by running a combinator attack for each of the word
+compounds combination.
 * `run_bssid_attack`: Some routers, i.e., TP-LINK, in the past used the last 8 MAC AP characters as the default password.
 * `run_top1k`: Top1575-probable-v2.txt + best64.rule attack.
 * `run_top304k`: Top304Thousand-probable-v2.txt attack.
