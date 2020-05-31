@@ -10,6 +10,5 @@ Werkzeug==0.16.1
 WTForms==2.2.1
 python-dateutil==2.8.1
 gunicorn==20.0.4
-pyenchant==2.0.0
 wordninja==2.0.0
 tqdm

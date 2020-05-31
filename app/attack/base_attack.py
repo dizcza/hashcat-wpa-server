@@ -43,7 +43,6 @@ class BaseAttack:
         self.hcap_file = Path(shlex.quote(str(hcap_file)))
         self.verbose = verbose
         self.hashcat_args = hashcat_args
-        assert self.hcap_file.suffix == '.hccapx'
         self.key_file = self.hcap_file.with_suffix('.key')
         self.session = self.hcap_file.name
 
