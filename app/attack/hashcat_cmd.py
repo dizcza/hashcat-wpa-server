@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Union, List
 
 from app.config import HASHCAT_STATUS_TIMER
-from app.domain import Rule, WordList, ProgressLock, TaskInfoStatus, Mask
+from app.domain import Rule, WordList, ProgressLock, TaskInfoStatus, Mask, HashcatMode
 from app.nvidia_smi import set_cuda_visible_devices
 
 HASHCAT_WARNINGS = (
@@ -42,8 +42,9 @@ def split_warnings_errors(stderr: str):
 
 
 class HashcatCmd:
-    def __init__(self, outfile: Union[str, Path], hashcat_args=(), session=None):
+    def __init__(self, outfile: Union[str, Path], mode='22000', hashcat_args=(), session=None):
         self.outfile = str(outfile)
+        self.mode = mode
         self.session = session
         self.rules = []
         self.wordlists = []
@@ -52,8 +53,7 @@ class HashcatCmd:
 
     def build(self) -> List[str]:
         set_cuda_visible_devices()
-        hashcat_mode = os.getenv('HASHCAT_MODE', '2500')
-        command = ["hashcat", f"-m{hashcat_mode}", *self.hashcat_args]
+        command = ["hashcat", f"-m{self.mode}", *self.hashcat_args]
         for rule in self.rules:
             if rule is not None:
                 rule_path = str(rule.path)
@@ -91,7 +91,8 @@ class HashcatCmd:
 
 class HashcatCmdCapture(HashcatCmd):
     def __init__(self, hcap_file: Union[str, Path], outfile: Union[str, Path], hashcat_args=(), session=None):
-        super().__init__(outfile=outfile, hashcat_args=hashcat_args, session=session)
+        mode = HashcatMode.from_suffix(Path(hcap_file).suffix)
+        super().__init__(outfile=outfile, mode=mode, hashcat_args=hashcat_args, session=session)
         self.hcap_file = str(hcap_file)
 
     def _populate_class_specific(self, command: List[str]):

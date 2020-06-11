@@ -9,8 +9,15 @@
 
 # Hashcat WPA/WPA2 server
 
-Yet another WPA/WPA2 hashes cracker. Powered by [hashcat](https://hashcat.net/hashcat/), written in Python 3.6. The
+Yet another WPA/WPA2 hashes cracker web server. Powered by [hashcat](https://hashcat.net/hashcat/), written in Python 3.6. The
 backend is implemented with Flask.
+
+Supported capture file formats:
+* .pcapng (hcxdumptool)
+* .cap (airodump)
+* .hccapx (m2500)
+* .pmkid (m16800)
+* .22000 (PMKID/EAPOL)
 
 Every password cracking researcher is proud of his/her wordlists and rules. Here is my strategy of checking the most
 probable passwords that require only a few minutes to run on any laptop or Raspberry Pi. The strategy is marked as
@@ -23,12 +30,11 @@ method:
 compounds. For example "PetitCafe2017" ESSID will be split in `['2017', '2017Cafe', '2017CafePetit', '2017Petit', '2017PetitCafe', 'Cafe', 'Cafe2017', 'Cafe2017Petit', 'CafePetit', 'CafePetit2017', 'Petit', 'Petit2017', 'Petit2017Cafe', 'PetitCafe', 'PetitCafe2017']`
 which increases the chance of finding passwords of type "PetitXXXX" by running a combinator attack for each of the word
 compounds combination.
-* `run_bssid_attack`: Some routers, i.e., TP-LINK, in the past used the last 8 MAC AP characters as the default password.
 * `run_top1k`: Top1575-probable-v2.txt + best64.rule attack.
 * `run_top304k`: Top304Thousand-probable-v2.txt attack.
-* `run_digits8`: birthdays 100 years backward, digits masks like aabbccdd (refer to ![mask_8-12.txt](digits/mask_8-12.txt)), digits cycles, and more.
+* `run_digits8`: birthdays 100 years backward, digits masks like aabbccdd (refer to [mask_8-12.txt](digits/mask_8-12.txt)), digits cycles, and more.
 * `run_keyboard_walk`: [keyboard-walk](https://github.com/hashcat/kwprocessor) attack.
-* `run_names`: names_ua-ru.txt with ![essid.rule](rules/essid.rule) attack.
+* `run_names`: names_ua-ru.txt with [essid.rule](rules/essid.rule) attack.
 
 Check out a running server on a CPU instance: http://85.217.171.57:9111. To surf the site, login with the `guest:guest` credentials. (Yes, you don't have the permissions to start jobs. Contact me if necessary.)
 

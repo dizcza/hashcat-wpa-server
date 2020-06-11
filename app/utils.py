@@ -11,8 +11,8 @@ from flask import request
 
 from app import lock_app
 from app.app_logger import logger
-from app.config import Config, BENCHMARK_FILE
-from app.domain import Benchmark
+from app.config import BENCHMARK_FILE
+from app.domain import Benchmark, InvalidFileError
 from app.nvidia_smi import NvidiaSmi
 
 DATE_FORMAT = "%Y-%m-%d %H:%M"
@@ -30,19 +30,6 @@ def subprocess_call(args: List[str]):
                                stderr=subprocess.PIPE)
     out, err = process.communicate()
     return out, err
-
-
-def wlanhcxinfo(hcap_path: Union[Path, str], mode: str):
-    """
-    :param hcap_path: .hccapx file path
-    :param mode: '-a' list access points
-                 '-e' list essid
-    :return: access points or essid list
-    """
-    out, err = subprocess_call(['wlanhcxinfo', '-i', hcap_path, mode])
-    out = out.strip('\n')
-    out = set(out.split('\n'))
-    return out
 
 
 def is_safe_url(target):
@@ -81,19 +68,6 @@ def str_to_date(date_str: str) -> datetime.datetime:
     return datetime.datetime.strptime(date_str, DATE_FORMAT)
 
 
-def is_cap_mime_valid(cap_path: Union[str, Path]) -> bool:
-    # Checks if the capture file has valid signature
-    cap_path = Path(cap_path)
-    if not cap_path.exists():
-        return False
-    if cap_path.suffix not in Config.CAPTURE_MIMES:
-        return False
-    correct_signature = Config.CAPTURE_MIMES[cap_path.suffix]
-    with open(cap_path, 'rb') as f:
-        cap_data = f.read()
-    return cap_data.startswith(correct_signature)
-
-
 def read_last_benchmark():
     if not BENCHMARK_FILE.exists():
         return Benchmark(date="(Never)", speed=0)
@@ -109,3 +83,19 @@ def wrap_render_template(render_template):
         kwargs.update(gpus=NvidiaSmi.get_gpus())
         return render_template(*args, **kwargs)
     return wrapper
+
+
+def bssid_essid_from_22000(file_22000):
+    if not Path(file_22000).exists():
+        raise FileNotFoundError(file_22000)
+    with open(file_22000) as f:
+        lines = f.readlines()
+    bssid_essids = set()
+    for line in lines:
+        info_split = line.split('*')
+        if len(info_split) == 0:
+            raise InvalidFileError("Not a 22000 file")
+        bssid = info_split[3]
+        essid = info_split[5]  # in hex format
+        bssid_essids.add(f"{bssid}:{essid}")
+    return iter(bssid_essids)

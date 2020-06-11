@@ -5,23 +5,15 @@ logs/
 env/
 ignored/
 database/
+captures/
 
 !wordlists/names_ua-ru.txt
 
-# airdump capture
-*.cap
-
-# hashcat acceptable capture format
-*.hccapx
-
-# cracked keys
+# found keys
 *.key
 
 # sqlite database
 *.db
-
-# igored files
-temp.py
 
 # certificate
 *.pem

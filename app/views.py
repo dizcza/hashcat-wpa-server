@@ -14,7 +14,7 @@ from app.config import BENCHMARK_UPDATE_PERIOD, BENCHMARK_FILE
 from app.login import LoginForm, RegistrationForm
 from app.login import User, RoleEnum, register_user, create_first_users, Role, roles_required, user_has_roles
 from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks
-from app.utils import is_safe_url, is_cap_mime_valid, read_last_benchmark, wrap_render_template
+from app.utils import is_safe_url, read_last_benchmark, wrap_render_template
 
 hashcat_worker = HashcatWorker(app)
 render_template = wrap_render_template(render_template)
@@ -55,17 +55,13 @@ def upload():
             return flask.abort(403, description="You do not have the permission to start jobs.")
         filename = cap_uploads.save(request.files['capture'], folder=current_user.username)
         cap_path = Path(app.config['CAPTURES_DIR']) / filename
-        if is_cap_mime_valid(cap_path):
-            new_task = UploadedTask(user_id=current_user.id, filepath=str(cap_path), wordlist=form.wordlist.data,
-                                    rule=form.rule.data, workload=int(form.workload.data))
-            db.session.add(new_task)
-            db.session.commit()
-            flask.flash("Uploaded {}".format(filename))
-            hashcat_worker.submit_capture(new_task, timeout=form.timeout.data)
-            return redirect(url_for('user_profile'))
-        else:
-            flask.flash("Invalid file", category='error')
-            return redirect(url_for('upload'))
+        new_task = UploadedTask(user_id=current_user.id, filepath=str(cap_path), wordlist=form.wordlist.data,
+                                rule=form.rule.data, workload=int(form.workload.data))
+        db.session.add(new_task)
+        db.session.commit()
+        flask.flash("Uploaded {}".format(filename))
+        hashcat_worker.submit_capture(new_task, timeout=form.timeout.data)
+        return redirect(url_for('user_profile'))
     return render_template('upload.html', title='Upload', form=form)
 
 

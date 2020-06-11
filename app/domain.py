@@ -1,12 +1,19 @@
 import threading
 from collections import namedtuple
 from enum import Enum, unique
+from pathlib import Path
+from typing import Union
 
 from app.config import WORDLISTS_DIR, RULES_DIR, MASKS_DIR
 
 NONE_ENUM = str(None)
 Benchmark = namedtuple('Benchmark', ('date', 'speed'))
 JobLock = namedtuple('JobLock', ('job_id', 'lock'))
+
+
+class InvalidFileError(Exception):
+    # self-explanatory error
+    pass
 
 
 @unique
@@ -44,6 +51,37 @@ class Mask(Enum):
     @property
     def path(self):
         return MASKS_DIR / self.value
+
+
+class HashcatMode:
+
+    @staticmethod
+    def valid_modes():
+        return ("2500", "2501", "16800", "16801", "22000", "22001")
+
+    @staticmethod
+    def valid_suffixes():
+        # valid file suffixes
+        valid = ["cap", "pcapng", "hccapx", "pmkid"]
+        valid.extend(HashcatMode.valid_modes())
+        return valid
+
+    @staticmethod
+    def from_suffix(suffix: Union[str, Path]):
+        suffix = str(suffix).lstrip('.')
+        if suffix not in HashcatMode.valid_suffixes():
+            raise ValueError(f"Invalid capture file suffix: '{suffix}'")
+        if suffix == "cap":
+            raise ValueError("Convert '.cap' to hccapx/2500 file with "
+                             "'cap2hccapx' command.")
+        if suffix == "pcapng":
+            raise ValueError("Convert '.pcapng' to 22000 file with "
+                             "'hcxpcapngtool' command.")
+        if suffix == "hccapx":
+            return "2500"
+        if suffix == "pmkid":
+            return "16800"
+        return suffix
 
 
 @unique

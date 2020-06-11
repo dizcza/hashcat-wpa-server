@@ -8,18 +8,19 @@ from app import db, lock_app
 from app.app_logger import logger
 from app.attack.base_attack import BaseAttack, monitor_timer
 from app.attack.hashcat_cmd import run_with_status
-from app.config import BENCHMARK_FILE, AIRODUMP_SUFFIX, HCCAPX_SUFFIX
-from app.domain import Rule, WordList, NONE_ENUM, ProgressLock, JobLock, TaskInfoStatus
+from app.config import BENCHMARK_FILE
+from app.domain import Rule, WordList, NONE_ENUM, ProgressLock, JobLock, \
+    TaskInfoStatus, InvalidFileError
 from app.nvidia_smi import set_cuda_visible_devices
 from app.uploader import UploadedTask
-from app.utils import read_plain_key, date_formatted, subprocess_call, wlanhcxinfo
+from app.utils import read_plain_key, date_formatted, subprocess_call, bssid_essid_from_22000
 
 
 class CapAttack(BaseAttack):
 
     def __init__(self, uploaded_task: UploadedTask, lock: ProgressLock, timeout: int):
         capture_path = Path(shlex.quote(uploaded_task.filepath))
-        super().__init__(hcap_file=capture_path.with_suffix('.hccapx'),
+        super().__init__(hcap_file=capture_path.with_suffix('.22000'),
                          hashcat_args=(f"--workload-profile={uploaded_task.workload}",),
                          verbose=False)
         self.lock = lock
@@ -48,18 +49,30 @@ class CapAttack(BaseAttack):
         """
         Convert airodump's `.cap` to hashcat's `.hccapx`
         """
-        with self.lock:
-            self.lock.status = "Converting .cap to .hccapx"
+        def convert_and_verify(cmd, path_verify=self.hcap_file):
+            subprocess_call(cmd)
+            if not Path(path_verify).exists():
+                raise FileNotFoundError(f"{cmd[0]} failed")
 
-        if self.capture_path.suffix == AIRODUMP_SUFFIX:
-            subprocess_call(['cap2hccapx', str(self.capture_path), str(self.hcap_file)])
-        elif self.capture_path.suffix == HCCAPX_SUFFIX:
+        if self.capture_path.suffix == ".pcapng":
+            convert_and_verify(['hcxpcapngtool', '-o', str(self.hcap_file),
+                             str(self.capture_path)])
+            self.capture_path = self.hcap_file
+        elif self.capture_path.suffix == ".cap":
+            hccapx_file = self.capture_path.with_suffix(".hccapx")
+            convert_and_verify(['cap2hccapx', str(self.capture_path), str(hccapx_file)], path_verify=hccapx_file)
+            self.capture_path = hccapx_file
+
+        # TODO: add support for 22001 (2501, 16801) modes
+        if self.capture_path.suffix in (".hccapx", ".2500"):
+            convert_and_verify(['hcxmactool', f'--hccapxin={self.capture_path}', f'--pmkideapolout={self.hcap_file}'])
+        elif self.capture_path.suffix in (".pmkid", ".16800"):
+            convert_and_verify(['hcxmactool', f'--pmkidin={self.capture_path}', f'--pmkideapolout={self.hcap_file}'])
+        elif self.capture_path.suffix == ".22000":
             self.hcap_file = self.capture_path
         else:
-            raise ValueError("Invalid capture file extension")
+            raise InvalidFileError(f"Invalid file suffix: '{self.capture_path.suffix}'")
 
-        if not self.hcap_file.exists():
-            raise FileNotFoundError("cap2hccapx failed")
 
     def check_hccapx(self):
         """
@@ -67,7 +80,7 @@ class CapAttack(BaseAttack):
         """
         file_size = self.hcap_file.stat().st_size
         if file_size == 0:
-            raise Exception("No hashes found")
+            raise InvalidFileError("No hashes found")
 
     def run_essid_attack(self):
         """
@@ -79,10 +92,11 @@ class CapAttack(BaseAttack):
         with self.lock:
             self.lock.status = "Running ESSID attack"
         super().run_essid_attack()
-        bssid_essid_pairs = wlanhcxinfo(self.hcap_file, '-ae')
+        bssid_essid_pairs = bssid_essid_from_22000(self.hcap_file)
         bssids, essids = [], []
         for bssid_essid in bssid_essid_pairs:
             _bssid, _essid = bssid_essid.split(':')
+            _essid = bytes.fromhex(_essid).decode('utf-8')
             bssids.append(_bssid)
             essids.append(_essid)
         with self.lock:

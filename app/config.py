@@ -1,7 +1,5 @@
-import os
+import secrets
 from pathlib import Path
-
-import itsdangerous
 
 APP_DIR = Path(__file__).parent
 ROOT_DIR = APP_DIR.parent
@@ -19,14 +17,11 @@ HASHCAT_STATUS_TIMER = 20  # seconds
 BENCHMARK_FILE = APP_DIR / "benchmark.csv"
 BENCHMARK_UPDATE_PERIOD = 60  # seconds
 
-AIRODUMP_SUFFIX = ".cap"
-HCCAPX_SUFFIX = ".hccapx"
-
 
 class Config:
     """ Flask application config """
 
-    SECRET_KEY = os.urandom(24)
+    SECRET_KEY = secrets.token_bytes(64)
 
     # Flask-SQLAlchemy settings
     SQLALCHEMY_DATABASE_URI = "sqlite:///{}".format(DATABASE_PATH)
@@ -34,7 +29,3 @@ class Config:
 
     # Airodump capture files
     CAPTURES_DIR = ROOT_DIR / "captures"
-    CAPTURE_MIMES = {
-        AIRODUMP_SUFFIX: itsdangerous.base64_decode("1MOyoQIABAAAAAAAAAAAAP//AABpAAAA"),
-        HCCAPX_SUFFIX: b'HCPX',
-    }

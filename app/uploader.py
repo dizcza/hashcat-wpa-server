@@ -1,5 +1,4 @@
 import datetime
-from enum import Enum
 from pathlib import Path
 
 from flask_uploads import UploadSet, configure_uploads
@@ -9,11 +8,10 @@ from wtforms import RadioField, IntegerField, SubmitField
 from wtforms.validators import DataRequired
 
 from app import app, db
-from app.domain import WordList, Rule, NONE_ENUM, TaskInfoStatus, Workload
+from app.domain import WordList, Rule, NONE_ENUM, TaskInfoStatus, Workload, \
+    HashcatMode
 from app.utils import read_plain_key
-from app.config import AIRODUMP_SUFFIX, HCCAPX_SUFFIX
 
-CAPTURE_EXTENSIONS = (AIRODUMP_SUFFIX.lstrip('.'), HCCAPX_SUFFIX.lstrip('.'))
 TIMEOUT_HASHCAT_MINUTES = 120
 
 
@@ -60,12 +58,12 @@ class UploadForm(FlaskForm):
     rule = RadioField('Rule', choices=((NONE_ENUM, "(None)"), (Rule.BEST_64.value, Rule.BEST_64.value)),
                       default=NONE_ENUM)
     timeout = IntegerField('Timeout (minutes)', validators=[DataRequired()], default=TIMEOUT_HASHCAT_MINUTES)
-    capture = FileField('Capture', validators=[FileRequired(), FileAllowed(CAPTURE_EXTENSIONS,
-                                                                           message='Airodump capture files only')])
+    capture = FileField('Capture', validators=[FileRequired(), FileAllowed(HashcatMode.valid_suffixes(),
+                                                                           message='Airodump & Hashcat capture files only')])
     workload = RadioField("Workload", choices=tuple((wl.value, wl.name) for wl in Workload),
                           default=Workload.Default.value)
     submit = SubmitField('Submit')
 
 
-cap_uploads = UploadSet(name='files', extensions=CAPTURE_EXTENSIONS, default_dest=lambda app: app.config['CAPTURES_DIR'])
+cap_uploads = UploadSet(name='files', extensions=HashcatMode.valid_suffixes(), default_dest=lambda app: app.config['CAPTURES_DIR'])
 configure_uploads(app, cap_uploads)

@@ -1,4 +1,5 @@
 import argparse
+import os
 import re
 import shlex
 import shutil
@@ -10,13 +11,12 @@ from typing import Union
 
 from tqdm import tqdm
 
-from app.app_logger import logger
 from app.attack.hashcat_cmd import HashcatCmdCapture, HashcatCmdStdout
 from app.config import ESSID_TRIED
 from app.domain import Rule, WordList, Mask
-from app.utils import read_plain_key, subprocess_call, wlanhcxinfo
-from app.word_magic import collect_essid_parts
 from app.hamming import hamming_ball
+from app.utils import read_plain_key, subprocess_call, bssid_essid_from_22000
+from app.word_magic import collect_essid_parts
 
 
 def monitor_timer(func):
@@ -58,23 +58,28 @@ class BaseAttack:
         Run ESSID + best64.rule attack.
         """
         ESSID_TRIED.parent.mkdir(parents=True, exist_ok=True)
-        hcap_split_dir = Path(tempfile.mkdtemp())
-        essid_split_dir = Path(tempfile.mkdtemp())
-        subprocess_call(['wlanhcx2ssid', '-i', self.hcap_file, '-p', hcap_split_dir, '-e'])
-        files = list(hcap_split_dir.iterdir())
+        split_by_essid_dir = Path(tempfile.mkdtemp())
+        essid_as_wordlist_dir = Path(tempfile.mkdtemp())
+
+        curdir = os.getcwd()
+        os.chdir(split_by_essid_dir)
+        subprocess_call(['hcxhashtool', '-i', self.hcap_file, '--essid-group'])
+        os.chdir(curdir)
+
         bssid_essid_tried = set()
         if ESSID_TRIED.exists():
             with open(ESSID_TRIED, 'r') as f:
                 bssid_essid_tried = set(f.read().splitlines())
-        for hcap_fpath_essid in tqdm(files, desc="ESSID attack", disable=not self.verbose):
-            bssid_essid = wlanhcxinfo(hcap_fpath_essid, mode='-ae')
-            if len(bssid_essid) > 1:
-                logger.warn(f"Expected 1 unique BSSID:ESSID in {bssid_essid}.")
-            bssid_essid = next(iter(bssid_essid))  # should be only 1 item
+
+        files_split_by_essid = list(split_by_essid_dir.iterdir())
+        for hcap_fpath_essid in tqdm(files_split_by_essid, desc="ESSID attack", disable=not self.verbose):
+            bssid_essid = next(bssid_essid_from_22000(hcap_fpath_essid))
             if bssid_essid in bssid_essid_tried:
                 continue
-            bssid, essid = bssid_essid.split(':', maxsplit=1)
-            essid_filepath = essid_split_dir / re.sub(r'\W+', '', essid)  # strip all except digits, letters and '_'
+            bssid, essid = bssid_essid.split(':')
+            assert essid == hcap_fpath_essid.stem
+            essid = bytes.fromhex(essid).decode('utf-8')
+            essid_filepath = essid_as_wordlist_dir / re.sub(r'\W+', '', essid)  # strip all except digits, letters and '_'
             with open(essid_filepath, 'w') as f:
                 f.write('\n'.join(collect_essid_parts(essid)))
             self._run_essid_rule(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=essid_filepath)
@@ -82,8 +87,8 @@ class BaseAttack:
             self._run_essid_hamming(hcap_fpath_essid=hcap_fpath_essid, essid=essid)
             with open(ESSID_TRIED, 'a') as f:
                 f.write(bssid_essid + '\n')
-        shutil.rmtree(essid_split_dir)
-        shutil.rmtree(hcap_split_dir)
+        shutil.rmtree(essid_as_wordlist_dir)
+        shutil.rmtree(split_by_essid_dir)
 
     @monitor_timer
     def _run_essid_rule(self, hcap_fpath: Path, essid_wordlist_path: Path):
@@ -113,33 +118,13 @@ class BaseAttack:
 
     @monitor_timer
     def _run_essid_hamming(self, hcap_fpath_essid: Path, essid: str, hamming_dist_max=2):
+        essid_hamming = set()
+        essid_hamming.update(hamming_ball(s=essid, n=hamming_dist_max))
+        essid_hamming.update(hamming_ball(s=essid.lower(), n=hamming_dist_max))
+        print(f"Essid {essid} -> {len(essid_hamming)} hamming cousins with dist={hamming_dist_max}")
         with tempfile.NamedTemporaryFile(mode='w') as f:
-            essid_hamming = set()
-            essid_hamming.update(hamming_ball(s=essid, n=hamming_dist_max))
-            essid_hamming.update(hamming_ball(s=essid.lower(), n=hamming_dist_max))
-            print(f"Essid {essid} -> {len(essid_hamming)} hamming cousins with dist={hamming_dist_max}")
             f.write('\n'.join(essid_hamming))
             hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
-            hashcat_cmd.add_wordlists(f.name)
-            subprocess_call(hashcat_cmd.build())
-
-    def run_bssid_attack(self):
-        """
-        Some routers, for example, TP-LINK, use last 8 MAC AP characters as the default password.
-        """
-        bssids = wlanhcxinfo(self.hcap_file, mode='-a')
-        password_len = 8
-        mac_ap_candidates = set()
-        for mac_ap in bssids:
-            mac_ap_candidates.add(mac_ap)
-            for start in range(len(mac_ap) - password_len):
-                mac_ap_chunk = mac_ap[start: start + password_len]
-                mac_ap_candidates.add(mac_ap_chunk)
-        if self.verbose:
-            logger.debug(f"BSSID candidates: {mac_ap_candidates}")
-        hashcat_cmd = self.new_cmd()
-        with tempfile.NamedTemporaryFile(mode='w') as f:
-            f.write('\n'.join(mac_ap_candidates))
             hashcat_cmd.add_wordlists(f.name)
             subprocess_call(hashcat_cmd.build())
 
@@ -221,7 +206,6 @@ class BaseAttack:
         Run all attacks.
         """
         self.run_essid_attack()
-        self.run_bssid_attack()
         self.run_top1k()
         self.run_top304k()
         self.run_digits8()
