@@ -1,10 +1,10 @@
 # encoding=utf-8
-
 import datetime
+import hashlib
 import subprocess
 from functools import wraps
 from pathlib import Path
-from typing import Union, List
+from typing import List
 from urllib.parse import urlparse, urljoin
 
 from flask import request
@@ -46,17 +46,18 @@ def log_request(logger):
     logger.debug(str_info)
 
 
-def read_plain_key(key_path) -> str:
+def read_plain_key(key_path):
+    key_path = Path(key_path)
+    if not key_path.exists():
+        return None
     with open(key_path) as f:
-        lines = f.readlines()
+        lines = f.read().splitlines()
     found_keys = set()
-    for hashcat_key in lines:
-        parts = hashcat_key.split(':')
-        if len(parts) != 5:
-            # failed to extract essid:key
-            found_keys.add(hashcat_key)
-        essid, key = parts[3], parts[4]
+    for line in lines:
+        essid, key = line.split(':')[-2:]
         found_keys.add("{essid}:{key}".format(essid=essid, key=key))
+    if not found_keys:
+        return None
     return ', '.join(found_keys)
 
 
@@ -99,3 +100,17 @@ def bssid_essid_from_22000(file_22000):
         essid = info_split[5]  # in hex format
         bssid_essids.add(f"{bssid}:{essid}")
     return iter(bssid_essids)
+
+
+def check_file_22000(file_22000):
+    file_22000 = Path(file_22000)
+    if file_22000.suffix != ".22000":
+        raise InvalidFileError(f"Invalid capture file format: '{file_22000.suffix}'. Expected 22000.")
+
+
+def calculate_md5(fpath, chunk_size=1024 * 1024):
+    md5 = hashlib.md5()
+    with open(fpath, 'rb') as f:
+        for chunk in iter(lambda: f.read(chunk_size), b''):
+            md5.update(chunk)
+    return md5.hexdigest()

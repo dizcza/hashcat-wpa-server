@@ -11,27 +11,27 @@
         <th>#</th>
         <th>Capture</th>
         <th>Date</th>
-        <th>Progress</th>
         <th>Duration</th>
         <th>BSSID</th>
         <th>ESSID</th>
         <th>Wordlist</th>
         <th>Rule</th>
         <th>Status</th>
+        <th>Progress</th>
         <th>Found Key</th>
     </tr>
-    {%- for row_id, task in enumerate(tasks) %}
+    {%- for task in tasks %}
     <tr id="task{{ task.id }}">
-        <td>{{ row_id }}</td>
-        <td>{{ basename(task.filepath) }}</td>
+        <td>{{ task.id }}</td>
+        <td>{{ task.filename }}</td>
         <td>{{ task.uploaded_time.strftime('%Y-%m-%d %H:%M') }}</td>
-        <td class="progress">{{ "{:.1f}".format(task.progress) }} %</td>
         <td>{{ task.duration }}</td>
         <td>{{ task.bssid }}</td>
         <td>{{ task.essid }}</td>
         <td>{{ task.wordlist }}</td>
         <td>{{ task.rule }}</td>
         <td class="status">{{ task.status }}</td>
+        <td class="progress"></td>
         <td class="found_key">{{ task.found_key }}</td>
         {% if not task.completed %}
         <td><button onclick="cancelTask({{ task.id }})">Cancel</button></td>
@@ -62,12 +62,9 @@
         $.get('/progress').done(function(response) {
             $.each(response, function(index, data) {
                 var $task_row = $("#task" + data.task_id);
-                $task_row.find("td.progress").text(data.progress + " %");
+                $task_row.find("td.progress").text(data.progress);
                 $task_row.find("td.status").text(data.status);
                 $task_row.find("td.found_key").text(data.found_key);
-                if (data.completed) {
-                    $.get('/delete_lock/' + data.task_id);
-                }
             });
         })
         {% endif %}

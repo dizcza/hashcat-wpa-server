@@ -1,5 +1,6 @@
 import datetime
 import os
+import shlex
 from http import HTTPStatus
 from pathlib import Path
 
@@ -9,12 +10,14 @@ from flask.json import jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 
 from app import app, db
+from app.attack.convert import split_by_essid, convert_to_22000
 from app.attack.worker import HashcatWorker
 from app.config import BENCHMARK_UPDATE_PERIOD, BENCHMARK_FILE
 from app.login import LoginForm, RegistrationForm
+from app.domain import TaskInfoStatus
 from app.login import User, RoleEnum, register_user, create_first_users, Role, roles_required, user_has_roles
 from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks
-from app.utils import is_safe_url, read_last_benchmark, wrap_render_template
+from app.utils import is_safe_url, read_last_benchmark, wrap_render_template, bssid_essid_from_22000
 
 hashcat_worker = HashcatWorker(app)
 render_template = wrap_render_template(render_template)
@@ -55,12 +58,23 @@ def upload():
             return flask.abort(403, description="You do not have the permission to start jobs.")
         filename = cap_uploads.save(request.files['capture'], folder=current_user.username)
         cap_path = Path(app.config['CAPTURES_DIR']) / filename
-        new_task = UploadedTask(user_id=current_user.id, filepath=str(cap_path), wordlist=form.wordlist.data,
-                                rule=form.rule.data, workload=int(form.workload.data))
-        db.session.add(new_task)
+        cap_path = Path(shlex.quote(str(cap_path)))
+        file_22000 = convert_to_22000(cap_path)
+        folder_split_by_essid = split_by_essid(file_22000)
+        tasks = {}
+        for file_essid in folder_split_by_essid.iterdir():
+            bssid_essid = next(bssid_essid_from_22000(file_essid))
+            bssid, essid = bssid_essid.split(':')
+            essid = bytes.fromhex(essid).decode('utf-8')
+            new_task = UploadedTask(user_id=current_user.id, filename=cap_path.name, wordlist=form.wordlist.data,
+                                    rule=form.rule.data, bssid=bssid, essid=essid,
+                                    hashcat_args=f"--workload-profile={form.workload.data}")
+            tasks[file_essid] = new_task
+        db.session.add_all(tasks.values())
         db.session.commit()
-        flask.flash("Uploaded {}".format(filename))
-        hashcat_worker.submit_capture(new_task, timeout=form.timeout.data)
+        for file_essid, task in tasks.items():
+            hashcat_worker.submit_capture(file_essid, uploaded_form=form, task=task)
+        flask.flash(f"Uploaded {filename}")
         return redirect(url_for('user_profile'))
     return render_template('upload.html', title='Upload', form=form)
 
@@ -69,7 +83,7 @@ def upload():
 @login_required
 def user_profile():
     return render_template('user_profile.html', title='Home', tasks=current_user.uploads[::-1],
-                           benchmark=read_last_benchmark(), enumerate=enumerate, basename=os.path.basename)
+                           benchmark=read_last_benchmark())
 
 
 @app.route('/progress')
@@ -77,38 +91,19 @@ def user_profile():
 def progress():
     tasks_progress = []
     user_tasks_id = set(task.id for task in current_user.uploads)
-    user_tasks_running_id = set(hashcat_worker.locks.keys()).intersection(user_tasks_id)
-    for task_id in user_tasks_running_id:
-        job_id, lock = hashcat_worker.locks[task_id]
+    locks = set(hashcat_worker.locks.values())
+    locks.update(hashcat_worker.locks_onetime)
+    hashcat_worker.locks_onetime.clear()
+    for lock in locks:
         with lock:
-            task_progress = dict(task_id=task_id,
-                                 progress="{:.1f}".format(lock.progress),
-                                 status=lock.status,
-                                 found_key=lock.key,
-                                 completed=lock.completed)
-        tasks_progress.append(task_progress)
+            task_id = lock.task_id
+            if task_id in user_tasks_id:
+                task_progress = dict(task_id=task_id,
+                                     progress="{:.1f} %".format(lock.progress),
+                                     status=lock.status,
+                                     found_key=lock.found_key)
+                tasks_progress.append(task_progress)
     return jsonify(tasks_progress)
-
-
-@app.route('/delete_lock/<int:task_id>')
-@login_required
-def delete_lock(task_id):
-    deleted = False
-    task = UploadedTask.query.get(task_id)
-    if task is None:
-        return flask.Response(status=HTTPStatus.BAD_REQUEST)
-    if task.user_id != current_user.id:
-        return flask.Response(status=HTTPStatus.FORBIDDEN)
-    if task.id in hashcat_worker.locks:
-        job_id, lock = hashcat_worker.locks[task.id]
-        with lock:
-            if lock.completed:
-                del hashcat_worker.locks[task.id]
-                deleted = True
-    if deleted:
-        return flask.Response("Deleted", status=HTTPStatus.OK)
-    else:
-        return flask.Response(status=HTTPStatus.BAD_REQUEST)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -186,6 +181,16 @@ def cancel(task_id):
     if task.user_id != current_user.id:
         return flask.Response(status=HTTPStatus.FORBIDDEN)
     if hashcat_worker.cancel(task.id):
-        return jsonify("Canceled")
+        return jsonify(TaskInfoStatus.CANCELLED)
     else:
+        # mark it as ABORTED but it may be with a high chance set to CANCELLED later on
+        task.status = TaskInfoStatus.ABORTED
         return jsonify("Couldn't cancel the task")
+
+
+@app.route('/terminate')
+@login_required
+@roles_required(RoleEnum.ADMIN)
+def terminate():
+    hashcat_worker.terminate()
+    return jsonify("Terminated all jobs")

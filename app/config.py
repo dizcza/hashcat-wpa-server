@@ -16,6 +16,7 @@ DATABASE_PATH = DATABASE_DIR / "hashcat_wpa.db"
 HASHCAT_STATUS_TIMER = 20  # seconds
 BENCHMARK_FILE = APP_DIR / "benchmark.csv"
 BENCHMARK_UPDATE_PERIOD = 60  # seconds
+TIMEOUT_HASHCAT_MINUTES = 120
 
 
 class Config:

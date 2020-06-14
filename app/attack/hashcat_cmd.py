@@ -122,7 +122,7 @@ def run_with_status(hashcat_cmd: HashcatCmdCapture, lock: ProgressLock, timeout_
         with lock:
             if lock.cancelled:
                 process.terminate()
-                raise InterruptedError(TaskInfoStatus.CANCELED)
+                raise InterruptedError(TaskInfoStatus.CANCELLED)
         time_spent = time.time() - start
         if time_spent > timeout_seconds:
             process.terminate()

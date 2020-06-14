@@ -1,7 +1,6 @@
 import argparse
 import os
 import re
-import shlex
 import shutil
 import tempfile
 import time
@@ -15,8 +14,10 @@ from app.attack.hashcat_cmd import HashcatCmdCapture, HashcatCmdStdout
 from app.config import ESSID_TRIED
 from app.domain import Rule, WordList, Mask
 from app.hamming import hamming_ball
-from app.utils import read_plain_key, subprocess_call, bssid_essid_from_22000
+from app.app_logger import logger
+from app.utils import read_plain_key, subprocess_call, bssid_essid_from_22000, check_file_22000
 from app.word_magic import collect_essid_parts
+from app.attack.convert import split_by_essid
 
 
 def monitor_timer(func):
@@ -35,20 +36,21 @@ def monitor_timer(func):
 class BaseAttack:
     timers = defaultdict(lambda: dict(count=0, elapsed=1e-6))
 
-    def __init__(self, hcap_file: Union[str, Path], hashcat_args=(), verbose=True):
+    def __init__(self, file_22000: Union[str, Path], hashcat_args=(), verbose=True):
         """
-        :param hcap_file: .hccapx hashcat capture file path
+        :param file_22000: .22000 hashcat capture file path
         :param verbose: show (True) or hide (False) tqdm
         """
-        self.hcap_file = Path(shlex.quote(str(hcap_file)))
+        check_file_22000(file_22000)
+        self.file_22000 = Path(file_22000)
+        self.hashcat_args = tuple(hashcat_args)
         self.verbose = verbose
-        self.hashcat_args = hashcat_args
-        self.key_file = self.hcap_file.with_suffix('.key')
-        self.session = self.hcap_file.name
+        self.key_file = self.file_22000.with_suffix('.key')
+        self.session = self.file_22000.name
 
     def new_cmd(self, hcap_file: Union[str, Path] = None):
         if hcap_file is None:
-            hcap_file = self.hcap_file
+            hcap_file = self.file_22000
         return HashcatCmdCapture(hcap_file=hcap_file, outfile=self.key_file, hashcat_args=self.hashcat_args,
                                  session=self.session)
 
@@ -61,23 +63,23 @@ class BaseAttack:
         split_by_essid_dir = Path(tempfile.mkdtemp())
         essid_as_wordlist_dir = Path(tempfile.mkdtemp())
 
-        curdir = os.getcwd()
-        os.chdir(split_by_essid_dir)
-        subprocess_call(['hcxhashtool', '-i', self.hcap_file, '--essid-group'])
-        os.chdir(curdir)
-
         bssid_essid_tried = set()
         if ESSID_TRIED.exists():
             with open(ESSID_TRIED, 'r') as f:
                 bssid_essid_tried = set(f.read().splitlines())
 
-        files_split_by_essid = list(split_by_essid_dir.iterdir())
+        bssid_essid_pairs = tuple(bssid_essid_from_22000(self.file_22000))
+        if len(bssid_essid_pairs) > 1:
+            split_by_essid(self.file_22000, to_folder=split_by_essid_dir)
+            files_split_by_essid = list(split_by_essid_dir.iterdir())
+        else:
+            files_split_by_essid = [self.file_22000]
+
         for hcap_fpath_essid in tqdm(files_split_by_essid, desc="ESSID attack", disable=not self.verbose):
             bssid_essid = next(bssid_essid_from_22000(hcap_fpath_essid))
             if bssid_essid in bssid_essid_tried:
                 continue
             bssid, essid = bssid_essid.split(':')
-            assert essid == hcap_fpath_essid.stem
             essid = bytes.fromhex(essid).decode('utf-8')
             essid_filepath = essid_as_wordlist_dir / re.sub(r'\W+', '', essid)  # strip all except digits, letters and '_'
             with open(essid_filepath, 'w') as f:
@@ -121,7 +123,7 @@ class BaseAttack:
         essid_hamming = set()
         essid_hamming.update(hamming_ball(s=essid, n=hamming_dist_max))
         essid_hamming.update(hamming_ball(s=essid.lower(), n=hamming_dist_max))
-        print(f"Essid {essid} -> {len(essid_hamming)} hamming cousins with dist={hamming_dist_max}")
+        logger.debug(f"Essid {essid} -> {len(essid_hamming)} hamming cousins with dist={hamming_dist_max}")
         with tempfile.NamedTemporaryFile(mode='w') as f:
             f.write('\n'.join(essid_hamming))
             hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
@@ -172,7 +174,7 @@ class BaseAttack:
     @monitor_timer
     def run_keyboard_walk(self):
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlists(WordList.KEYBOARD_WALK_EN, WordList.KEYBOARD_WALK_RU)
+        hashcat_cmd.add_wordlists(WordList.KEYBOARD_WALK)
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
@@ -213,23 +215,23 @@ class BaseAttack:
         self.run_names()
 
 
-def crack_hccapx():
+def crack_22000():
     """
-    Crack .hhcapx in command line.
+    Crack .22000 in command line.
     """
     parser = argparse.ArgumentParser(description='Check weak passwords')
-    parser.add_argument('hccapx', help='path to .hccapx')
+    parser.add_argument('capture', help='path to .22000')
     args, hashcat_args = parser.parse_known_args()
     print(f"Hashcat args: {hashcat_args}")
-    attack = BaseAttack(hcap_file=args.hccapx, hashcat_args=hashcat_args)
+    attack = BaseAttack(file_22000=args.hccapx, hashcat_args=hashcat_args)
     attack.run_all()
     # attack.run_names_with_digits()
-    if attack.key_file.exists():
-        key_password = read_plain_key(attack.key_file)
+    key_password = read_plain_key(attack.key_file)
+    if key_password:
         print("WPA key is found!\n", key_password)
     else:
         print("WPA key is not found.")
 
 
 if __name__ == '__main__':
-    crack_hccapx()
+    crack_22000()

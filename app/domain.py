@@ -3,12 +3,12 @@ from collections import namedtuple
 from enum import Enum, unique
 from pathlib import Path
 from typing import Union
+import datetime
 
 from app.config import WORDLISTS_DIR, RULES_DIR, MASKS_DIR
 
 NONE_ENUM = str(None)
 Benchmark = namedtuple('Benchmark', ('date', 'speed'))
-JobLock = namedtuple('JobLock', ('job_id', 'lock'))
 
 
 class InvalidFileError(Exception):
@@ -34,8 +34,7 @@ class WordList(Enum):
     DIGITS_APPEND = "digits_append.txt"
     TOP1K = "Top1575-probable-v2.txt"
     TOP304K = "Top304Thousand-probable-v2.txt"
-    KEYBOARD_WALK_EN = "kwp_en_2-to-10-max-3"
-    KEYBOARD_WALK_RU = "kwp_ru_2-to-10-max-3"
+    KEYBOARD_WALK = "keyboard-walk"
     NAMES_UA_RU = "names_ua-ru.txt"
     NAMES_UA_RU_WITH_DIGITS = "names_ua-ru_with_digits.txt"
 
@@ -62,7 +61,7 @@ class HashcatMode:
     @staticmethod
     def valid_suffixes():
         # valid file suffixes
-        valid = ["cap", "pcapng", "hccapx", "pmkid"]
+        valid = ["cap", "pcap", "pcapng", "hccapx", "pmkid"]
         valid.extend(HashcatMode.valid_modes())
         return valid
 
@@ -71,8 +70,8 @@ class HashcatMode:
         suffix = str(suffix).lstrip('.')
         if suffix not in HashcatMode.valid_suffixes():
             raise ValueError(f"Invalid capture file suffix: '{suffix}'")
-        if suffix == "cap":
-            raise ValueError("Convert '.cap' to hccapx/2500 file with "
+        if suffix in ("cap", "pcap"):
+            raise ValueError(f"Convert '{suffix}' to hccapx/2500 file with "
                              "'cap2hccapx' command.")
         if suffix == "pcapng":
             raise ValueError("Convert '.pcapng' to 22000 file with "
@@ -93,27 +92,46 @@ class Workload(Enum):
 
 class TaskInfoStatus:
     SCHEDULED = "Scheduled"  # added to tasks queue
-    COMPETED = "Completed"  # all attacks run
-    CANCELED = "Cancelled"  # user cancelled
+    COMPLETED = "Completed"  # all attacks run
+    CANCELLED = "Cancelled"  # user cancelled
     REJECTED = "Rejected"  # invalid request
     ABORTED = "Aborted"  # task was interrupted due to server issues
 
 
 class ProgressLock:
-    def __init__(self):
+    def __init__(self, task_id: int):
+        self.task_id = task_id
         self._lock = threading.RLock()
+        self.future = None  # will be set next
         self.progress = 0
         self.status = TaskInfoStatus.SCHEDULED
-        self.key = None
-        self.completed = False
-        self.cancelled = False
-        self.essid = None
-        self.bssid = None
+        self.found_key = None
+        self.cancelled = False  # needed in hashcat_cmd.run_with_status()
+        self.completed = False  # checked in /progress
+        self._start_time = datetime.datetime.now()
+
+    def set_status(self, status):
+        self.status = status
 
     def cancel(self):
-        self.cancelled = True
-        self.status = TaskInfoStatus.CANCELED
-        return True
+        # cancellation will delete this lock from a pool of locks in HashcatWorker
+        self.cancelled = self.completed = True
+        self.set_status(TaskInfoStatus.CANCELLED)
+        if self.future is None:
+            return False
+        if self.future.cancelled():
+            return True
+        return self.future.cancel()
+
+    def finish(self):
+        # called after the completion or cancellation
+        self.completed = True
+        self.progress = 100
+
+    def update_dict(self):
+        duration = datetime.datetime.now() - self._start_time
+        return dict(found_key=self.found_key, duration=duration, completed=self.completed,
+                    status=self.status)
 
     def __enter__(self):
         self._lock.acquire()

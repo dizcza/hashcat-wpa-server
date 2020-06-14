@@ -16,6 +16,8 @@ def create_app():
 
 
 app = create_app()
+# uncomment if you see the error that a task is not bounded to a session
+# db = SQLAlchemy(app, session_options=dict(expire_on_commit=False))
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 lock_app = RLock()

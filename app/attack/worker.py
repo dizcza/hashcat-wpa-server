@@ -1,84 +1,48 @@
 import concurrent.futures
 import datetime
 import re
-import shlex
-from pathlib import Path
 
 from app import db, lock_app
 from app.app_logger import logger
 from app.attack.base_attack import BaseAttack, monitor_timer
-from app.attack.hashcat_cmd import run_with_status
-from app.config import BENCHMARK_FILE
-from app.domain import Rule, WordList, NONE_ENUM, ProgressLock, JobLock, \
-    TaskInfoStatus, InvalidFileError
+from app.attack.hashcat_cmd import run_with_status, HashcatCmdCapture
+from app.config import BENCHMARK_FILE, TIMEOUT_HASHCAT_MINUTES
+from app.domain import Rule, WordList, NONE_ENUM, TaskInfoStatus, InvalidFileError, ProgressLock
 from app.nvidia_smi import set_cuda_visible_devices
-from app.uploader import UploadedTask
-from app.utils import read_plain_key, date_formatted, subprocess_call, bssid_essid_from_22000
+from app.uploader import UploadForm, UploadedTask
+from app.utils import read_plain_key, date_formatted, subprocess_call
 
 
 class CapAttack(BaseAttack):
 
-    def __init__(self, uploaded_task: UploadedTask, lock: ProgressLock, timeout: int):
-        capture_path = Path(shlex.quote(uploaded_task.filepath))
-        super().__init__(hcap_file=capture_path.with_suffix('.22000'),
-                         hashcat_args=(f"--workload-profile={uploaded_task.workload}",),
+    def __init__(self, file_22000, lock: ProgressLock, wordlist: WordList = None, rule: Rule = None, hashcat_args='', timeout=TIMEOUT_HASHCAT_MINUTES):
+        super().__init__(file_22000=file_22000,
+                         hashcat_args=hashcat_args.split(' '),
                          verbose=False)
         self.lock = lock
         self.timeout = timeout
-        self.capture_path = capture_path
-        self.wordlist = None if uploaded_task.wordlist == NONE_ENUM else WordList(uploaded_task.wordlist)
-        self.rule = None if uploaded_task.rule == NONE_ENUM else Rule(uploaded_task.rule)
+        self.wordlist = wordlist
+        self.rule = rule
 
     def is_attack_needed(self) -> bool:
         key_already_found = self.key_file.exists()
         with self.lock:
             if self.lock.cancelled:
-                raise InterruptedError(TaskInfoStatus.CANCELED)
+                raise InterruptedError(TaskInfoStatus.CANCELLED)
         return not key_already_found
 
     def read_key(self):
-        key_password = None
-        if self.key_file.exists():
-            key_password = read_plain_key(self.key_file)
+        dump_keys_cmd = HashcatCmdCapture(self.file_22000, outfile=self.key_file, hashcat_args=['--show'])
+        subprocess_call(dump_keys_cmd.build())
+        key_password = read_plain_key(self.key_file)
         with self.lock:
-            self.lock.key = key_password
-            self.lock.status = TaskInfoStatus.COMPETED
-            self.lock.progress = 100
+            self.lock.found_key = key_password
 
-    def cap2hccapx(self):
-        """
-        Convert airodump's `.cap` to hashcat's `.hccapx`
-        """
-        def convert_and_verify(cmd, path_verify=self.hcap_file):
-            subprocess_call(cmd)
-            if not Path(path_verify).exists():
-                raise FileNotFoundError(f"{cmd[0]} failed")
-
-        if self.capture_path.suffix == ".pcapng":
-            convert_and_verify(['hcxpcapngtool', '-o', str(self.hcap_file),
-                             str(self.capture_path)])
-            self.capture_path = self.hcap_file
-        elif self.capture_path.suffix == ".cap":
-            hccapx_file = self.capture_path.with_suffix(".hccapx")
-            convert_and_verify(['cap2hccapx', str(self.capture_path), str(hccapx_file)], path_verify=hccapx_file)
-            self.capture_path = hccapx_file
-
-        # TODO: add support for 22001 (2501, 16801) modes
-        if self.capture_path.suffix in (".hccapx", ".2500"):
-            convert_and_verify(['hcxmactool', f'--hccapxin={self.capture_path}', f'--pmkideapolout={self.hcap_file}'])
-        elif self.capture_path.suffix in (".pmkid", ".16800"):
-            convert_and_verify(['hcxmactool', f'--pmkidin={self.capture_path}', f'--pmkideapolout={self.hcap_file}'])
-        elif self.capture_path.suffix == ".22000":
-            self.hcap_file = self.capture_path
-        else:
-            raise InvalidFileError(f"Invalid file suffix: '{self.capture_path.suffix}'")
-
-
-    def check_hccapx(self):
+    def check_not_empty(self):
         """
         Check .hccapx file for hashes.
         """
-        file_size = self.hcap_file.stat().st_size
+        file_size = self.file_22000.stat().st_size
         if file_size == 0:
             raise InvalidFileError("No hashes found")
 
@@ -90,25 +54,15 @@ class CapAttack(BaseAttack):
         if not self.is_attack_needed():
             return
         with self.lock:
-            self.lock.status = "Running ESSID attack"
+            self.lock.set_status("Running ESSID attack")
         super().run_essid_attack()
-        bssid_essid_pairs = bssid_essid_from_22000(self.hcap_file)
-        bssids, essids = [], []
-        for bssid_essid in bssid_essid_pairs:
-            _bssid, _essid = bssid_essid.split(':')
-            _essid = bytes.fromhex(_essid).decode('utf-8')
-            bssids.append(_bssid)
-            essids.append(_essid)
-        with self.lock:
-            self.lock.bssid = ', '.join(bssids)
-            self.lock.essid = ', '.join(essids)
 
     @monitor_timer
     def run_top1k(self):
         if not self.is_attack_needed():
             return
         with self.lock:
-            self.lock.status = "Running top1k with rules"
+            self.lock.set_status("Running top1k with rules")
         super().run_top1k()
 
     @monitor_timer
@@ -116,7 +70,7 @@ class CapAttack(BaseAttack):
         if not self.is_attack_needed():
             return
         with self.lock:
-            self.lock.status = "Running top304k"
+            self.lock.set_status("Running top304k")
         super().run_top304k()
 
     @monitor_timer
@@ -124,7 +78,7 @@ class CapAttack(BaseAttack):
         if not self.is_attack_needed():
             return
         with self.lock:
-            self.lock.status = "Running digits8"
+            self.lock.set_status("Running digits8")
         super().run_digits8()
 
     @monitor_timer
@@ -135,7 +89,7 @@ class CapAttack(BaseAttack):
         if self.wordlist is None or not self.is_attack_needed():
             return
         with self.lock:
-            self.lock.status = "Running main wordlist"
+            self.lock.set_status(f"Running {self.wordlist.value}")
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlists(self.wordlist)
         hashcat_cmd.add_rule(self.rule)
@@ -154,11 +108,10 @@ def _crack_async(attack: CapAttack):
     Called in background process.
     :param attack: hashcat attack to crack uploaded capture
     """
-    attack.cap2hccapx()
-    attack.check_hccapx()
+    attack.check_not_empty()
     attack.run_all()
     attack.read_key()
-    logger.info("Finished cracking {}".format(attack.capture_path))
+    logger.info("Finished cracking {}".format(attack.file_22000))
     for name, timer in attack.timers.items():
         logger.debug("Timer {}: {:.2f} sec".format(name, timer['elapsed'] / timer['count']))
 
@@ -187,64 +140,65 @@ class HashcatWorker:
         :param app: flask app
         """
         # we don't need more than 1 thread since hashcat utilizes all devices at once
-        self.workers = 1
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self.app = app
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.workers)
-        self.futures = {}
         self.locks = {}
+        self.locks_onetime = []
         self.last_benchmark_call = datetime.datetime.now()
         if not BENCHMARK_FILE.exists():
             self.benchmark()
 
-    def find_task_and_lock(self, job_id_query: int):
-        task_id, lock = None, None
-        for task_id, (job_id, lock) in self.locks.items():
-            if job_id == job_id_query:
-                break
-        return task_id, lock
-
     def callback_attack(self, future: concurrent.futures.Future):
-        exception = future.exception()
+        # called when the future is done or cancelled
+        try:
+            exception = future.exception()
+        except concurrent.futures.CancelledError as cancelled_error:
+            exception = None
         if exception is not None:
-            logger.error(exception)
+            logger.exception(repr(exception), exc_info=False)
         job_id = id(future)
-        task_id, lock = self.find_task_and_lock(job_id_query=job_id)
+        lock = self.locks.pop(job_id, None)
         if lock is None:
             logger.error("Could not find lock for job {}".format(job_id))
             return
-        task = UploadedTask.query.get(task_id)
         with lock:
+            if future.cancelled():
+                lock.set_status(TaskInfoStatus.CANCELLED)
+            else:
+                lock.set_status(TaskInfoStatus.COMPLETED)
             if exception is not None:
-                lock.status = repr(exception)
-            task.status = lock.status
-            task.progress = lock.progress
-            task.found_key = lock.key
-            task.completed = lock.completed = True
-            task.essid = lock.essid
-            task.bssid = lock.bssid
-        task.duration = datetime.datetime.now() - task.uploaded_time
+                lock.set_status(repr(exception))
+            lock.finish()
+            update_dict = lock.update_dict()
+            task_id = lock.task_id
+        UploadedTask.query.filter_by(id=task_id).update(update_dict)
         db.session.commit()
+        self.locks_onetime.append(lock)
 
-    def submit_capture(self, uploaded_task: UploadedTask, timeout: int):
+    def submit_capture(self, file_22000, uploaded_form: UploadForm, task: UploadedTask):
         """
         Called in main process.
         Starts cracking .cap file in parallel process.
         :param uploaded_task: uploaded .cap file task
         :param timeout: brute force timeout in minutes
         """
-        lock = ProgressLock()
+        lock = ProgressLock(task_id=task.id)
+        hashcat_args = task.hashcat_args
+        wordlist = None if task.wordlist == NONE_ENUM else WordList(task.wordlist)
+        rule = None if task.rule == NONE_ENUM else Rule(task.rule)
         try:
-            attack = CapAttack(uploaded_task, lock=lock, timeout=timeout)
-        except ValueError:
-            uploaded_task.status = TaskInfoStatus.REJECTED
-            uploaded_task.completed = True
+            attack = CapAttack(file_22000=file_22000, lock=lock, wordlist=wordlist, rule=rule, hashcat_args=hashcat_args, timeout=uploaded_form.timeout.data)
+        except InvalidFileError:
+            with lock:
+                lock.cancel()
+                lock.set_status(TaskInfoStatus.REJECTED)
             db.session.commit()
             return
         future = self.executor.submit(_crack_async, attack=attack)
-        job_id = id(future)
-        self.locks[uploaded_task.id] = JobLock(job_id=job_id, lock=lock)
         future.add_done_callback(self.callback_attack)
-        self.futures[job_id] = future
+        with lock:
+            lock.future = future
+        self.locks[id(future)] = lock
 
     def benchmark(self):
         """
@@ -254,26 +208,18 @@ class HashcatWorker:
         self.executor.submit(_hashcat_benchmark_async)
 
     def terminate(self):
-        futures_active = iter(future for future in self.futures if not future.done())
-        for future in futures_active:
-            future.cancel()
+        for lock in tuple(self.locks.values()):
+            with lock:
+                lock.cancel()
         subprocess_call(["pkill", "hashcat"])
+        self.locks.clear()
 
     def cancel(self, task_id: int):
-        # todo terminate pid
-        self.terminate()
-        if task_id not in self.locks:
-            return False
-        job_id, lock = self.locks[task_id]
-        future = self.futures.get(job_id, None)
-        if future is None:
-            return False
-        cancelled = future.cancel()
-        if lock is not None:
+        for job_id, lock in tuple(self.locks.items()):
             with lock:
-                cancelled = lock.cancel()
-                lock.completed = True
-        return cancelled
+                if lock.task_id == task_id:
+                    return lock.cancel()
+        return False
 
     def __del__(self):
         self.executor.shutdown(wait=False)
