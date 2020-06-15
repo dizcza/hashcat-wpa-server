@@ -14,9 +14,11 @@ services:
     volumes:
       - hashcat-db:/root/hashcat-wpa-server/database
       - hashcat-migrations:/root/hashcat-wpa-server/migrations
+      - hashcat-cache:/root/.hashcat
     restart: always
 
 
 volumes:
   hashcat-db:
   hashcat-migrations:
+  hashcat-cache:

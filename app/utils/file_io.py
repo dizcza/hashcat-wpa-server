@@ -1,8 +1,10 @@
 import hashlib
 from pathlib import Path
+import secrets
 
 from app import lock_app
-from app.config import BENCHMARK_FILE
+from app.logger import logger
+from app.config import BENCHMARK_FILE, HASHCAT_BRAIN_PASSWORD_PATH
 from app.domain import Benchmark, InvalidFileError
 
 
@@ -30,11 +32,20 @@ def read_last_benchmark():
     return Benchmark(date=date_str, speed=speed)
 
 
+def read_hashcat_brain_password():
+    if not HASHCAT_BRAIN_PASSWORD_PATH.exists():
+        logger.error("Hashcat brain password file does not exist. Generating a random password.")
+        HASHCAT_BRAIN_PASSWORD_PATH.write_text(secrets.token_hex(16))
+    with open(HASHCAT_BRAIN_PASSWORD_PATH) as f:
+        brain_password = f.readline().rstrip()
+    return brain_password
+
+
 def bssid_essid_from_22000(file_22000):
     if not Path(file_22000).exists():
         raise FileNotFoundError(file_22000)
     with open(file_22000) as f:
-        lines = f.readlines()
+        lines = f.read().splitlines()
     bssid_essids = set()
     for line in lines:
         info_split = line.split('*')

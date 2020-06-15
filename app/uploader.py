@@ -7,7 +7,7 @@ from wtforms import RadioField, IntegerField, SubmitField
 from wtforms.validators import DataRequired
 
 from app import app, db
-from app.domain import WordList, Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode
+from app.domain import WordList, Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode, OnOff
 from app.config import TIMEOUT_HASHCAT_MINUTES
 
 
@@ -52,6 +52,8 @@ class UploadForm(FlaskForm):
                                                                            message='Airodump & Hashcat capture files only')])
     workload = RadioField("Workload", choices=tuple((wl.value, wl.name) for wl in Workload),
                           default=Workload.Default.value)
+    brain = RadioField("Hashcat Brain", choices=tuple((enum.value, enum.name) for enum in OnOff),
+                       default=OnOff.OFF.value)
     submit = SubmitField('Submit')
 
 

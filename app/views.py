@@ -12,11 +12,12 @@ from app import app, db
 from app.attack.convert import split_by_essid, convert_to_22000
 from app.attack.worker import HashcatWorker
 from app.config import BENCHMARK_UPDATE_PERIOD, BENCHMARK_FILE
-from app.domain import TaskInfoStatus
+from app.domain import TaskInfoStatus, OnOff
 from app.login import LoginForm, RegistrationForm, User, RoleEnum, register_user, create_first_users, Role, \
     roles_required, user_has_roles
 from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks
-from app.utils import read_last_benchmark, bssid_essid_from_22000, is_safe_url, wrap_render_template
+from app.utils.file_io import read_last_benchmark, bssid_essid_from_22000, read_hashcat_brain_password
+from app.utils.utils import is_safe_url, wrap_render_template
 from app.word_magic import create_digits_wordlist
 
 hashcat_worker = HashcatWorker(app)
@@ -63,13 +64,15 @@ def upload():
         file_22000 = convert_to_22000(cap_path)
         folder_split_by_essid = split_by_essid(file_22000)
         tasks = {}
+        hashcat_args = f"--workload-profile={form.workload.data}"
+        if OnOff(form.brain.data) == OnOff.ON:
+            hashcat_args = f"{hashcat_args} --brain-client"
         for file_essid in folder_split_by_essid.iterdir():
             bssid_essid = next(bssid_essid_from_22000(file_essid))
             bssid, essid = bssid_essid.split(':')
             essid = bytes.fromhex(essid).decode('utf-8')
             new_task = UploadedTask(user_id=current_user.id, filename=cap_path.name, wordlist=form.wordlist.data,
-                                    rule=form.rule.data, bssid=bssid, essid=essid,
-                                    hashcat_args=f"--workload-profile={form.workload.data}")
+                                    rule=form.rule.data, bssid=bssid, essid=essid, hashcat_args=hashcat_args)
             tasks[file_essid] = new_task
         db.session.add_all(tasks.values())
         db.session.commit()
@@ -195,3 +198,10 @@ def cancel(task_id):
 def terminate():
     hashcat_worker.terminate()
     return jsonify("Terminated all jobs")
+
+
+@app.route('/brain_password')
+@login_required
+@roles_required(RoleEnum.ADMIN)
+def brain_password():
+    return jsonify(read_hashcat_brain_password())

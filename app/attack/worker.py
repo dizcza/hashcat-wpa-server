@@ -7,10 +7,10 @@ from app.logger import logger
 from app.attack.base_attack import BaseAttack, monitor_timer
 from app.attack.hashcat_cmd import run_with_status, HashcatCmdCapture
 from app.config import BENCHMARK_FILE, TIMEOUT_HASHCAT_MINUTES
-from app.domain import Rule, WordList, NONE_ENUM, TaskInfoStatus, InvalidFileError, ProgressLock
+from app.domain import Rule, WordList, NONE_ENUM, TaskInfoStatus, InvalidFileError, ProgressLock, OnOff
 from app.utils.nvidia_smi import set_cuda_visible_devices
 from app.uploader import UploadForm, UploadedTask
-from app.utils import read_plain_key, date_formatted, subprocess_call
+from app.utils import read_plain_key, date_formatted, subprocess_call, read_hashcat_brain_password
 
 
 class CapAttack(BaseAttack):
@@ -111,9 +111,10 @@ def _crack_async(attack: CapAttack):
     attack.check_not_empty()
     attack.run_all()
     attack.read_key()
-    logger.info("Finished cracking {}".format(attack.file_22000))
+    logger.info(f"Finished cracking {attack.file_22000}")
     for name, timer in attack.timers.items():
-        logger.debug("Timer {}: {:.2f} sec".format(name, timer['elapsed'] / timer['count']))
+        elapsed = timer['elapsed'] / timer['count']
+        logger.debug(f"Timer {name}: {elapsed:.2f} sec")
 
 
 def _hashcat_benchmark_async():
@@ -184,6 +185,10 @@ class HashcatWorker:
         """
         lock = ProgressLock(task_id=task.id)
         hashcat_args = task.hashcat_args
+        if OnOff(uploaded_form.brain.data) == OnOff.ON:
+            # --brain-client is already there
+            hashcat_args = f"{hashcat_args} --brain-client-features=3 " \
+                           f"--brain-password={read_hashcat_brain_password()}"
         wordlist = None if task.wordlist == NONE_ENUM else WordList(task.wordlist)
         rule = None if task.rule == NONE_ENUM else Rule(task.rule)
         try:
