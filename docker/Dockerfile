@@ -9,8 +9,8 @@ RUN wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O /tmp/get
     python3 /tmp/get-pip.py
 
 # wordlists
-RUN mkdir -p /hashcat-wpa-server/wordlists
-WORKDIR /hashcat-wpa-server/wordlists
+RUN mkdir -p /root/hashcat-wpa-server/wordlists
+WORKDIR /root/hashcat-wpa-server/wordlists
 RUN for dict in phpbb.txt.bz2 rockyou.txt.bz2; do \
     wget -q --no-check-certificate http://downloads.skullsecurity.org/passwords/${dict} && \
     bzip2 -d ${dict}; done
@@ -18,21 +18,19 @@ RUN for dict in Top1575-probable-v2.txt Top304Thousand-probable-v2.txt; do \
     wget --no-check-certificate https://github.com/berzerk0/Probable-Wordlists/raw/master/Real-Passwords/$dict; \
     done
 
-RUN mkdir -p /hashcat-wpa-server/captures
-RUN mkdir -p /hashcat-wpa-server/wordlists
+RUN mkdir -p /root/hashcat-wpa-server/captures
+RUN mkdir -p /root/hashcat-wpa-server/wordlists
 
-RUN kwp /hashcat/kwprocessor/basechars/tiny.base \
-    /hashcat/kwprocessor/keymaps/en-us.keymap \
-    /hashcat/kwprocessor/routes/2-to-16-max-3-direction-changes.route > /hashcat-wpa-server/wordlists/kwp_en_2-to-10-max-3
-RUN kwp /hashcat/kwprocessor/basechars/tiny.base \
-    /hashcat/kwprocessor/keymaps/ru.keymap \
-    /hashcat/kwprocessor/routes/2-to-16-max-3-direction-changes.route > /hashcat-wpa-server/wordlists/kwp_ru_2-to-10-max-3
+RUN for keymap in /root/kwprocessor/keymaps/*; do \
+    kwp /root/kwprocessor/basechars/tiny.base $keymap \
+        /root/kwprocessor/routes/2-to-16-max-3-direction-changes.route >> /root/hashcat-wpa-server/wordlists/keyboard-walk; \
+    done
 
-COPY ./requirements.txt /hashcat-wpa-server/requirements.txt
-RUN pip3 install -r /hashcat-wpa-server/requirements.txt
+COPY ./requirements.txt /root/hashcat-wpa-server/requirements.txt
+RUN pip3 install -r /root/hashcat-wpa-server/requirements.txt
 
-COPY ./digits /hashcat-wpa-server/digits
-WORKDIR /hashcat-wpa-server
+COPY ./digits /root/hashcat-wpa-server/digits
+WORKDIR /root/hashcat-wpa-server
 ENV PYTHONPATH=.:$PYTHONPATH
 RUN python3 digits/create_digits.py
 
@@ -40,19 +38,19 @@ COPY ./nginx.conf /etc/nginx/nginx.conf
 
 COPY ./supervisor.conf /etc/supervisor/conf.d/hashcat_wpa.conf
 
-RUN mkdir -p /hashcat-wpa-server/logs/gunicorn/nginx
-RUN mkdir -p /hashcat-wpa-server/logs/gunicorn/app
-RUN mkdir -p /hashcat-wpa-server/logs/gunicorn/wordlist
+RUN mkdir -p /root/hashcat-wpa-server/logs/gunicorn/nginx
+RUN mkdir -p /root/hashcat-wpa-server/logs/gunicorn/app
+RUN mkdir -p /root/hashcat-wpa-server/logs/gunicorn/wordlist
 
-COPY . /hashcat-wpa-server
-WORKDIR /hashcat-wpa-server
+COPY . /root/hashcat-wpa-server
+WORKDIR /root/hashcat-wpa-server
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
-RUN flask db init
-RUN flask db migrate
-RUN flask db upgrade
+RUN flask db init --directory=database/migrations
+RUN flask db migrate --directory=database/migrations
+RUN flask db upgrade --directory=database/migrations
 
-RUN mkdir -p /hashcat-wpa-server/logs/gunicorn
+RUN mkdir -p /root/hashcat-wpa-server/logs/gunicorn
 
 CMD supervisord -n -c /etc/supervisor/supervisord.conf

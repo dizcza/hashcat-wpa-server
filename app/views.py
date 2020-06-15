@@ -99,7 +99,7 @@ def progress():
             task_id = lock.task_id
             if task_id in user_tasks_id:
                 task_progress = dict(task_id=task_id,
-                                     progress="{:.1f} %".format(lock.progress),
+                                     progress=f"{lock.progress:.1f}",
                                      status=lock.status,
                                      found_key=lock.found_key)
                 tasks_progress.append(task_progress)

@@ -1,4 +1,4 @@
-FROM dizcza/docker-hashcat:intel-cpu
+FROM dizcza/docker-hashcat:pocl
 
 RUN apt-get update && \
     apt-get install -y bzip2 python3-distutils nginx supervisor
