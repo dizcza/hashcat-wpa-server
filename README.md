@@ -6,6 +6,9 @@
 [![](https://images.microbadger.com/badges/version/dizcza/hashcat-wpa-server:intel-cpu.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:intel-cpu)
 [![](https://images.microbadger.com/badges/image/dizcza/hashcat-wpa-server:intel-cpu.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:intel-cpu)
 
+[![](https://images.microbadger.com/badges/version/dizcza/hashcat-wpa-server:pocl.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:pocl)
+[![](https://images.microbadger.com/badges/image/dizcza/hashcat-wpa-server:pocl.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:pocl)
+
 
 # Hashcat WPA/WPA2 server
 
@@ -14,9 +17,9 @@ backend is implemented with Flask.
 
 Supported capture file formats:
 * .pcapng (hcxdumptool)
-* .cap (airodump)
-* .hccapx (m2500)
-* .pmkid (m16800)
+* .cap and .pcap (airodump)
+* .hccapx and .2500 (EAPOL)
+* .pmkid and .16800 (PMKID)
 * .22000 (PMKID/EAPOL)
 
 Every password cracking researcher is proud of his/her wordlists and rules. Here is my strategy of checking the most
@@ -45,39 +48,40 @@ run with, since they are not optimized as, for example, in
 
 ## Deployment
 
-#### Building your local image
-
-```
-export HASHCAT_ADMIN_USER=admin
-export HASHCAT_ADMIN_PASSWORD=<your-secret-password>
-docker-compose up -d
-```
-
-That's all! Navigate to [localhost:9111](localhost:9111). SQLite database with all users and uploaded tasks will be located in `$HOME/hashcat_database/hashcat_wpa.db` on your host machine.
+**Note**. Using GPU hardware requires [nvidia-docker2](https://github.com/NVIDIA/nvidia-docker) to be installed on your host machine.
 
 
-#### Using docker hub. Nvidia GPU
+### Using Docker Hub
 
-Make sure you've installed [nvidia-docker2](https://github.com/NVIDIA/nvidia-docker).
+There are 3 docker tags (branches):
 
-Then run `:latest` docker container from the [docker hub](https://hub.docker.com/r/dizcza/hashcat-wpa-server/): 
+* `latest`: Nvidia GPUs;
+* `intel-cpu`: Intel CPUs;
+* `pocl`: an alternative to `intel-cpu` tag, an open source implementation of OpenCL.
+
+For example, to run the `latest` tag (makes sense only if you have at least 1 GPU), open a terminal and run
 
 ```
 docker run --runtime=nvidia -d -e HASHCAT_ADMIN_USER=admin -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> -v ${HOME}/hashcat_database:/hashcat-wpa-server/database -p 9111:80 dizcza/hashcat-wpa-server:latest
 ```
 
-Or build your own image with Nvidia support: 
-
-```
-docker build -t hashcat-wpa-server -f docker/Dockerfile .
-```
-
-Then run your `hashcat-wpa-server` docker image instead of `dizcza/hashcat-wpa-server`. You'll still need [nvidia-docker2](https://github.com/NVIDIA/nvidia-docker) package installed to start containers.
-
-#### Using docker hub. Intel CPU
-
-For those who don't have GPUs, use `:intel-cpu` tag (suitable for AWS free tier instances):
+If you don't posses a GPU, try `intel-cpu` or `pocl` tag:
 
 ```
 docker run -d -e HASHCAT_ADMIN_USER=admin -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> -v ${HOME}/hashcat_database:/hashcat-wpa-server/database -p 9111:80 dizcza/hashcat-wpa-server:intel-cpu
 ```
+
+That's all! Navigate to [localhost:9111](localhost:9111). SQLite database with all users and uploaded tasks will be located in `$HOME/hashcat_database/hashcat_wpa.db` on your host machine.
+
+
+### Building the image locally
+
+```
+export HASHCAT_ADMIN_USER=admin
+export HASHCAT_ADMIN_PASSWORD=<your-secret-password>
+docker-compose -f docker-compose.yml up -d  # inside the docker/ folder
+```
+
+That's all! Navigate to [localhost:9111](localhost:9111) as in the previous step.
+
+If you don't posses a GPU, change the docker-compose file path to `docker-compose-intel.yml` or `docker-compose-pocl.yml`.

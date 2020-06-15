@@ -12,5 +12,5 @@ services:
        - "HASHCAT_ADMIN_PASSWORD=${HASHCAT_ADMIN_PASSWORD}"
        - "TERM=xterm"
     volumes:
-      - $HOME/hashcat_database/:/hashcat-wpa-server/database/
+      - $HOME/hashcat_database/:/root/hashcat-wpa-server/database/
     restart: always
