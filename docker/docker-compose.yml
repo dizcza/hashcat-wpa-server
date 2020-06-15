@@ -1,12 +1,10 @@
 version: '3.7'
 services:
-  app:
+  hashcat-wpa-server:
     image: "hashcat-wpa-server:latest"
     build:
       context: ..
       dockerfile: docker/Dockerfile
-      args:
-        branch: latest
     ports:
      - "9111:80"
     environment:
@@ -14,5 +12,11 @@ services:
        - "HASHCAT_ADMIN_PASSWORD=${HASHCAT_ADMIN_PASSWORD}"
        - "TERM=xterm"
     volumes:
-      - $HOME/hashcat_database/:/root/hashcat-wpa-server/database/
+      - hashcat-db:/root/hashcat-wpa-server/database
+      - hashcat-migrations:/root/hashcat-wpa-server/migrations
     restart: always
+
+
+volumes:
+  hashcat-db:
+  hashcat-migrations:

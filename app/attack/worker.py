@@ -3,12 +3,12 @@ import datetime
 import re
 
 from app import db, lock_app
-from app.app_logger import logger
+from app.logger import logger
 from app.attack.base_attack import BaseAttack, monitor_timer
 from app.attack.hashcat_cmd import run_with_status, HashcatCmdCapture
 from app.config import BENCHMARK_FILE, TIMEOUT_HASHCAT_MINUTES
 from app.domain import Rule, WordList, NONE_ENUM, TaskInfoStatus, InvalidFileError, ProgressLock
-from app.nvidia_smi import set_cuda_visible_devices
+from app.utils.nvidia_smi import set_cuda_visible_devices
 from app.uploader import UploadForm, UploadedTask
 from app.utils import read_plain_key, date_formatted, subprocess_call
 

@@ -1,5 +1,4 @@
 import datetime
-import os
 import shlex
 from http import HTTPStatus
 from pathlib import Path
@@ -13,11 +12,12 @@ from app import app, db
 from app.attack.convert import split_by_essid, convert_to_22000
 from app.attack.worker import HashcatWorker
 from app.config import BENCHMARK_UPDATE_PERIOD, BENCHMARK_FILE
-from app.login import LoginForm, RegistrationForm
 from app.domain import TaskInfoStatus
-from app.login import User, RoleEnum, register_user, create_first_users, Role, roles_required, user_has_roles
+from app.login import LoginForm, RegistrationForm, User, RoleEnum, register_user, create_first_users, Role, \
+    roles_required, user_has_roles
 from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks
-from app.utils import is_safe_url, read_last_benchmark, wrap_render_template, bssid_essid_from_22000
+from app.utils import read_last_benchmark, bssid_essid_from_22000, is_safe_url, wrap_render_template
+from app.word_magic import create_digits_wordlist
 
 hashcat_worker = HashcatWorker(app)
 render_template = wrap_render_template(render_template)
@@ -46,6 +46,7 @@ def make_shell_context():
 @app.before_first_request
 def before_first_request():
     create_first_users()
+    create_digits_wordlist()
     check_incomplete_tasks()
 
 

@@ -12,7 +12,7 @@ from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import ValidationError, DataRequired, EqualTo
 
 from app import app, db
-from app.app_logger import logger
+from app.logger import logger
 
 
 class LoginForm(FlaskForm):

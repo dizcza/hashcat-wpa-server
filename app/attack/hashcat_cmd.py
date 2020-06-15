@@ -7,7 +7,7 @@ from typing import Union, List
 
 from app.config import HASHCAT_STATUS_TIMER
 from app.domain import Rule, WordList, ProgressLock, TaskInfoStatus, Mask, HashcatMode
-from app.nvidia_smi import set_cuda_visible_devices
+from app.utils.nvidia_smi import set_cuda_visible_devices
 
 HASHCAT_WARNINGS = (
     "nvmlDeviceGetCurrPcieLinkWidth",

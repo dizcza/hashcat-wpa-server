@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from app.app_logger import logger
+from app.logger import logger
 from app.domain import InvalidFileError
 from app.utils import subprocess_call, check_file_22000, calculate_md5
 

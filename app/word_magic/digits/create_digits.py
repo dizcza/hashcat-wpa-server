@@ -8,15 +8,13 @@ from typing import Union, Iterable
 
 from dateutil.rrule import rrule, DAILY
 
-ROOT_DIR = Path(__file__).parent.parent
-WORDLISTS_DIR = ROOT_DIR / "wordlists"
-DIGITS_DIR = ROOT_DIR / "digits"
+from app.config import WORDLISTS_DIR
+from app.logger import logger
+
+DIGITS_DIR = Path(__file__).parent
+WORDLISTS_DIR.mkdir(exist_ok=True)
 
 LETTER_ALPHABETS = (string.ascii_lowercase, string.ascii_uppercase, 'zxcvbnm', 'asdfghjkl', 'qwertyuiop')
-
-# prepare
-WORDLISTS_DIR.mkdir(exist_ok=True)
-VERBOSE = 1
 
 
 @unique
@@ -30,20 +28,10 @@ class Mask(Enum):
         return DIGITS_DIR / self.value
 
 
-def count_digits(digits_generator):
-    def decorated(*args, **kwargs):
-        digits = digits_generator(*args, **kwargs)
-        if VERBOSE:
-            print(f"{digits_generator.__name__}: {len(digits)} digits")
-        return digits
-    return decorated
-
-
 def all_unique(passwords) -> bool:
     return len(set(passwords)) == len(passwords)
 
 
-@count_digits
 def create_days(flashback_years: int, date_fmt=("%m%d%Y", "%d%m%Y", "%Y%m%d", "%Y%d%m")) -> list:
     end_day = date.today()
     start_day = date(end_day.year - flashback_years, end_day.month, end_day.day)
@@ -54,7 +42,6 @@ def create_days(flashback_years: int, date_fmt=("%m%d%Y", "%d%m%Y", "%Y%m%d", "%
     return sorted(days)
 
 
-@count_digits
 def create_digits_mask(masks: Iterable, alphabet=string.digits, alphabet_size_max=4) -> list:
     digits = []
 
@@ -82,7 +69,6 @@ def create_digits_mask(masks: Iterable, alphabet=string.digits, alphabet_size_ma
     return digits
 
 
-@count_digits
 def create_digits_cycle(password_length: int) -> list:
     digits = []
     for start in range(10):
@@ -109,10 +95,11 @@ def write_digits(digits: Union[set, list], path_to: str):
     digits = '\n'.join(digits)
     with open(path_to, 'w') as f:
         f.write(digits)
-    print(f"Wrote {digits_count} digits to {path_to}")
+    logger.debug(f"Wrote {digits_count} digits to {path_to}")
 
 
-def generate_mask(mask_len: int, pattern_len: int):
+def generate_mask_stdout(mask_len: int, pattern_len: int):
+    # for debugging purpose
     assert pattern_len <= len(string.ascii_lowercase), "Too large pattern length"
     pattern = string.ascii_lowercase[:pattern_len]
     for mask in itertools.product(pattern, repeat=mask_len):
@@ -123,6 +110,60 @@ def generate_mask(mask_len: int, pattern_len: int):
             print(''.join(mask))
 
 
-def set_verbose(verbose: int):
-    global VERBOSE
-    VERBOSE = verbose
+def create_digits_8(flashback_years=100, cycle_length_max=20):
+    digits_wordlist_path = WORDLISTS_DIR / "digits_8.txt"
+    digits = create_days(flashback_years)
+    masks = read_mask(Mask.MASK_8.path)
+    digits.extend(create_digits_mask(masks, alphabet=string.digits, alphabet_size_max=4))
+    for alphabet in LETTER_ALPHABETS:
+        digits.extend(create_digits_mask(masks, alphabet=alphabet, alphabet_size_max=2))
+    for password_length in range(8, cycle_length_max + 1):
+        digits.extend(create_digits_cycle(password_length))
+    write_digits(digits, digits_wordlist_path)
+
+
+def create_digits_append(flashback_years=100, cycle_length_max=4):
+    """
+    2019          year
+    19            year[-2:]
+    1503          %d%m
+    0315          %m%d
+    mask_1-4.txt  digits only
+    234567890     digits cycle (left and right)
+    """
+    digits_wordlist_path = WORDLISTS_DIR / "digits_append.txt"
+    digits = set()
+    curr_year = date.today().year
+    for year in range(curr_year, curr_year - flashback_years - 1, -1):
+        year = str(year)
+        digits.add(year)
+        digits.add(year[-2:])
+    digits.update(create_days(flashback_years=1, date_fmt=('%m%d', '%d%m')))
+    masks = read_mask(Mask.MASK_1.path)
+    digits.update(create_digits_mask(masks, alphabet=string.digits, alphabet_size_max=2))
+    for password_length in range(1, max(cycle_length_max, 10) + 1):
+        digits.update(create_digits_cycle(password_length))
+    write_digits(digits, digits_wordlist_path)
+
+
+def create_digits_short(flashback_years=50, cycle_length_max=10):
+    digits = set()
+    digits_wordlist_path = WORDLISTS_DIR / "digits_short.txt"
+    masks = read_mask(Mask.MASK_8.path)
+    digits.update(create_digits_mask(masks, alphabet=string.digits, alphabet_size_max=3))
+    for alphabet in LETTER_ALPHABETS:
+        digits.update(create_digits_mask(masks, alphabet=alphabet, alphabet_size_max=1))
+    for password_length in range(8, cycle_length_max + 1):
+        digits.update(create_digits_cycle(password_length))
+    digits.update(create_days(flashback_years, date_fmt=("%d%m%Y",)))
+    write_digits(digits, digits_wordlist_path)
+
+
+def create_digits_wordlist():
+    create_digits_8()
+    create_digits_append()
+    create_digits_short()
+
+
+if __name__ == '__main__':
+    create_digits_wordlist()

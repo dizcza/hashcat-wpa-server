@@ -1,5 +1,4 @@
 import argparse
-import os
 import re
 import shutil
 import tempfile
@@ -10,14 +9,14 @@ from typing import Union
 
 from tqdm import tqdm
 
+from app.logger import logger
+from app.attack.convert import split_by_essid
 from app.attack.hashcat_cmd import HashcatCmdCapture, HashcatCmdStdout
 from app.config import ESSID_TRIED
 from app.domain import Rule, WordList, Mask
-from app.hamming import hamming_ball
-from app.app_logger import logger
 from app.utils import read_plain_key, subprocess_call, bssid_essid_from_22000, check_file_22000
-from app.word_magic import collect_essid_parts
-from app.attack.convert import split_by_essid
+from app.word_magic.essid import collect_essid_parts
+from app.word_magic.hamming import hamming_ball
 
 
 def monitor_timer(func):

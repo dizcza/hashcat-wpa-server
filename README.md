@@ -35,7 +35,7 @@ which increases the chance of finding passwords of type "PetitXXXX" by running a
 compounds combination.
 * `run_top1k`: Top1575-probable-v2.txt + best64.rule attack.
 * `run_top304k`: Top304Thousand-probable-v2.txt attack.
-* `run_digits8`: birthdays 100 years backward, digits masks like aabbccdd (refer to [mask_8-12.txt](digits/mask_8-12.txt)), digits cycles, and more.
+* `run_digits8`: birthdays 100 years backward, digits masks like aabbccdd (refer to [mask_8-12.txt](app/word_magic/digits/mask_8-12.txt)), digits cycles, and more.
 * `run_keyboard_walk`: [keyboard-walk](https://github.com/hashcat/kwprocessor) attack.
 * `run_names`: names_ua-ru.txt with [essid.rule](rules/essid.rule) attack.
 
@@ -62,13 +62,13 @@ There are 3 docker tags (branches):
 For example, to run the `latest` tag (makes sense only if you have at least 1 GPU), open a terminal and run
 
 ```
-docker run --runtime=nvidia -d -e HASHCAT_ADMIN_USER=admin -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> -v ${HOME}/hashcat_database:/hashcat-wpa-server/database -p 9111:80 dizcza/hashcat-wpa-server:latest
+docker run --runtime=nvidia -d -e HASHCAT_ADMIN_USER=admin -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> -v ${HOME}/hashcat_database:/root/hashcat-wpa-server/database -p 9111:80 dizcza/hashcat-wpa-server:latest
 ```
 
 If you don't posses a GPU, try `intel-cpu` or `pocl` tag:
 
 ```
-docker run -d -e HASHCAT_ADMIN_USER=admin -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> -v ${HOME}/hashcat_database:/hashcat-wpa-server/database -p 9111:80 dizcza/hashcat-wpa-server:intel-cpu
+docker run -d -e HASHCAT_ADMIN_USER=admin -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> -v ${HOME}/hashcat_database:/root/hashcat-wpa-server/database -p 9111:80 dizcza/hashcat-wpa-server:intel-cpu
 ```
 
 That's all! Navigate to [localhost:9111](localhost:9111). SQLite database with all users and uploaded tasks will be located in `$HOME/hashcat_database/hashcat_wpa.db` on your host machine.
@@ -82,6 +82,6 @@ export HASHCAT_ADMIN_PASSWORD=<your-secret-password>
 docker-compose -f docker-compose.yml up -d  # inside the docker/ folder
 ```
 
-That's all! Navigate to [localhost:9111](localhost:9111) as in the previous step.
+That's all! Navigate to [localhost:9111](localhost:9111) as in the previous step. Run `docker volume inspect docker_hashcat-db` in a terminal to find where `hashcat_wpa.db` database file is stored on your host machine.
 
 If you don't posses a GPU, change the docker-compose file path to `docker-compose-intel.yml` or `docker-compose-pocl.yml`.

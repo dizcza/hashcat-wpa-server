@@ -1,5 +1,4 @@
-ARG branch=latest
-FROM dizcza/docker-hashcat:$branch
+FROM dizcza/docker-hashcat:latest
 
 RUN apt-get update && \
     apt-get install -y bzip2 python3-distutils nginx supervisor
@@ -29,28 +28,20 @@ RUN for keymap in /root/kwprocessor/keymaps/*; do \
 COPY ./requirements.txt /root/hashcat-wpa-server/requirements.txt
 RUN pip3 install -r /root/hashcat-wpa-server/requirements.txt
 
-COPY ./digits /root/hashcat-wpa-server/digits
-WORKDIR /root/hashcat-wpa-server
-ENV PYTHONPATH=.:$PYTHONPATH
-RUN python3 digits/create_digits.py
-
-COPY ./nginx.conf /etc/nginx/nginx.conf
-
-COPY ./supervisor.conf /etc/supervisor/conf.d/hashcat_wpa.conf
-
 RUN mkdir -p /root/hashcat-wpa-server/logs/gunicorn/nginx
 RUN mkdir -p /root/hashcat-wpa-server/logs/gunicorn/app
 RUN mkdir -p /root/hashcat-wpa-server/logs/gunicorn/wordlist
 
-COPY . /root/hashcat-wpa-server
 WORKDIR /root/hashcat-wpa-server
+
+COPY ./nginx.conf /etc/nginx/nginx.conf
+COPY ./supervisor.conf /etc/supervisor/conf.d/hashcat_wpa.conf
+COPY . /root/hashcat-wpa-server
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
-RUN flask db init --directory=database/migrations
-RUN flask db migrate --directory=database/migrations
-RUN flask db upgrade --directory=database/migrations
-
-RUN mkdir -p /root/hashcat-wpa-server/logs/gunicorn
+RUN flask db init --directory=migrations
+RUN flask db migrate --directory=migrations
+RUN flask db upgrade --directory=migrations
 
 CMD supervisord -n -c /etc/supervisor/supervisord.conf

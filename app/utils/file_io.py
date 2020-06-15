@@ -1,49 +1,9 @@
-# encoding=utf-8
-import datetime
 import hashlib
-import subprocess
-from functools import wraps
 from pathlib import Path
-from typing import List
-from urllib.parse import urlparse, urljoin
-
-from flask import request
 
 from app import lock_app
-from app.app_logger import logger
 from app.config import BENCHMARK_FILE
 from app.domain import Benchmark, InvalidFileError
-from app.nvidia_smi import NvidiaSmi
-
-DATE_FORMAT = "%Y-%m-%d %H:%M"
-
-
-def subprocess_call(args: List[str]):
-    """
-    :param args: shell args
-    """
-    args = list(map(str, args))
-    logger.debug(">>> {}".format(' '.join(args)))
-    process = subprocess.Popen(args,
-                               universal_newlines=True,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    out, err = process.communicate()
-    return out, err
-
-
-def is_safe_url(target):
-    ref_url = urlparse(request.host_url)
-    test_url = urlparse(urljoin(request.host_url, target))
-    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
-
-
-def log_request(logger):
-    str_info = str(request.headers)
-    for key in ('REMOTE_ADDR',):
-        value = request.environ.get(key)
-        str_info += "{}: {}\r\n".format(key, value)
-    logger.debug(str_info)
 
 
 def read_plain_key(key_path):
@@ -61,29 +21,13 @@ def read_plain_key(key_path):
     return ', '.join(found_keys)
 
 
-def date_formatted() -> str:
-    return datetime.datetime.now().strftime(DATE_FORMAT)
-
-
-def str_to_date(date_str: str) -> datetime.datetime:
-    return datetime.datetime.strptime(date_str, DATE_FORMAT)
-
-
 def read_last_benchmark():
     if not BENCHMARK_FILE.exists():
         return Benchmark(date="(Never)", speed=0)
     with lock_app, open(BENCHMARK_FILE) as f:
-        last_line = f.readlines()[-1]
-    date_str, speed = last_line.rstrip().split(',')
+        last_line = f.read().splitlines()[-1]
+    date_str, speed = last_line.split(',')
     return Benchmark(date=date_str, speed=speed)
-
-
-def wrap_render_template(render_template):
-    @wraps(render_template)
-    def wrapper(*args, **kwargs):
-        kwargs.update(gpus=NvidiaSmi.get_gpus())
-        return render_template(*args, **kwargs)
-    return wrapper
 
 
 def bssid_essid_from_22000(file_22000):

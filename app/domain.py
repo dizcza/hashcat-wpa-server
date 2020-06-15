@@ -1,9 +1,9 @@
+import datetime
 import threading
 from collections import namedtuple
 from enum import Enum, unique
 from pathlib import Path
 from typing import Union
-import datetime
 
 from app.config import WORDLISTS_DIR, RULES_DIR, MASKS_DIR
 
