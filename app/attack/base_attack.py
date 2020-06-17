@@ -218,11 +218,12 @@ def crack_22000():
     """
     Crack .22000 in command line.
     """
-    parser = argparse.ArgumentParser(description='Check weak passwords')
+    parser = argparse.ArgumentParser(description='Check weak passwords',
+                                     usage="base_attack.py [-h] capture [hashcat-args]")
     parser.add_argument('capture', help='path to .22000')
     args, hashcat_args = parser.parse_known_args()
     print(f"Hashcat args: {hashcat_args}")
-    attack = BaseAttack(file_22000=args.hccapx, hashcat_args=hashcat_args)
+    attack = BaseAttack(file_22000=args.capture, hashcat_args=hashcat_args)
     attack.run_all()
     # attack.run_names_with_digits()
     key_password = read_plain_key(attack.key_file)

@@ -145,7 +145,6 @@ class HashcatWorker:
         self.app = app
         self.locks = {}
         self.locks_onetime = []
-        self.last_benchmark_call = datetime.datetime.now()
         if not BENCHMARK_FILE.exists():
             self.benchmark()
 
@@ -209,7 +208,6 @@ class HashcatWorker:
         """
         Run hashcat WPA benchmark.
         """
-        self.last_benchmark_call = datetime.datetime.now()
         self.executor.submit(_hashcat_benchmark_async)
 
     def terminate(self):

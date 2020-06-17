@@ -12,4 +12,4 @@ wordlists/
 temp.py
 rsync.exclude
 app/benchmark.csv
-!bash/clean_wordlist.sh
+app/hashcat_brain_password

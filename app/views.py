@@ -11,7 +11,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from app import app, db
 from app.attack.convert import split_by_essid, convert_to_22000
 from app.attack.worker import HashcatWorker
-from app.config import BENCHMARK_UPDATE_PERIOD, BENCHMARK_FILE
+from app.config import BENCHMARK_FILE
 from app.domain import TaskInfoStatus, OnOff
 from app.login import LoginForm, RegistrationForm, User, RoleEnum, register_user, create_first_users, Role, \
     roles_required, user_has_roles
@@ -162,18 +162,8 @@ def register_admin():
 @app.route("/benchmark")
 @login_required
 def benchmark():
-    def start_benchmark():
-        hashcat_worker.benchmark()
-        return jsonify("Started benchmark.")
-
-    if not BENCHMARK_FILE.exists():
-        return start_benchmark()
-    since_last_update = datetime.datetime.now() - hashcat_worker.last_benchmark_call
-    wait_time = BENCHMARK_UPDATE_PERIOD - since_last_update.seconds
-    if wait_time > 0:
-        return jsonify("Wait {wait_time} seconds for the next benchmark update.".format(wait_time=wait_time))
-    else:
-        return start_benchmark()
+    hashcat_worker.benchmark()
+    return jsonify("Started benchmark.")
 
 
 @app.route("/cancel/<int:task_id>")

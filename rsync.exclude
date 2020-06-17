@@ -9,10 +9,7 @@ captures
 env
 logs
 wordlists
-nvidia-docker-compose.yml
 rsync.exclude
-app/run.py
-app/__pycache__
 app/benchmark.csv
 README.md
 LICENCE
