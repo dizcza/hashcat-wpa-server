@@ -79,9 +79,15 @@ That's all! Navigate to [localhost:9111](localhost:9111). SQLite database with a
 ```
 export HASHCAT_ADMIN_USER=admin
 export HASHCAT_ADMIN_PASSWORD=<your-secret-password>
-docker-compose -f docker-compose.yml up -d  # inside the docker/ folder
+docker-compose -f docker-compose.yml build  # inside the docker/ folder
+docker-compose -f docker-compose.yml up -d
 ```
 
 That's all! Navigate to [localhost:9111](localhost:9111) as in the previous step. Run `docker volume inspect docker_hashcat-db` in a terminal to find where `hashcat_wpa.db` database file is stored on your host machine.
 
-If you don't posses a GPU, change the docker-compose file path to `docker-compose-intel.yml` or `docker-compose-pocl.yml`.
+If you don't posses a GPU, run docker compose like so:
+
+```
+docker-compose -f docker-compose.yml build --build-arg branch=intel-cpu
+docker-compose -f docker-compose.yml up -d
+```

@@ -5,6 +5,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      args:
+        branch: latest
     ports:
      - "9111:80"
     environment:
