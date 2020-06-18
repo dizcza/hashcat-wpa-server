@@ -3,7 +3,7 @@
 
 <p>
     {{ field.label }}<br>
-    {{ field(**kwargs) | safe }}
+    {{ field(title=field.description, **kwargs) | safe }}
     <span class="error" style="color: red;">
     {% for error in field.errors %}
         [{{ error }}]

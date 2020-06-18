@@ -28,8 +28,9 @@ class Rule(Enum):
 
 @unique
 class WordList(Enum):
-    ROCKYOU = "rockyou.txt"
-    PHPBB = "phpbb.txt"
+    TOP1M = "Top1pt6Million-probable-v2.txt"
+    TOP29M = "Top29Million-probable-v2.txt"
+    TOP109M = "Top109Million-probable-v2.txt"
     DIGITS_8 = "digits_8.txt"
     DIGITS_APPEND = "digits_append.txt"
     TOP1K = "Top1575-probable-v2.txt"

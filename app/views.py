@@ -1,7 +1,7 @@
-import datetime
 import shlex
 from http import HTTPStatus
 from pathlib import Path
+from threading import Thread
 
 import flask
 from flask import request, render_template, redirect, url_for
@@ -11,11 +11,11 @@ from flask_login import login_user, logout_user, login_required, current_user
 from app import app, db
 from app.attack.convert import split_by_essid, convert_to_22000
 from app.attack.worker import HashcatWorker
-from app.config import BENCHMARK_FILE
-from app.domain import TaskInfoStatus, OnOff
+from app.domain import TaskInfoStatus, OnOff, WordList, NONE_ENUM
 from app.login import LoginForm, RegistrationForm, User, RoleEnum, register_user, create_first_users, Role, \
     roles_required, user_has_roles
 from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks
+from app.utils.download import download_wordlist
 from app.utils.file_io import read_last_benchmark, bssid_essid_from_22000, read_hashcat_brain_password
 from app.utils.utils import is_safe_url, wrap_render_template
 from app.word_magic import create_digits_wordlist
@@ -58,9 +58,12 @@ def upload():
     if form.validate_on_submit():
         if not user_has_roles(current_user, RoleEnum.USER):
             return flask.abort(403, description="You do not have the permission to start jobs.")
+        # flask-uploads already uses werkzeug.secure_filename()
         filename = cap_uploads.save(request.files['capture'], folder=current_user.username)
         cap_path = Path(app.config['CAPTURES_DIR']) / filename
         cap_path = Path(shlex.quote(str(cap_path)))
+        wordlist = None if form.wordlist.data == NONE_ENUM else WordList(form.wordlist.data)
+        Thread(target=download_wordlist, args=(wordlist,)).start()
         file_22000 = convert_to_22000(cap_path)
         folder_split_by_essid = split_by_essid(file_22000)
         tasks = {}

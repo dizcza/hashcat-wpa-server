@@ -22,6 +22,8 @@ Supported capture file formats:
 * .pmkid and .16800 (PMKID)
 * .22000 (PMKID/EAPOL)
 
+The server uses [Hashcat Brain](https://hashcat.net/forum/thread-7903.html) transparently for the user (the user is allowed to activate and deactivate the feature).
+
 Every password cracking researcher is proud of his/her wordlists and rules. Here is my strategy of checking the most
 probable passwords that require only a few minutes to run on any laptop or Raspberry Pi. The strategy is marked as
 `'(fast)'` among wordlist choices in UI. They are all run in [`BaseAttack.run_all()`](
@@ -40,10 +42,6 @@ compounds combination.
 * `run_names`: names_ua-ru.txt with [essid.rule](rules/essid.rule) attack.
 
 Check out a running server on a CPU instance: http://85.217.171.57:9111. To surf the site, login with the `guest:guest` credentials. (Yes, you don't have the permissions to start jobs. Contact me if necessary.)
-
-'rockyou.txt' and 'phpbb.txt' classic wordlist options are for demonstration purposes only and are not recommended to
-run with, since they are not optimized as, for example, in
-[Probable-Wordlists](https://github.com/berzerk0/Probable-Wordlists).
 
 
 ## Deployment

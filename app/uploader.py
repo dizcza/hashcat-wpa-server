@@ -7,15 +7,21 @@ from wtforms import RadioField, IntegerField, SubmitField
 from wtforms.validators import DataRequired
 
 from app import app, db
-from app.domain import WordList, Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode, OnOff
 from app.config import TIMEOUT_HASHCAT_MINUTES
+from app.domain import WordList, Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode, OnOff
+from app.utils.download import get_wordlist_rate
 
 
 def _wordlist_choices():
     # return a pairs of (id-value, display: str)
     choices = [(NONE_ENUM, "(fast)")]
-    choices.extend((wordlist.value, wordlist.value) for wordlist in (
-        WordList.ROCKYOU, WordList.PHPBB, WordList.TOP304K))
+    for wordlist in (WordList.TOP304K, WordList.TOP1M, WordList.TOP29M, WordList.TOP109M):
+        rate = get_wordlist_rate(wordlist)
+        extra = f"rate={rate}"
+        if not wordlist.path.exists():
+            extra = f"{extra}; requires downloading"
+        display_text = f"{wordlist.value} [{extra}]"
+        choices.append((wordlist.value, display_text))
     return choices
 
 
@@ -44,7 +50,7 @@ class UploadedTask(db.Model):
 
 
 class UploadForm(FlaskForm):
-    wordlist = RadioField('Wordlist', choices=_wordlist_choices(), default=NONE_ENUM)
+    wordlist = RadioField('Wordlist', choices=_wordlist_choices(), default=NONE_ENUM, description="The higher the rate, the better")
     rule = RadioField('Rule', choices=((NONE_ENUM, "(None)"), (Rule.BEST_64.value, Rule.BEST_64.value)),
                       default=NONE_ENUM)
     timeout = IntegerField('Timeout (minutes)', validators=[DataRequired()], default=TIMEOUT_HASHCAT_MINUTES)
@@ -53,7 +59,7 @@ class UploadForm(FlaskForm):
     workload = RadioField("Workload", choices=tuple((wl.value, wl.name) for wl in Workload),
                           default=Workload.Default.value)
     brain = RadioField("Hashcat Brain", choices=tuple((enum.value, enum.name) for enum in OnOff),
-                       default=OnOff.OFF.value)
+                       default=OnOff.OFF.value, description="Hashcat Brain skips already tried password candidates")
     submit = SubmitField('Submit')
 
 

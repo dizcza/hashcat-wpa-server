@@ -1,16 +1,16 @@
 import concurrent.futures
-import datetime
 import re
+import time
 
 from app import db, lock_app
-from app.logger import logger
 from app.attack.base_attack import BaseAttack, monitor_timer
 from app.attack.hashcat_cmd import run_with_status, HashcatCmdCapture
 from app.config import BENCHMARK_FILE, TIMEOUT_HASHCAT_MINUTES
 from app.domain import Rule, WordList, NONE_ENUM, TaskInfoStatus, InvalidFileError, ProgressLock, OnOff
-from app.utils.nvidia_smi import set_cuda_visible_devices
+from app.logger import logger
 from app.uploader import UploadForm, UploadedTask
 from app.utils import read_plain_key, date_formatted, subprocess_call, read_hashcat_brain_password
+from app.utils.nvidia_smi import set_cuda_visible_devices
 
 
 class CapAttack(BaseAttack):
@@ -24,12 +24,14 @@ class CapAttack(BaseAttack):
         self.wordlist = wordlist
         self.rule = rule
 
-    def is_attack_needed(self) -> bool:
-        key_already_found = self.key_file.exists()
+    def cancel_if_needed(self):
         with self.lock:
             if self.lock.cancelled:
                 raise InterruptedError(TaskInfoStatus.CANCELLED)
-        return not key_already_found
+
+    def is_attack_needed(self) -> bool:
+        self.cancel_if_needed()
+        return not self.key_file.exists()
 
     def read_key(self):
         dump_keys_cmd = HashcatCmdCapture(self.file_22000, outfile=self.key_file, hashcat_args=['--show'])
@@ -88,6 +90,12 @@ class CapAttack(BaseAttack):
         """
         if self.wordlist is None or not self.is_attack_needed():
             return
+        if not self.wordlist.path.exists():
+            with self.lock:
+                self.lock.set_status("Downloading the wordlist")
+            while not self.wordlist.path.exists():
+                time.sleep(5)
+                self.cancel_if_needed()
         with self.lock:
             self.lock.set_status(f"Running {self.wordlist.value}")
         hashcat_cmd = self.new_cmd()
