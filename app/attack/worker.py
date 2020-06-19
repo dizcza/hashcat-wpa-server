@@ -5,7 +5,7 @@ import time
 from app import db, lock_app
 from app.attack.base_attack import BaseAttack, monitor_timer
 from app.attack.hashcat_cmd import run_with_status, HashcatCmdCapture
-from app.config import BENCHMARK_FILE, TIMEOUT_HASHCAT_MINUTES
+from app.config import BENCHMARK_FILE
 from app.domain import Rule, WordList, NONE_ENUM, TaskInfoStatus, InvalidFileError, ProgressLock, OnOff
 from app.logger import logger
 from app.uploader import UploadForm, UploadedTask
@@ -15,7 +15,7 @@ from app.utils.nvidia_smi import set_cuda_visible_devices
 
 class CapAttack(BaseAttack):
 
-    def __init__(self, file_22000, lock: ProgressLock, wordlist: WordList = None, rule: Rule = None, hashcat_args='', timeout=TIMEOUT_HASHCAT_MINUTES):
+    def __init__(self, file_22000, lock: ProgressLock, wordlist: WordList = None, rule: Rule = None, hashcat_args='', timeout=None):
         super().__init__(file_22000=file_22000,
                          hashcat_args=hashcat_args.split(' '),
                          verbose=False)

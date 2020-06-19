@@ -110,7 +110,9 @@ class HashcatCmdStdout(HashcatCmd):
         command.append('--stdout')
 
 
-def run_with_status(hashcat_cmd: HashcatCmdCapture, lock: ProgressLock, timeout_minutes: int):
+def run_with_status(hashcat_cmd: HashcatCmdCapture, lock: ProgressLock, timeout_minutes=None):
+    if timeout_minutes is None:
+        timeout_minutes = float('inf')
     timeout_seconds = timeout_minutes * 60
     start = time.time()
     hashcat_cmd_list = hashcat_cmd.build()
@@ -126,7 +128,7 @@ def run_with_status(hashcat_cmd: HashcatCmdCapture, lock: ProgressLock, timeout_
         time_spent = time.time() - start
         if time_spent > timeout_seconds:
             process.terminate()
-            raise TimeoutError("Timed out {} sec".format(timeout_seconds))
+            raise TimeoutError(f"Timed out after {timeout_minutes} minutes")
         if line.startswith("STATUS"):
             parts = line.split()
             try:

@@ -4,10 +4,9 @@ from flask_uploads import UploadSet, configure_uploads
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
 from wtforms import RadioField, IntegerField, SubmitField
-from wtforms.validators import DataRequired
+from wtforms.validators import Optional
 
 from app import app, db
-from app.config import TIMEOUT_HASHCAT_MINUTES
 from app.domain import WordList, Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode, OnOff
 from app.word_magic.wordlist import get_wordlist_rate, estimate_runtime_fmt
 
@@ -53,7 +52,7 @@ class UploadForm(FlaskForm):
     wordlist = RadioField('Wordlist', choices=_wordlist_choices(), default=NONE_ENUM, description="The higher the rate, the better")
     rule = RadioField('Rule', choices=((NONE_ENUM, "(None)"), (Rule.BEST_64.value, Rule.BEST_64.value)),
                       default=NONE_ENUM)
-    timeout = IntegerField('Timeout (minutes)', validators=[DataRequired()], default=TIMEOUT_HASHCAT_MINUTES)
+    timeout = IntegerField('Timeout in minutes, optional', validators=[Optional()])
     capture = FileField('Capture', validators=[FileRequired(), FileAllowed(HashcatMode.valid_suffixes(),
                                                                            message='Airodump & Hashcat capture files only')])
     workload = RadioField("Workload", choices=tuple((wl.value, wl.name) for wl in Workload),

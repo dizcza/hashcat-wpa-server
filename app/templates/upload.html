@@ -8,8 +8,8 @@
         {{ form.hidden_tag() }}
         {{ render_field(form.wordlist) }}
         {{ render_field(form.rule) }}
-        {{ render_field(form.timeout) }}
         <p>Estimated runtime: <span id="runtime">{{ form.runtime }}</span></p>
+        {{ render_field(form.timeout) }}
         {{ render_field(form.workload) }}
         {{ render_field(form.brain) }}
         {{ render_field(form.capture) }}
