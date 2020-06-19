@@ -11,9 +11,6 @@ RUN wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O /tmp/get
 # wordlists
 RUN mkdir -p /root/hashcat-wpa-server/wordlists
 WORKDIR /root/hashcat-wpa-server/wordlists
-RUN for dict in phpbb.txt.bz2 rockyou.txt.bz2; do \
-    wget -q --no-check-certificate http://downloads.skullsecurity.org/passwords/${dict} && \
-    bzip2 -d ${dict}; done
 RUN for dict in Top1575-probable-v2.txt Top304Thousand-probable-v2.txt; do \
     wget --no-check-certificate https://github.com/berzerk0/Probable-Wordlists/raw/master/Real-Passwords/$dict; \
     done
