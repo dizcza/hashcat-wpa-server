@@ -95,7 +95,7 @@ class NvidiaSmi:
         return gpus
 
 
-def set_cuda_visible_devices(limit_devices=int(1e9), min_free_memory=0.4, max_load=0.6) -> list:
+def set_cuda_visible_devices(limit_devices=None, min_free_memory=0.4, max_load=0.6) -> list:
     """
     Automatically sets CUDA_VISIBLE_DEVICES env to first `limit_devices` available GPUs with least used memory.
     :param limit_devices: limit available GPU devices to use
@@ -105,8 +105,9 @@ def set_cuda_visible_devices(limit_devices=int(1e9), min_free_memory=0.4, max_lo
     Cache.clear_cache("NvidiaSmi")
     gpus = NvidiaSmi.get_gpus(min_free_memory, max_load)
     gpus.sort(key=lambda gpu: gpu.get_available_memory_portion(), reverse=True)
-    limit_devices = min(limit_devices, len(gpus))
-    gpus = gpus[:limit_devices]
+    if limit_devices:
+        limit_devices = min(limit_devices, len(gpus))
+        gpus = gpus[:limit_devices]
     gpus_id = [str(gpu.index) for gpu in gpus]
     os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(gpus_id)
     return gpus

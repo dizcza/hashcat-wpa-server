@@ -52,7 +52,6 @@ class HashcatCmd:
         self.hashcat_args = hashcat_args
 
     def build(self) -> List[str]:
-        set_cuda_visible_devices()
         command = ["hashcat", f"-m{self.mode}", *self.hashcat_args]
         for rule in self.rules:
             if rule is not None:
