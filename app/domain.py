@@ -25,6 +25,12 @@ class Rule(Enum):
     def path(self):
         return RULES_DIR / self.value
 
+    @staticmethod
+    def from_data(name: str):
+        if name in (None, NONE_ENUM):
+            return None
+        return Rule(name)
+
 
 @unique
 class WordList(Enum):
@@ -42,6 +48,12 @@ class WordList(Enum):
     @property
     def path(self):
         return WORDLISTS_DIR / self.value
+
+    @staticmethod
+    def from_data(name: str):
+        if name in (None, NONE_ENUM):
+            return None
+        return WordList(name)
 
 
 @unique

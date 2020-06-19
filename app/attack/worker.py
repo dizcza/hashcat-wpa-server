@@ -196,8 +196,8 @@ class HashcatWorker:
             # --brain-client is already there
             hashcat_args = f"{hashcat_args} --brain-client-features=3 " \
                            f"--brain-password={read_hashcat_brain_password()}"
-        wordlist = None if task.wordlist == NONE_ENUM else WordList(task.wordlist)
-        rule = None if task.rule == NONE_ENUM else Rule(task.rule)
+        wordlist = uploaded_form.get_wordlist()
+        rule = uploaded_form.get_rule()
         try:
             attack = CapAttack(file_22000=file_22000, lock=lock, wordlist=wordlist, rule=rule, hashcat_args=hashcat_args, timeout=uploaded_form.timeout.data)
         except InvalidFileError:

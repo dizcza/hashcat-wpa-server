@@ -9,7 +9,6 @@ env/
 logs/
 server_keys_backup/
 wordlists/
-temp.py
 rsync.exclude
 app/benchmark.csv
 app/hashcat_brain_password

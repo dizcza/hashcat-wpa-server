@@ -9,7 +9,7 @@ from wtforms.validators import DataRequired
 from app import app, db
 from app.config import TIMEOUT_HASHCAT_MINUTES
 from app.domain import WordList, Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode, OnOff
-from app.utils.download import get_wordlist_rate
+from app.word_magic.wordlist import get_wordlist_rate, estimate_runtime_fmt
 
 
 def _wordlist_choices():
@@ -61,6 +61,17 @@ class UploadForm(FlaskForm):
     brain = RadioField("Hashcat Brain", choices=tuple((enum.value, enum.name) for enum in OnOff),
                        default=OnOff.OFF.value, description="Hashcat Brain skips already tried password candidates")
     submit = SubmitField('Submit')
+
+    def get_wordlist(self):
+        return WordList.from_data(self.wordlist.data)
+
+    def get_rule(self):
+        return Rule.from_data(self.rule.data)
+
+    @property
+    def runtime(self):
+        runtime = estimate_runtime_fmt(wordlist=self.get_wordlist(), rule=self.get_rule())
+        return runtime
 
 
 cap_uploads = UploadSet(name='files', extensions=HashcatMode.valid_suffixes(), default_dest=lambda app: app.config['CAPTURES_DIR'])

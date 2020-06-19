@@ -83,8 +83,7 @@ def create_digits_cycle(password_length: int) -> list:
 
 def read_mask(mask_path: str) -> list:
     with open(mask_path) as f:
-        lines = f.readlines()
-    lines = [line.rstrip('\n') for line in lines]
+        lines = f.read().splitlines()
     lines = filter(len, lines)
     lines = filter(lambda line: not line.startswith('#'), lines)
     return list(lines)

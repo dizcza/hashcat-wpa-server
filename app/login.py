@@ -9,7 +9,7 @@ from flask_login import LoginManager, UserMixin, current_user
 from flask_wtf import FlaskForm
 from werkzeug.security import generate_password_hash, check_password_hash
 from wtforms import StringField, PasswordField, SubmitField, BooleanField
-from wtforms.validators import ValidationError, DataRequired, EqualTo
+from wtforms.validators import ValidationError, DataRequired, EqualTo, Length
 
 from app import app, db
 from app.logger import logger
@@ -23,8 +23,8 @@ class LoginForm(FlaskForm):
 
 
 class RegistrationForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
+    username = StringField('Username', validators=[DataRequired(), Length(min=4, max=64)])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=8, max=128)])
     password2 = PasswordField(
         'Repeat Password', validators=[DataRequired(), EqualTo('password')])
     submit = SubmitField('Register')
@@ -32,7 +32,7 @@ class RegistrationForm(FlaskForm):
     def validate_username(self, username):
         user = User.query.filter_by(username=username.data).first()
         if user is not None:
-            raise ValidationError('Please use a different username.')
+            raise ValidationError('Please enter another username.')
 
 
 login_manager = LoginManager(app)
