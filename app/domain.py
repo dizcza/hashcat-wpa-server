@@ -41,7 +41,7 @@ class WordList(Enum):
     DIGITS_APPEND = "digits_append.txt"
     TOP1K = "Top1575-probable-v2.txt"
     TOP304K = "Top304Thousand-probable-v2.txt"
-    KEYBOARD_WALK = "keyboard-walk"
+    KEYBOARD_WALK = "keyboard-walk.txt"
     NAMES_UA_RU = "names_ua-ru.txt"
     NAMES_UA_RU_WITH_DIGITS = "names_ua-ru_with_digits.txt"
 

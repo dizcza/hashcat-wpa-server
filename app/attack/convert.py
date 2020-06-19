@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import re
 
 from app.logger import logger
 from app.domain import InvalidFileError
@@ -12,19 +13,14 @@ def convert_to_22000(capture_path):
     """
     file_22000 = Path(capture_path).with_suffix(".22000")
 
-    def convert_and_verify(cmd, path_verify=file_22000):
+    def convert_and_verify(cmd):
         subprocess_call(cmd)
-        if not Path(path_verify).exists():
+        if not Path(file_22000).exists():
             raise FileNotFoundError(f"{cmd[0]} failed")
 
-    if capture_path.suffix == ".pcapng":
-        convert_and_verify(['hcxpcapngtool', '-o', str(file_22000),
-                            str(capture_path)])
+    if re.fullmatch("\.(p?cap|pcapng)", capture_path.suffix, flags=re.IGNORECASE):
+        convert_and_verify(['hcxpcapngtool', '-o', str(file_22000), str(capture_path)])
         capture_path = file_22000
-    elif capture_path.suffix in (".cap", ".pcap"):
-        hccapx_file = capture_path.with_suffix(".hccapx")
-        convert_and_verify(['cap2hccapx', str(capture_path), str(hccapx_file)], path_verify=hccapx_file)
-        capture_path = hccapx_file
 
     # TODO: add support for 22001 (2501, 16801) modes
     if capture_path.suffix in (".hccapx", ".2500"):

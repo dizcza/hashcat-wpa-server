@@ -20,7 +20,7 @@ RUN mkdir -p /root/hashcat-wpa-server/wordlists
 
 RUN for keymap in /root/kwprocessor/keymaps/*; do \
     kwp /root/kwprocessor/basechars/tiny.base $keymap \
-        /root/kwprocessor/routes/2-to-16-max-3-direction-changes.route >> /root/hashcat-wpa-server/wordlists/keyboard-walk; \
+        /root/kwprocessor/routes/2-to-16-max-3-direction-changes.route >> /root/hashcat-wpa-server/wordlists/keyboard-walk.txt; \
     done
 
 COPY ./requirements.txt /root/hashcat-wpa-server/requirements.txt
