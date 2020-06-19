@@ -26,9 +26,7 @@ RUN for keymap in /root/kwprocessor/keymaps/*; do \
 COPY ./requirements.txt /root/hashcat-wpa-server/requirements.txt
 RUN pip3 install -r /root/hashcat-wpa-server/requirements.txt
 
-RUN mkdir -p /root/hashcat-wpa-server/logs/supervisor/nginx
-RUN mkdir -p /root/hashcat-wpa-server/logs/supervisor/gunicorn
-RUN mkdir -p /root/hashcat-wpa-server/logs/supervisor/hashcat-brain
+RUN mkdir -p /root/hashcat-wpa-server/logs/supervisor
 
 WORKDIR /root/hashcat-wpa-server
 
