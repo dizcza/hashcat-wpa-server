@@ -54,5 +54,7 @@ def collect_essid_parts(essid_origin: str):
 
 if __name__ == '__main__':
     for essid in ["Tanya007", "My_rabbit", "Myrabbit", "MyRabbit", "PetitCafe2017"]:
-        print(f"'{essid}' compounds: {sorted(split_word_compounds(essid))}")
-        print("\tcandidates: ", sorted(collect_essid_parts(essid)))
+        compounds = sorted(split_word_compounds(essid))
+        candidates = sorted(collect_essid_parts(essid))
+        print(f"'{essid}'\n\t{len(compounds)} compounds: {compounds}")
+        print(f"\t{len(candidates)} candidates: {candidates}")

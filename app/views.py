@@ -18,7 +18,7 @@ from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete
 from app.word_magic.wordlist import download_wordlist
 from app.utils.file_io import read_last_benchmark, bssid_essid_from_22000, read_hashcat_brain_password
 from app.utils.utils import is_safe_url, wrap_render_template
-from app.word_magic import create_digits_wordlist, estimate_runtime_fmt
+from app.word_magic import create_digits_wordlist, estimate_runtime_fmt, create_fast_wordlists
 
 hashcat_worker = HashcatWorker(app)
 render_template = wrap_render_template(render_template)
@@ -48,6 +48,7 @@ def make_shell_context():
 def before_first_request():
     create_first_users()
     create_digits_wordlist()
+    create_fast_wordlists()
     check_incomplete_tasks()
 
 

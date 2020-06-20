@@ -97,10 +97,10 @@ class BaseAttack:
         Run ESSID + best64.rule attack.
         """
         with tempfile.NamedTemporaryFile(mode='w') as f:
-            hashcat_cmd = HashcatCmdStdout(outfile=f.name)
-            hashcat_cmd.add_wordlists(essid_wordlist_path)
-            hashcat_cmd.add_rule(Rule.ESSID)
-            subprocess_call(hashcat_cmd.build())
+            hashcat_stdout = HashcatCmdStdout(outfile=f.name)
+            hashcat_stdout.add_wordlists(essid_wordlist_path)
+            hashcat_stdout.add_rule(Rule.ESSID)
+            subprocess_call(hashcat_stdout.build())
             hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath)
             hashcat_cmd.add_wordlists(f.name)
             subprocess_call(hashcat_cmd.build())
@@ -109,9 +109,9 @@ class BaseAttack:
         wordlist_order = [essid_wordlist_path, WordList.DIGITS_APPEND.path]
         for reverse in range(2):
             with tempfile.NamedTemporaryFile(mode='w') as f:
-                hashcat_cmd = HashcatCmdStdout(outfile=f.name)
-                hashcat_cmd.add_wordlists(*wordlist_order, speial_args=['-a1'])
-                subprocess_call(hashcat_cmd.build())
+                hashcat_stdout = HashcatCmdStdout(outfile=f.name)
+                hashcat_stdout.add_wordlists(*wordlist_order, speial_args=['-a1'])
+                subprocess_call(hashcat_stdout.build())
                 hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
                 hashcat_cmd.add_wordlists(f.name)
                 subprocess_call(hashcat_cmd.build())
@@ -146,22 +146,8 @@ class BaseAttack:
         """
         - Top1575-probable-v2.txt with best64 rules
         """
-        with tempfile.NamedTemporaryFile(mode='w') as f:
-            hashcat_cmd = HashcatCmdStdout(outfile=f.name)
-            hashcat_cmd.add_wordlists(WordList.TOP1K)
-            hashcat_cmd.add_rule(Rule.BEST_64)
-            subprocess_call(hashcat_cmd.build())
-            hashcat_cmd = self.new_cmd()
-            hashcat_cmd.add_wordlists(f.name)
-            subprocess_call(hashcat_cmd.build())
-
-    @monitor_timer
-    def run_top304k(self):
-        """
-        - Top304Thousand-probable-v2.txt
-        """
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlists(WordList.TOP304K)
+        hashcat_cmd.add_wordlists(WordList.TOP1K_RULE_BEST64)
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
@@ -179,25 +165,25 @@ class BaseAttack:
     @monitor_timer
     def run_names(self):
         with tempfile.NamedTemporaryFile(mode='w') as f:
-            hashcat_cmd = HashcatCmdStdout(outfile=f.name)
-            hashcat_cmd.add_wordlists(WordList.NAMES_UA_RU)
-            hashcat_cmd.add_rule(Rule.ESSID)
-            subprocess_call(hashcat_cmd.build())
+            hashcat_stdout = HashcatCmdStdout(outfile=f.name)
+            hashcat_stdout.add_wordlists(WordList.NAMES_UA_RU)
+            hashcat_stdout.add_rule(Rule.ESSID)
+            subprocess_call(hashcat_stdout.build())
             hashcat_cmd = self.new_cmd()
             hashcat_cmd.add_wordlists(f.name)
             subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
     def run_names_with_digits(self):
+        # excluded from the fast run
         with open(WordList.NAMES_UA_RU_WITH_DIGITS.path, 'w') as f:
+            wordlist_order = [WordList.NAMES_UA_RU, WordList.DIGITS_APPEND]
             for left in ['left', 'right']:
-                wordlist_order = [WordList.NAMES_UA_RU, WordList.DIGITS_APPEND]
-                if left == 'right':
-                    wordlist_order = wordlist_order[::-1]
                 for rule_names in ['', 'T0', 'u']:
-                    hashcat_cmd = HashcatCmdStdout(outfile=f.name)
-                    hashcat_cmd.add_wordlists(*wordlist_order, speial_args=['-a1', f'--rule-{left}={rule_names}'])
-                    subprocess_call(hashcat_cmd.build())
+                    hashcat_stdout = HashcatCmdStdout(outfile=f.name)
+                    hashcat_stdout.add_wordlists(*wordlist_order, speial_args=['-a1', f'--rule-{left}={rule_names}'])
+                    subprocess_call(hashcat_stdout.build())
+                wordlist_order = wordlist_order[::-1]
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlists(WordList.NAMES_UA_RU_WITH_DIGITS)
         subprocess_call(hashcat_cmd.build())
@@ -208,7 +194,6 @@ class BaseAttack:
         """
         self.run_essid_attack()
         self.run_top1k()
-        self.run_top304k()
         self.run_digits8()
         self.run_keyboard_walk()
         self.run_names()

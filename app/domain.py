@@ -40,6 +40,7 @@ class WordList(Enum):
     DIGITS_8 = "digits_8.txt"
     DIGITS_APPEND = "digits_append.txt"
     TOP1K = "Top1575-probable-v2.txt"
+    TOP1K_RULE_BEST64 = "Top1575-probable-v2-rule-best64.txt"
     TOP304K = "Top304Thousand-probable-v2.txt"
     KEYBOARD_WALK = "keyboard-walk.txt"
     NAMES_UA_RU = "names_ua-ru.txt"

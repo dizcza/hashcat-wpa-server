@@ -4,6 +4,7 @@ from collections import namedtuple
 from functools import lru_cache
 
 from app import lock_app
+from app.attack.hashcat_cmd import HashcatCmdStdout
 from app.domain import WordList, Rule
 from app.logger import logger
 from app.utils import subprocess_call
@@ -95,9 +96,28 @@ def estimate_runtime_fmt(wordlist: WordList, rule: Rule) -> str:
     speed = int(read_last_benchmark().speed)
     if speed == 0:
         return "unknown"
-    n_candidates = count_words(wordlist) * count_rules(rule)
+    # add extra words to account for the 'fast' run, which includes
+    # 160k digits8, 120k top1k+best64 and ESSID manipulation
+    # (300k hamming ball, 70k digits append mask)
+    n_words = count_words(wordlist) + 700_000
+    n_candidates = n_words * count_rules(rule)
     runtime = int(n_candidates / speed)  # in seconds
-    if runtime < 60:
-        return "<1 min"
     runtime_ftm = str(datetime.timedelta(seconds=runtime))
     return runtime_ftm
+
+
+def create_fast_wordlists():
+    # note that dumping all combinations in a file is not equivalent to
+    # directly adding top1k wordlist and best64 rule because hashcat ignores
+    # patterns that are <8 chars _before_ expanding a candidate with the rule.
+    if not WordList.TOP1K_RULE_BEST64.path.exists():
+        # it should be already created in a docker
+        logger.warning(f"{WordList.TOP1K_RULE_BEST64.name} does not exist. Creating")
+        hashcat_stdout = HashcatCmdStdout(outfile=WordList.TOP1K_RULE_BEST64.path)
+        hashcat_stdout.add_wordlists(WordList.TOP1K)
+        hashcat_stdout.add_rule(Rule.BEST_64)
+        subprocess_call(hashcat_stdout.build())
+
+
+if __name__ == '__main__':
+    create_fast_wordlists()

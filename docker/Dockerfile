@@ -34,6 +34,10 @@ COPY ./nginx.conf /etc/nginx/nginx.conf
 COPY ./supervisor.conf /etc/supervisor/conf.d/hashcat_wpa.conf
 COPY . /root/hashcat-wpa-server
 
+RUN hashcat --stdout --rules=/root/hashcat-wpa-server/rules/best64.rule \
+    --outfile=/root/hashcat-wpa-server/wordlists/Top1575-probable-v2-rule-best64.txt \
+    /root/hashcat-wpa-server/wordlists/Top1575-probable-v2.txt
+
 RUN LC_ALL=C tr -dc '[:alnum:]' < /dev/urandom | head -c20 > /root/hashcat-wpa-server/app/hashcat_brain_password
 
 ENV LC_ALL=C.UTF-8
