@@ -99,12 +99,6 @@ class Workload(Enum):
     High = "3"
 
 
-@unique
-class OnOff(Enum):
-    ON = "1"
-    OFF = "0"
-
-
 class TaskInfoStatus:
     SCHEDULED = "Scheduled"  # added to tasks queue
     COMPLETED = "Completed"  # all attacks run

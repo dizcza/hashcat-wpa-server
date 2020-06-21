@@ -3,11 +3,11 @@ import datetime
 from flask_uploads import UploadSet, configure_uploads
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
-from wtforms import RadioField, IntegerField, SubmitField
+from wtforms import RadioField, IntegerField, SubmitField, BooleanField
 from wtforms.validators import Optional, ValidationError
 
 from app import app, db
-from app.domain import Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode, OnOff
+from app.domain import Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode
 from app.word_magic.wordlist import estimate_runtime_fmt, wordlists_available, wordlist_path_from_name, \
     find_wordlist_by_path
 
@@ -45,8 +45,7 @@ class UploadForm(FlaskForm):
                                                                            message='Airodump & Hashcat capture files only')])
     workload = RadioField("Workload", choices=tuple((wl.value, wl.name) for wl in Workload),
                           default=Workload.Default.value)
-    brain = RadioField("Hashcat Brain", choices=tuple((enum.value, enum.name) for enum in OnOff),
-                       default=OnOff.OFF.value, description="Hashcat Brain skips already tried password candidates")
+    brain = BooleanField("Hashcat Brain", default=False, description="Hashcat Brain skips already tried password candidates")
     submit = SubmitField('Submit')
 
     def __init__(self):
@@ -76,7 +75,7 @@ class UploadForm(FlaskForm):
 
         wordlist = find_wordlist_by_path(wordlist)
         if wordlist is None:
-            raise ValidationError(f"The chosen wordlist does not exist anymore. Refresh the page.")
+            raise ValidationError(f"The chosen wordlist does not exist anymore.")
 
 
 cap_uploads = UploadSet(name='files', extensions=HashcatMode.valid_suffixes(), default_dest=lambda app: app.config['CAPTURES_DIR'])

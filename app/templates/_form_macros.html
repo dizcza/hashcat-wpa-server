@@ -13,3 +13,18 @@
 </p>
 
 {% endmacro %}
+
+{% macro render_inline(field) %}
+
+<p>
+    {{ field(title=field.description, **kwargs) | safe }}
+    {{ field.label }}
+    <span class="error" style="color: red;">
+    {% for error in field.errors %}
+        [{{ error }}]
+    {% endfor %}
+    </span>
+    <br>
+</p>
+
+{% endmacro %}

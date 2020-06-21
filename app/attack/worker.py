@@ -7,7 +7,7 @@ from app import db, lock_app
 from app.attack.base_attack import BaseAttack, monitor_timer
 from app.attack.hashcat_cmd import run_with_status, HashcatCmdCapture
 from app.config import BENCHMARK_FILE
-from app.domain import Rule, TaskInfoStatus, InvalidFileError, ProgressLock, OnOff
+from app.domain import Rule, TaskInfoStatus, InvalidFileError, ProgressLock
 from app.logger import logger
 from app.uploader import UploadForm, UploadedTask
 from app.utils import read_plain_key, date_formatted, subprocess_call, read_hashcat_brain_password
@@ -183,7 +183,7 @@ class HashcatWorker:
         """
         lock = ProgressLock(task_id=task.id)
         hashcat_args = task.hashcat_args
-        if OnOff(uploaded_form.brain.data) == OnOff.ON:
+        if uploaded_form.brain.data:
             # --brain-client is already there
             hashcat_args = f"{hashcat_args} --brain-client-features=3 " \
                            f"--brain-password={read_hashcat_brain_password()}"

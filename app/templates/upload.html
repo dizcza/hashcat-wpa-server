@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_form_macros.html" import render_field %}
+{% from "_form_macros.html" import render_field, render_inline %}
 
 {% block content %}
     <h1>Upload handshake capture</h1>
@@ -11,7 +11,7 @@
         <p>Estimated runtime: <span id="runtime">{{ form.runtime }}</span></p>
         {{ render_field(form.timeout) }}
         {{ render_field(form.workload) }}
-        {{ render_field(form.brain) }}
+        {{ render_inline(form.brain) }}
         {{ render_field(form.capture) }}
         <p>{{ form.submit() }}</p>
     </form>

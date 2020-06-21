@@ -60,12 +60,12 @@
     $(document).ready(function() {
         {% if current_user.is_active and current_user.is_authenticated %}
         $.get('/progress').done(function(response) {
-            $.each(response, function(index, data) {
-                var $task_row = $("#task" + data.task_id);
-                $task_row.find("td.progress").text(data.progress);
-                $task_row.find("td.status").text(data.status);
-                $task_row.find("td.found_key").text(data.found_key);
-            });
+            for (let task_progress of response) {
+                let task_row = $("#task" + task_progress.task_id);
+                task_row.find("td.progress").text(task_progress.progress);
+                task_row.find("td.status").text(task_progress.status);
+                task_row.find("td.found_key").text(task_progress.found_key);
+            }
         })
         {% endif %}
         setTimeout(arguments.callee, 10000);

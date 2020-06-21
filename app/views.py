@@ -11,7 +11,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from app import app, db
 from app.attack.convert import split_by_essid, convert_to_22000
 from app.attack.worker import HashcatWorker
-from app.domain import TaskInfoStatus, OnOff, Rule
+from app.domain import TaskInfoStatus, Rule
 from app.login import LoginForm, RegistrationForm, User, RoleEnum, register_user, create_first_users, Role, \
     roles_required, user_has_roles
 from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks
@@ -69,7 +69,7 @@ def upload():
         folder_split_by_essid = split_by_essid(file_22000)
         tasks = {}
         hashcat_args = f"--workload-profile={form.workload.data}"
-        if OnOff(form.brain.data) == OnOff.ON:
+        if form.brain.data:
             hashcat_args = f"{hashcat_args} --brain-client"
         for file_essid in folder_split_by_essid.iterdir():
             bssid_essid = next(bssid_essid_from_22000(file_essid))
@@ -116,7 +116,7 @@ def progress():
             task_id = lock.task_id
             if task_id in user_tasks_id:
                 task_progress = dict(task_id=task_id,
-                                     progress=f"{lock.progress:.1f}",
+                                     progress=f"{lock.progress:.2f}",
                                      status=lock.status,
                                      found_key=lock.found_key)
                 tasks_progress.append(task_progress)
