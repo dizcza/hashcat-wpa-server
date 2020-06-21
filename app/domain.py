@@ -1,5 +1,6 @@
 import datetime
 import threading
+import time
 from collections import namedtuple
 from enum import Enum, unique
 from pathlib import Path
@@ -33,7 +34,7 @@ class Rule(Enum):
 
 
 @unique
-class WordList(Enum):
+class WordListDefault(Enum):
     TOP1M = "Top1pt6Million-probable-v2.txt"
     TOP29M = "Top29Million-probable-v2.txt"
     TOP109M = "Top109Million-probable-v2.txt"
@@ -49,12 +50,6 @@ class WordList(Enum):
     @property
     def path(self):
         return WORDLISTS_DIR / self.value
-
-    @staticmethod
-    def from_data(name: str):
-        if name in (None, NONE_ENUM):
-            return None
-        return WordList(name)
 
 
 @unique
@@ -128,7 +123,7 @@ class ProgressLock:
         self.found_key = None
         self.cancelled = False  # needed in hashcat_cmd.run_with_status()
         self.completed = False  # checked in /progress
-        self._start_time = datetime.datetime.now()
+        self._start_time = time.time()
 
     def set_status(self, status):
         self.status = status
@@ -149,7 +144,8 @@ class ProgressLock:
         self.progress = 100
 
     def update_dict(self):
-        duration = datetime.datetime.now() - self._start_time
+        duration = int(time.time() - self._start_time)
+        duration = datetime.timedelta(seconds=duration)
         return dict(found_key=self.found_key, duration=duration, completed=self.completed,
                     status=self.status)
 

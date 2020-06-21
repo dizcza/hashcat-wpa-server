@@ -30,16 +30,15 @@ probable passwords that require only a few minutes to run on any laptop or Raspb
 https://github.com/dizcza/hashcat-wpa-server/blob/c9285676668c1c64fd5a62282366d3cb92dff969/app/attack/base_attack.py#L220)
 method:
 
-* `run_essid_attack`: ESSID + digits_append.txt combinator attack (`-a1`), ESSID + best64.rule attack. It uses
-[wordninja](https://github.com/keredson/wordninja) to split ESSID in words and create all possible permutations of word
-compounds. For example "PetitCafe2017" ESSID will be split in `['2017', '2017Cafe', '2017CafePetit', '2017Petit', '2017PetitCafe', 'Cafe', 'Cafe2017', 'Cafe2017Petit', 'CafePetit', 'CafePetit2017', 'Petit', 'Petit2017', 'Petit2017Cafe', 'PetitCafe', 'PetitCafe2017']`
-which increases the chance of finding passwords of type "PetitXXXX" by running a combinator attack for each of the word
-compounds combination.
+* `run_essid_attack`: 
+  - Hamming ball ESSID attack (perturb ESSID name with at most Hamming distance '2');
+  - Split ESSID in word compounds with [wordninja](https://github.com/keredson/wordninja). For example "PetitCafe2017" ESSID is split in `['2017', '2017Cafe', '2017CafePetit', '2017Petit', 'Cafe', ..., 'CafePetit2017']` which increases the chance of finding passwords of type "PetitXXXX" by running the combinator attack for each of the word compounds combination. Technically, for each `essid_i` word compound, it runs
+      - essid_i + digits_append.txt (prepend and append) combinator attack (`-a1`);
+      - essid_i + best64.rule attack;
 * `run_top1k`: Top1575-probable-v2.txt + best64.rule attack.
-* `run_top304k`: Top304Thousand-probable-v2.txt attack.
 * `run_digits8`: birthdays 100 years backward, digits masks like aabbccdd (refer to [mask_8-12.txt](app/word_magic/digits/mask_8-12.txt)), digits cycles, and more.
 * `run_keyboard_walk`: [keyboard-walk](https://github.com/hashcat/kwprocessor) attack.
-* `run_names`: names_ua-ru.txt with [essid.rule](rules/essid.rule) attack.
+* `run_names`: names_ua-ru.txt with best64 attack.
 
 Check out a running server on a CPU instance: http://85.217.171.57:9111. To surf the site, login with the `guest:guest` credentials. (Yes, you don't have the permissions to start jobs. Contact me if necessary.)
 
@@ -60,16 +59,28 @@ There are 3 docker tags (branches):
 For example, to run the `latest` tag (makes sense only if you have at least 1 GPU), open a terminal and run
 
 ```
-docker run --runtime=nvidia -d -e HASHCAT_ADMIN_USER=admin -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> -v ${HOME}/hashcat_database:/root/hashcat-wpa-server/database -p 9111:80 dizcza/hashcat-wpa-server:latest
+docker run --runtime=nvidia -d \
+    -e HASHCAT_ADMIN_USER=admin \
+    -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> \
+    -v ${HOME}/hashcat_database:/root/hashcat-wpa-server/database \
+    -v hashcat-wordlists:/root/hashcat-wpa-server/wordlists/user \
+    -p 9111:80 \
+    dizcza/hashcat-wpa-server:latest
 ```
 
 If you don't posses a GPU, try `intel-cpu` or `pocl` tag:
 
 ```
-docker run -d -e HASHCAT_ADMIN_USER=admin -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> -v ${HOME}/hashcat_database:/root/hashcat-wpa-server/database -p 9111:80 dizcza/hashcat-wpa-server:intel-cpu
+docker run -d \
+    -e HASHCAT_ADMIN_USER=admin \
+    -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> \
+    -v hashcat-database:/root/hashcat-wpa-server/database \
+    -v hashcat-wordlists:/root/hashcat-wpa-server/wordlists/user \
+    -p 9111:80 \
+    dizcza/hashcat-wpa-server:intel-cpu
 ```
 
-That's all! Navigate to [localhost:9111](localhost:9111). SQLite database with all users and uploaded tasks will be located in `$HOME/hashcat_database/hashcat_wpa.db` on your host machine.
+That's all! Navigate to [localhost:9111](localhost:9111). Run `docker volume inspect hashcat-database` in a terminal (look for "Mountpoint") to find where `hashcat_wpa.db` SQLite database file with all users and uploaded tasks is stored on your host machine.
 
 
 ### Building the image locally
@@ -81,7 +92,7 @@ docker-compose -f docker-compose.yml build  # inside the docker/ folder
 docker-compose -f docker-compose.yml up -d
 ```
 
-That's all! Navigate to [localhost:9111](localhost:9111) as in the previous step. Run `docker volume inspect docker_hashcat-db` in a terminal to find where `hashcat_wpa.db` database file is stored on your host machine.
+That's all! Navigate to [localhost:9111](localhost:9111) as in the previous step. Run `docker volume ls --filter name=docker_hashcat*` to list hashcat-wpa-server related docker volumes.
 
 If you don't posses a GPU, run docker compose like so:
 
@@ -89,3 +100,8 @@ If you don't posses a GPU, run docker compose like so:
 docker-compose -f docker-compose.yml build --build-arg branch=intel-cpu
 docker-compose -f docker-compose.yml up -d
 ```
+
+
+## User wordlists
+
+Hashcat-wpa-server app is shipped with default Top-xxx-probable [wordlists](app/domain.py). If you want to make use of your custom wordlists, place them in the folder defined by `docker inspect hashcat-wordlists` (might require root access).

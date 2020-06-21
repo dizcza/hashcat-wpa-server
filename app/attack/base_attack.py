@@ -13,7 +13,7 @@ from app.logger import logger
 from app.attack.convert import split_by_essid
 from app.attack.hashcat_cmd import HashcatCmdCapture, HashcatCmdStdout
 from app.config import ESSID_TRIED
-from app.domain import Rule, WordList, Mask
+from app.domain import Rule, WordListDefault, Mask
 from app.utils import read_plain_key, subprocess_call, bssid_essid_from_22000, check_file_22000
 from app.word_magic.essid import collect_essid_parts
 from app.word_magic.hamming import hamming_ball
@@ -106,7 +106,7 @@ class BaseAttack:
             subprocess_call(hashcat_cmd.build())
 
     def _run_essid_digits(self, hcap_fpath_essid: Path, essid_wordlist_path: str):
-        wordlist_order = [essid_wordlist_path, WordList.DIGITS_APPEND.path]
+        wordlist_order = [essid_wordlist_path, WordListDefault.DIGITS_APPEND.path]
         for reverse in range(2):
             with tempfile.NamedTemporaryFile(mode='w') as f:
                 hashcat_stdout = HashcatCmdStdout(outfile=f.name)
@@ -138,7 +138,7 @@ class BaseAttack:
         For more information refer to `digits/create_digits.py`
         """
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlists(WordList.DIGITS_8)
+        hashcat_cmd.add_wordlists(WordListDefault.DIGITS_8)
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
@@ -147,7 +147,7 @@ class BaseAttack:
         - Top1575-probable-v2.txt with best64 rules
         """
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlists(WordList.TOP1K_RULE_BEST64)
+        hashcat_cmd.add_wordlists(WordListDefault.TOP1K_RULE_BEST64)
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
@@ -159,14 +159,14 @@ class BaseAttack:
     @monitor_timer
     def run_keyboard_walk(self):
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlists(WordList.KEYBOARD_WALK)
+        hashcat_cmd.add_wordlists(WordListDefault.KEYBOARD_WALK)
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
     def run_names(self):
         with tempfile.NamedTemporaryFile(mode='w') as f:
             hashcat_stdout = HashcatCmdStdout(outfile=f.name)
-            hashcat_stdout.add_wordlists(WordList.NAMES_UA_RU)
+            hashcat_stdout.add_wordlists(WordListDefault.NAMES_UA_RU)
             hashcat_stdout.add_rule(Rule.ESSID)
             subprocess_call(hashcat_stdout.build())
             hashcat_cmd = self.new_cmd()
@@ -176,8 +176,8 @@ class BaseAttack:
     @monitor_timer
     def run_names_with_digits(self):
         # excluded from the fast run
-        with open(WordList.NAMES_UA_RU_WITH_DIGITS.path, 'w') as f:
-            wordlist_order = [WordList.NAMES_UA_RU, WordList.DIGITS_APPEND]
+        with open(WordListDefault.NAMES_UA_RU_WITH_DIGITS.path, 'w') as f:
+            wordlist_order = [WordListDefault.NAMES_UA_RU, WordListDefault.DIGITS_APPEND]
             for left in ['left', 'right']:
                 for rule_names in ['', 'T0', 'u']:
                     hashcat_stdout = HashcatCmdStdout(outfile=f.name)
@@ -185,7 +185,7 @@ class BaseAttack:
                     subprocess_call(hashcat_stdout.build())
                 wordlist_order = wordlist_order[::-1]
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlists(WordList.NAMES_UA_RU_WITH_DIGITS)
+        hashcat_cmd.add_wordlists(WordListDefault.NAMES_UA_RU_WITH_DIGITS)
         subprocess_call(hashcat_cmd.build())
 
     def run_all(self):

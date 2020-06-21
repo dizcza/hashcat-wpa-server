@@ -4,6 +4,7 @@ from pathlib import Path
 APP_DIR = Path(__file__).parent
 ROOT_DIR = APP_DIR.parent
 WORDLISTS_DIR = ROOT_DIR / "wordlists"
+WORDLISTS_USER_DIR = WORDLISTS_DIR / "user"  # user custom wordlists
 RULES_DIR = ROOT_DIR / "rules"
 MASKS_DIR = ROOT_DIR / "masks"
 LOGS_DIR = ROOT_DIR / "logs"

@@ -1,4 +1,5 @@
 version: '3.7'
+
 services:
   hashcat-wpa-server:
     image: "hashcat-wpa-server:latest"
@@ -14,13 +15,15 @@ services:
        - "HASHCAT_ADMIN_PASSWORD=${HASHCAT_ADMIN_PASSWORD}"
        - "TERM=xterm"
     volumes:
-      - hashcat-db:/root/hashcat-wpa-server/database
+      - hashcat-database:/root/hashcat-wpa-server/database
+      - hashcat-wordlists:/root/hashcat-wpa-server/wordlists/user
       - hashcat-migrations:/root/hashcat-wpa-server/migrations
       - hashcat-cache:/root/.hashcat
     restart: always
 
 
 volumes:
-  hashcat-db:
+  hashcat-database:
+  hashcat-wordlists:
   hashcat-migrations:
   hashcat-cache:

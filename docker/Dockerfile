@@ -9,19 +9,17 @@ RUN wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O /tmp/get
     python3 /tmp/get-pip.py
 
 # wordlists
-RUN mkdir -p /root/hashcat-wpa-server/wordlists
+RUN mkdir -p /root/hashcat-wpa-server/wordlists/user
 WORKDIR /root/hashcat-wpa-server/wordlists
 RUN for dict in Top1575-probable-v2.txt Top304Thousand-probable-v2.txt; do \
-    wget --no-check-certificate https://github.com/berzerk0/Probable-Wordlists/raw/master/Real-Passwords/$dict; \
+    wget -q --no-check-certificate https://github.com/berzerk0/Probable-Wordlists/raw/master/Real-Passwords/$dict; \
     done
-
-RUN mkdir -p /root/hashcat-wpa-server/captures
-RUN mkdir -p /root/hashcat-wpa-server/wordlists
-
 RUN for keymap in /root/kwprocessor/keymaps/*; do \
     kwp /root/kwprocessor/basechars/tiny.base $keymap \
         /root/kwprocessor/routes/2-to-16-max-3-direction-changes.route >> /root/hashcat-wpa-server/wordlists/keyboard-walk.txt; \
     done
+
+RUN mkdir -p /root/hashcat-wpa-server/captures
 
 COPY ./requirements.txt /root/hashcat-wpa-server/requirements.txt
 RUN pip3 install -r /root/hashcat-wpa-server/requirements.txt
@@ -34,9 +32,10 @@ COPY ./nginx.conf /etc/nginx/nginx.conf
 COPY ./supervisor.conf /etc/supervisor/conf.d/hashcat_wpa.conf
 COPY . /root/hashcat-wpa-server
 
+# TODO: remove exit code once https://github.com/hashcat/hashcat/issues/2465 is fixed
 RUN hashcat --stdout --rules=/root/hashcat-wpa-server/rules/best64.rule \
     --outfile=/root/hashcat-wpa-server/wordlists/Top1575-probable-v2-rule-best64.txt \
-    /root/hashcat-wpa-server/wordlists/Top1575-probable-v2.txt
+    /root/hashcat-wpa-server/wordlists/Top1575-probable-v2.txt ; exit 0
 
 RUN LC_ALL=C tr -dc '[:alnum:]' < /dev/urandom | head -c20 > /root/hashcat-wpa-server/app/hashcat_brain_password
 

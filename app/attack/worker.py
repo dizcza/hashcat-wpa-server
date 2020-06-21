@@ -1,21 +1,21 @@
 import concurrent.futures
 import re
 import time
+from pathlib import Path
 
 from app import db, lock_app
 from app.attack.base_attack import BaseAttack, monitor_timer
 from app.attack.hashcat_cmd import run_with_status, HashcatCmdCapture
 from app.config import BENCHMARK_FILE
-from app.domain import Rule, WordList, NONE_ENUM, TaskInfoStatus, InvalidFileError, ProgressLock, OnOff
+from app.domain import Rule, TaskInfoStatus, InvalidFileError, ProgressLock, OnOff
 from app.logger import logger
 from app.uploader import UploadForm, UploadedTask
 from app.utils import read_plain_key, date_formatted, subprocess_call, read_hashcat_brain_password
-from app.utils.nvidia_smi import set_cuda_visible_devices
 
 
 class CapAttack(BaseAttack):
 
-    def __init__(self, file_22000, lock: ProgressLock, wordlist: WordList = None, rule: Rule = None, hashcat_args='', timeout=None):
+    def __init__(self, file_22000, lock: ProgressLock, wordlist: Path = None, rule: Rule = None, hashcat_args='', timeout=None):
         super().__init__(file_22000=file_22000,
                          hashcat_args=hashcat_args.split(' '),
                          verbose=False)
@@ -68,14 +68,6 @@ class CapAttack(BaseAttack):
         super().run_top1k()
 
     @monitor_timer
-    def run_top304k(self):
-        if not self.is_attack_needed():
-            return
-        with self.lock:
-            self.lock.set_status("Running top304k")
-        super().run_top304k()
-
-    @monitor_timer
     def run_digits8(self):
         if not self.is_attack_needed():
             return
@@ -90,14 +82,14 @@ class CapAttack(BaseAttack):
         """
         if self.wordlist is None or not self.is_attack_needed():
             return
-        if not self.wordlist.path.exists():
+        if not self.wordlist.exists():
             with self.lock:
                 self.lock.set_status("Downloading the wordlist")
-            while not self.wordlist.path.exists():
+            while not self.wordlist.exists():
                 time.sleep(5)
                 self.cancel_if_needed()
         with self.lock:
-            self.lock.set_status(f"Running {self.wordlist.value}")
+            self.lock.set_status(f"Running {self.wordlist.name}")
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlists(self.wordlist)
         hashcat_cmd.add_rule(self.rule)
@@ -195,10 +187,10 @@ class HashcatWorker:
             # --brain-client is already there
             hashcat_args = f"{hashcat_args} --brain-client-features=3 " \
                            f"--brain-password={read_hashcat_brain_password()}"
-        wordlist = uploaded_form.get_wordlist()
+        wordlist_path = uploaded_form.get_wordlist_path()
         rule = uploaded_form.get_rule()
         try:
-            attack = CapAttack(file_22000=file_22000, lock=lock, wordlist=wordlist, rule=rule, hashcat_args=hashcat_args, timeout=uploaded_form.timeout.data)
+            attack = CapAttack(file_22000=file_22000, lock=lock, wordlist=wordlist_path, rule=rule, hashcat_args=hashcat_args, timeout=uploaded_form.timeout.data)
         except InvalidFileError:
             with lock:
                 lock.cancel()

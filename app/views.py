@@ -11,14 +11,14 @@ from flask_login import login_user, logout_user, login_required, current_user
 from app import app, db
 from app.attack.convert import split_by_essid, convert_to_22000
 from app.attack.worker import HashcatWorker
-from app.domain import TaskInfoStatus, OnOff, WordList, Rule
+from app.domain import TaskInfoStatus, OnOff, Rule
 from app.login import LoginForm, RegistrationForm, User, RoleEnum, register_user, create_first_users, Role, \
     roles_required, user_has_roles
 from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks
-from app.word_magic.wordlist import download_wordlist
 from app.utils.file_io import read_last_benchmark, bssid_essid_from_22000, read_hashcat_brain_password
 from app.utils.utils import is_safe_url, wrap_render_template
 from app.word_magic import create_digits_wordlist, estimate_runtime_fmt, create_fast_wordlists
+from app.word_magic.wordlist import download_wordlist, wordlist_path_from_name
 
 hashcat_worker = HashcatWorker(app)
 render_template = wrap_render_template(render_template)
@@ -63,8 +63,8 @@ def upload():
         filename = cap_uploads.save(request.files['capture'], folder=current_user.username)
         cap_path = Path(app.config['CAPTURES_DIR']) / filename
         cap_path = Path(shlex.quote(str(cap_path)))
-        wordlist = form.get_wordlist()
-        Thread(target=download_wordlist, args=(wordlist,)).start()
+        wordlist_path = form.get_wordlist_path()
+        Thread(target=download_wordlist, args=(wordlist_path,)).start()
         file_22000 = convert_to_22000(cap_path)
         folder_split_by_essid = split_by_essid(file_22000)
         tasks = {}
@@ -90,9 +90,9 @@ def upload():
 @app.route('/estimate_runtime', methods=['POST'])
 @login_required
 def estimate_runtime():
-    wordlist = WordList.from_data(request.form.get('wordlist'))
+    wordlist = wordlist_path_from_name(request.form.get('wordlist'))
     rule = Rule.from_data(request.form.get('rule'))
-    runtime = estimate_runtime_fmt(wordlist=wordlist, rule=rule)
+    runtime = estimate_runtime_fmt(wordlist_path=wordlist, rule=rule)
     return jsonify(runtime)
 
 

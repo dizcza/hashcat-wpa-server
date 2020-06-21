@@ -4,6 +4,7 @@ ignored/
 migrations/
 database/
 captures/
+docker/
 bash/
 env/
 logs/

@@ -4,24 +4,12 @@ from flask_uploads import UploadSet, configure_uploads
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
 from wtforms import RadioField, IntegerField, SubmitField
-from wtforms.validators import Optional
+from wtforms.validators import Optional, ValidationError
 
 from app import app, db
-from app.domain import WordList, Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode, OnOff
-from app.word_magic.wordlist import get_wordlist_rate, estimate_runtime_fmt
-
-
-def _wordlist_choices():
-    # return a pairs of (id-value, display: str)
-    choices = [(NONE_ENUM, "(fast)")]
-    for wordlist in (WordList.TOP304K, WordList.TOP1M, WordList.TOP29M, WordList.TOP109M):
-        rate = get_wordlist_rate(wordlist)
-        extra = f"rate={rate}"
-        if not wordlist.path.exists():
-            extra = f"{extra}; requires downloading"
-        display_text = f"{wordlist.value} [{extra}]"
-        choices.append((wordlist.value, display_text))
-    return choices
+from app.domain import Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode, OnOff
+from app.word_magic.wordlist import estimate_runtime_fmt, wordlists_available, wordlist_path_from_name, \
+    find_wordlist_by_path
 
 
 def check_incomplete_tasks():
@@ -49,7 +37,7 @@ class UploadedTask(db.Model):
 
 
 class UploadForm(FlaskForm):
-    wordlist = RadioField('Wordlist', choices=_wordlist_choices(), default=NONE_ENUM, description="The higher the rate, the better")
+    wordlist = RadioField('Wordlist', choices=wordlists_available(), default=NONE_ENUM, description="The higher the rate, the better")
     rule = RadioField('Rule', choices=((NONE_ENUM, "(None)"), (Rule.BEST_64.value, Rule.BEST_64.value)),
                       default=NONE_ENUM)
     timeout = IntegerField('Timeout in minutes, optional', validators=[Optional()])
@@ -61,16 +49,34 @@ class UploadForm(FlaskForm):
                        default=OnOff.OFF.value, description="Hashcat Brain skips already tried password candidates")
     submit = SubmitField('Submit')
 
-    def get_wordlist(self):
-        return WordList.from_data(self.wordlist.data)
+    def __init__(self):
+        super().__init__()
+        self.wordlist.choices = wordlists_available()
+
+    def get_wordlist_path(self):
+        return wordlist_path_from_name(self.wordlist.data)
 
     def get_rule(self):
         return Rule.from_data(self.rule.data)
 
     @property
     def runtime(self):
-        runtime = estimate_runtime_fmt(wordlist=self.get_wordlist(), rule=self.get_rule())
+        runtime = estimate_runtime_fmt(wordlist_path=self.get_wordlist_path(), rule=self.get_rule())
         return runtime
+
+    @staticmethod
+    def validate_wordlist(form, field):
+        wordlist = wordlist_path_from_name(field.data)
+        if wordlist is None:
+            # fast mode
+            return
+
+        # update the wordlists
+        wordlists_available()
+
+        wordlist = find_wordlist_by_path(wordlist)
+        if wordlist is None:
+            raise ValidationError(f"The chosen wordlist does not exist anymore. Refresh the page.")
 
 
 cap_uploads = UploadSet(name='files', extensions=HashcatMode.valid_suffixes(), default_dest=lambda app: app.config['CAPTURES_DIR'])
