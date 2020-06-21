@@ -182,11 +182,10 @@ class HashcatWorker:
         :param timeout: brute force timeout in minutes
         """
         lock = ProgressLock(task_id=task.id)
-        hashcat_args = task.hashcat_args
+        hashcat_args = f"--workload-profile={uploaded_form.workload.data} {task.hashcat_args}"
         if uploaded_form.brain.data:
             # --brain-client is already there
-            hashcat_args = f"{hashcat_args} --brain-client-features=3 " \
-                           f"--brain-password={read_hashcat_brain_password()}"
+            hashcat_args = f"{hashcat_args} --brain-password={read_hashcat_brain_password()}"
         wordlist_path = uploaded_form.get_wordlist_path()
         rule = uploaded_form.get_rule()
         try:

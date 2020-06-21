@@ -27,6 +27,12 @@ class Rule(Enum):
         return RULES_DIR / self.value
 
     @staticmethod
+    def to_form():
+        # (id_value, description) pairs
+        choices = ((NONE_ENUM, "(None)"), (Rule.BEST_64.value, Rule.BEST_64.value))
+        return choices
+
+    @staticmethod
     def from_data(name: str):
         if name in (None, NONE_ENUM):
             return None
@@ -59,6 +65,23 @@ class Mask(Enum):
     @property
     def path(self):
         return MASKS_DIR / self.value
+
+
+@unique
+class BrainClientFeature(Enum):
+    PASSWORDS = "1"
+    POSITIONS = "2"
+    PASSWORDS_AND_POSITIONS = "3"
+
+    @staticmethod
+    def to_form():
+        # (id_value, description) pairs
+        choices = (
+            (BrainClientFeature.PASSWORDS.value, "Store tried passwords"),
+            (BrainClientFeature.POSITIONS.value, "Store wordlist attack positions"),
+            (BrainClientFeature.PASSWORDS_AND_POSITIONS.value, "Store tried passwords and attack positions"),
+        )
+        return choices
 
 
 class HashcatMode:
@@ -97,6 +120,12 @@ class Workload(Enum):
     Low = "1"
     Default = "2"
     High = "3"
+
+    @staticmethod
+    def to_form():
+        # (id_value, description) pairs
+        choices = tuple((wl.value, wl.name) for wl in Workload)
+        return choices
 
 
 class TaskInfoStatus:

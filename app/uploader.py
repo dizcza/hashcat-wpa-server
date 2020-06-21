@@ -7,7 +7,7 @@ from wtforms import RadioField, IntegerField, SubmitField, BooleanField
 from wtforms.validators import Optional, ValidationError
 
 from app import app, db
-from app.domain import Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode
+from app.domain import Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode, BrainClientFeature
 from app.word_magic.wordlist import estimate_runtime_fmt, wordlists_available, wordlist_path_from_name, \
     find_wordlist_by_path
 
@@ -38,14 +38,14 @@ class UploadedTask(db.Model):
 
 class UploadForm(FlaskForm):
     wordlist = RadioField('Wordlist', choices=wordlists_available(), default=NONE_ENUM, description="The higher the rate, the better")
-    rule = RadioField('Rule', choices=((NONE_ENUM, "(None)"), (Rule.BEST_64.value, Rule.BEST_64.value)),
-                      default=NONE_ENUM)
+    rule = RadioField('Rule', choices=Rule.to_form(), default=NONE_ENUM)
     timeout = IntegerField('Timeout in minutes, optional', validators=[Optional()])
+    workload = RadioField("Workload", choices=Workload.to_form(), default=Workload.Default.value)
+    brain = BooleanField("Hashcat Brain", default=False, description="Hashcat Brain skips already tried password candidates")
+    brain_client_feature = RadioField("Brain client features", choices=BrainClientFeature.to_form(),
+                                      default=BrainClientFeature.PASSWORDS_AND_POSITIONS.value)
     capture = FileField('Capture', validators=[FileRequired(), FileAllowed(HashcatMode.valid_suffixes(),
                                                                            message='Airodump & Hashcat capture files only')])
-    workload = RadioField("Workload", choices=tuple((wl.value, wl.name) for wl in Workload),
-                          default=Workload.Default.value)
-    brain = BooleanField("Hashcat Brain", default=False, description="Hashcat Brain skips already tried password candidates")
     submit = SubmitField('Submit')
 
     def __init__(self):

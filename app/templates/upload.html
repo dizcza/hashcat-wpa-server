@@ -12,6 +12,9 @@
         {{ render_field(form.timeout) }}
         {{ render_field(form.workload) }}
         {{ render_inline(form.brain) }}
+        <div id="brain-client-feature-div" style="display: none;">
+        {{ render_field(form.brain_client_feature) }}
+        </div>
         {{ render_field(form.capture) }}
         <p>{{ form.submit() }}</p>
     </form>
@@ -29,5 +32,17 @@
             $('#runtime').text(response);
         });
     }
+
+    const brain_checkbox = document.getElementById('brain');
+    const brain_feature = document.getElementById('brain-client-feature-div');
+
+    brain_checkbox.addEventListener('change', (event) => {
+      if (event.target.checked) {
+        brain_feature.style.display = "block";
+      } else {
+        brain_feature.style.display = "none";
+      }
+    })
+
 </script>
 {% endblock %}
