@@ -41,9 +41,9 @@ login_manager.login_view = 'login'
 
 @unique
 class RoleEnum(Enum):
-    ADMIN = 'Admin'  # can register new people
+    ADMIN = 'Admin'  # can register new users
     USER = 'User'    # can submit tasks
-    GUEST = 'Guest'  # anonymous
+    GUEST = 'Guest'  # anonymous, cannot submit tasks
 
 
 class Role(db.Model):

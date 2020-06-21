@@ -18,7 +18,7 @@
             <a href="{{ url_for('upload') }}">Upload .cap file</a>
             <a href="{{ url_for('user_profile') }}">User profile</a>
         </div>
-        <p><a href="{{ url_for('register_admin') }}">Register a new user (Admin only)</a></p>
+        <p><a href="{{ url_for('register') }}">Register a new user (Admin only)</a></p>
         {% if current_user.is_active %}
         <p>You're logged in as <b>{{ current_user.username }}</b>. Privileges: {{ current_user.roles }}</p>
         {% endif %}
