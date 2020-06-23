@@ -1,27 +1,61 @@
 {% extends "base.html" %}
-{% from "_form_macros.html" import render_field, render_inline %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block styles %}
+{{super()}}
+<link rel="stylesheet" href="{{url_for('static', filename='upload.css')}}">
+{% endblock %}
+
+{% macro render_field(field, inline=False) %}
+<div title="{{ field.description }}">
+    {% if inline %}
+    {{ wtf.form_field(field, form_type="inline") }}
+    {% else %}
+    <h4>{{ field.label.text }}</h4>
+    {{ wtf.form_field(field) }}
+    {% endif %}
+    {{ wtf.form_errors(field) }}
+</div>
+{% endmacro %}
+
 
 {% block content %}
+{{ super() }}
+
+<div class="container-fluid">
     <h1>Upload handshake capture</h1>
-    <form action="" method="post" enctype="multipart/form-data" onchange="updateEstimatedRuntime()">
-        <!-- csrf_token is in hidden_tag -->
+    <form action="" method="post" class="form" enctype="multipart/form-data" role="form" onchange="updateEstimatedRuntime()">
+        <!-- csrf_token is in the hidden_tag -->
         {{ form.hidden_tag() }}
-        {{ render_field(form.wordlist) }}
-        {{ render_field(form.rule) }}
-        <p>Estimated runtime: <span id="runtime">{{ form.runtime }}</span></p>
-        {{ render_field(form.timeout) }}
-        {{ render_field(form.workload) }}
-        {{ render_inline(form.brain) }}
-        <div id="brain-client-feature-div" style="display: none;">
-        {{ render_field(form.brain_client_feature) }}
+
+        <div class="row field-boxed">
+            <div class="col-md-6">
+                <div class="col">{{ render_field(form.wordlist) }}</div>
+            </div>
+            <div class="col-md-4">
+                <div class="col">{{ render_field(form.rule) }}</div>
+            </div>
         </div>
-        {{ render_field(form.capture) }}
-        <p>{{ form.submit() }}</p>
+
+        <p>Estimated runtime: <span id="runtime">{{ form.runtime }}</span></p>
+        {{ wtf.form_field(form.timeout) }}
+        {{ render_field(form.workload) }}
+
+        <div class="row field-boxed">
+            {{ render_field(form.brain, inline=True) }}
+            <div id="brain-client-feature-div" style="display: none;">
+            {{ render_field(form.brain_client_feature) }}
+            </div>
+        </div>
+        {{ wtf.form_field(form.capture) }}
+        <button type="submit" class="btn btn-default">Submit</button>
     </form>
+</div>
 {% endblock %}
 
 {% block scripts %}
-<script src="http://code.jquery.com/jquery.js"></script>
+{{super()}}
+
 <script>
     function updateEstimatedRuntime() {
         $.post("/estimate_runtime", {

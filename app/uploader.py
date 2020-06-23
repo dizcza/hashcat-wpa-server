@@ -43,10 +43,12 @@ class UploadForm(FlaskForm):
     workload = RadioField("Workload", choices=Workload.to_form(), default=Workload.Default.value)
     brain = BooleanField("Hashcat Brain", default=False, description="Hashcat Brain skips already tried password candidates")
     brain_client_feature = RadioField("Brain client features", choices=BrainClientFeature.to_form(),
-                                      default=BrainClientFeature.PASSWORDS_AND_POSITIONS.value)
+                                      default=BrainClientFeature.POSITIONS.value)
     capture = FileField('Capture', validators=[FileRequired(), FileAllowed(HashcatMode.valid_suffixes(),
                                                                            message='Airodump & Hashcat capture files only')])
     submit = SubmitField('Submit')
+
+    # TODO: pass render_kw=dict(disabled=True) in RadioField
 
     def __init__(self):
         super().__init__()

@@ -89,7 +89,7 @@ class CapAttack(BaseAttack):
                 time.sleep(5)
                 self.cancel_if_needed()
         with self.lock:
-            self.lock.set_status(f"Running {self.wordlist.name}")
+            self.lock.set_status(f"Running the main wordlist")
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlists(self.wordlist)
         hashcat_cmd.add_rule(self.rule)
@@ -99,6 +99,12 @@ class CapAttack(BaseAttack):
         """
         Run all attacks.
         """
+        with self.lock:
+            task_id = self.lock.task_id
+        with lock_app:
+            task = UploadedTask.query.get(task_id)
+            task.status = TaskInfoStatus.RUNNING
+            db.session.commit()
         super().run_all()
         self.run_main_wordlist()
 

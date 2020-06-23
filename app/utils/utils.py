@@ -1,13 +1,11 @@
 import datetime
 import subprocess
-from functools import wraps
 from typing import List
 from urllib.parse import urlparse, urljoin
 
 from flask import request
 
 from app.logger import logger
-from app.utils.nvidia_smi import NvidiaSmi
 
 
 def subprocess_call(args: List[str]):
@@ -32,11 +30,3 @@ def is_safe_url(target):
 
 def date_formatted() -> str:
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-
-
-def wrap_render_template(render_template):
-    @wraps(render_template)
-    def wrapper(*args, **kwargs):
-        kwargs.update(gpus=NvidiaSmi.get_gpus())
-        return render_template(*args, **kwargs)
-    return wrapper

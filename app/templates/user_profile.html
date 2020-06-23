@@ -1,49 +1,75 @@
 {% extends "base.html" %}
 
+{% macro class_status(task) %}
+
+{% if task.found_key != None %}
+success
+{% elif task.status == "Completed" %}
+info
+{% elif task.status == "Running" %}
+warning
+{% elif "Error" in task.status or task.status in ("Cancelled", "Aborted", "Rejected") %}
+danger
+{% endif %}
+
+{% endmacro %}
+
+
 {% block content %}
-<h2>Uploaded captures</h2>
-<p>Hashcat WPA/WPA2 benchmark speed: <b>{{ benchmark.speed }}</b> H/s.
-    Last update: {{ benchmark.date }}
-    <button onclick="updateBenchmark()">Update</button>
-</p>
-<table>
-    <tr>
-        <th>#</th>
-        <th>Capture</th>
-        <th>Date</th>
-        <th>Duration</th>
-        <th>BSSID</th>
-        <th>ESSID</th>
-        <th>Wordlist</th>
-        <th>Rule</th>
-        <th>Status</th>
-        <th>Progress</th>
-        <th>Found Key</th>
-    </tr>
-    {%- for task in tasks %}
-    <tr id="task{{ task.id }}">
-        <td>{{ task.id }}</td>
-        <td>{{ task.filename }}</td>
-        <td>{{ task.uploaded_time.strftime('%Y-%m-%d %H:%M') }}</td>
-        <td>{{ task.duration }}</td>
-        <td>{{ task.bssid }}</td>
-        <td>{{ task.essid }}</td>
-        <td>{{ task.wordlist }}</td>
-        <td>{{ task.rule }}</td>
-        <td class="status">{{ task.status }}</td>
-        <td class="progress"></td>
-        <td class="found_key">{{ task.found_key }}</td>
-        {% if not task.completed %}
-        <td><button onclick="cancelTask({{ task.id }})">Cancel</button></td>
-        {% endif %}
-    </tr>
-    {%- endfor %}
-</table>
+{{ super() }}
+
+<div class="container-fluid">
+    {% if current_user.is_active %}
+    <p>You're logged in as <b>{{ current_user.username }}</b>. Privileges: {{ current_user.roles }}</p>
+    {% endif %}
+    <p>Available GPUs: {{ gpus }} </p>
+    <hr>
+
+    <h2>Uploaded captures</h2>
+    <p>Hashcat WPA/WPA2 benchmark speed: <b>{{ benchmark.speed }}</b> H/s.
+        Last update: {{ benchmark.date }}
+        <button onclick="updateBenchmark()">Update</button>
+    </p>
+
+    <table class="table table-hover">
+        <tr>
+            <th>#</th>
+            <th>Capture</th>
+            <th>Date</th>
+            <th>Duration</th>
+            <th>BSSID</th>
+            <th>ESSID</th>
+            <th>Wordlist</th>
+            <th>Rule</th>
+            <th>Status</th>
+            <th>Progress</th>
+            <th>Found Key</th>
+        </tr>
+        {%- for task in tasks %}
+        <tr class="{{ class_status(task) }}" id="task{{ task.id }}">
+            <td>{{ task.id }}</td>
+            <td>{{ task.filename }}</td>
+            <td>{{ task.uploaded_time.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>{{ task.duration }}</td>
+            <td>{{ task.bssid }}</td>
+            <td>{{ task.essid }}</td>
+            <td>{{ task.wordlist }}</td>
+            <td>{{ task.rule }}</td>
+            <td class="status">{{ task.status }}</td>
+            <td class="progress"></td>
+            <td class="found_key">{{ task.found_key }}</td>
+            {% if not task.completed %}
+            <td><button onclick="cancelTask({{ task.id }})">Cancel</button></td>
+            {% endif %}
+        </tr>
+        {%- endfor %}
+    </table>
+</div>
 {% endblock %}
 
 
 {% block scripts %}
-<script src="http://code.jquery.com/jquery.js"></script>
+{{super()}}
 <script>
     function updateBenchmark() {
        $.get('/benchmark').done(function(message) {
@@ -57,16 +83,19 @@
        })
     }
 
+    function updateProgress(response) {
+        for (let task_progress of response) {
+            let task_row = $("#task" + task_progress.task_id);
+            task_row.find("td.progress").text(task_progress.progress);
+            task_row.find("td.status").text(task_progress.status);
+            task_row.find("td.found_key").text(task_progress.found_key);
+        }
+    }
+
+
     $(document).ready(function() {
         {% if current_user.is_active and current_user.is_authenticated %}
-        $.get('/progress').done(function(response) {
-            for (let task_progress of response) {
-                let task_row = $("#task" + task_progress.task_id);
-                task_row.find("td.progress").text(task_progress.progress);
-                task_row.find("td.status").text(task_progress.status);
-                task_row.find("td.found_key").text(task_progress.found_key);
-            }
-        })
+        $.get('/progress').done(updateProgress);
         {% endif %}
         setTimeout(arguments.callee, 10000);
     });

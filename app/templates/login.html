@@ -1,13 +1,12 @@
 {% extends "base.html" %}
-{% from "_form_macros.html" import render_field %}
+{% import "bootstrap/wtf.html" as wtf %}
 
 {% block content %}
+{{ super() }}
+
+<div class="container">
     <h1>Sign In</h1>
-    <form action="" method="post">
-        {{ form.hidden_tag() }}
-        {{ render_field(form.username) }}
-        {{ render_field(form.password) }}
-        <p>{{ form.remember_me() }} {{ form.remember_me.label }}</p>
-        <p>{{ form.submit() }}</p>
-    </form>
+    {{ wtf.quick_form(form)}}
+</div>
+
 {% endblock %}

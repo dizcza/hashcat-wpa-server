@@ -129,7 +129,8 @@ class Workload(Enum):
 
 
 class TaskInfoStatus:
-    SCHEDULED = "Scheduled"  # added to tasks queue
+    SCHEDULED = "Scheduled"  # added to the tasks queue
+    RUNNING = "Running"  # started execution
     COMPLETED = "Completed"  # all attacks run
     CANCELLED = "Cancelled"  # user cancelled
     REJECTED = "Rejected"  # invalid request
