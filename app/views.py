@@ -14,7 +14,7 @@ from app.attack.worker import HashcatWorker
 from app.domain import TaskInfoStatus, Rule
 from app.login import LoginForm, RegistrationForm, User, RoleEnum, register_user, create_first_users, Role, \
     roles_required, user_has_roles
-from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks
+from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks, backward_db_compatibility
 from app.utils.file_io import read_last_benchmark, bssid_essid_from_22000, read_hashcat_brain_password
 from app.utils.nvidia_smi import NvidiaSmi
 from app.utils.utils import is_safe_url
@@ -50,6 +50,7 @@ def before_first_request():
     create_digits_wordlist()
     create_fast_wordlists()
     check_incomplete_tasks()
+    backward_db_compatibility()
 
 
 @app.route('/upload', methods=['GET', 'POST'])

@@ -3,6 +3,6 @@ $( '#topheader .navbar-nav a' ).on( 'click', function () {
 	$( this ).parent( 'li' ).addClass( 'active' );
 });
 
-$(".alert").delay(4000).slideUp(500, function () {
+$(".flashed-messages .alert").delay(4000).slideUp(500, function () {
  $(this).remove();
 });

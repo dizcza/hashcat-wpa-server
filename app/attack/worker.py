@@ -1,6 +1,7 @@
 import concurrent.futures
 import re
 import time
+from asyncio import CancelledError
 from pathlib import Path
 
 from app import db, lock_app
@@ -27,7 +28,7 @@ class CapAttack(BaseAttack):
     def cancel_if_needed(self):
         with self.lock:
             if self.lock.cancelled:
-                raise InterruptedError(TaskInfoStatus.CANCELLED)
+                raise CancelledError(TaskInfoStatus.CANCELLED)
 
     def is_attack_needed(self) -> bool:
         self.cancel_if_needed()
@@ -172,7 +173,10 @@ class HashcatWorker:
             else:
                 lock.set_status(TaskInfoStatus.COMPLETED)
             if exception is not None:
-                lock.set_status(repr(exception))
+                if isinstance(exception, CancelledError):
+                    lock.set_status(TaskInfoStatus.CANCELLED)
+                else:
+                    lock.set_status(repr(exception))
             lock.finish()
             update_dict = lock.update_dict()
             task_id = lock.task_id

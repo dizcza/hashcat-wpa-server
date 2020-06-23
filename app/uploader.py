@@ -19,6 +19,12 @@ def check_incomplete_tasks():
     db.session.commit()
 
 
+def backward_db_compatibility():
+    for task in UploadedTask.query.filter_by(status="InterruptedError('Cancelled')"):
+        task.status = TaskInfoStatus.CANCELLED
+    db.session.commit()
+
+
 class UploadedTask(db.Model):
     __tablename__ = "uploads"
     id = db.Column(db.Integer, primary_key=True)
