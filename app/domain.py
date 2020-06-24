@@ -133,7 +133,6 @@ class TaskInfoStatus:
     RUNNING = "Running"  # started execution
     COMPLETED = "Completed"  # all attacks run
     CANCELLED = "Cancelled"  # user cancelled
-    REJECTED = "Rejected"  # invalid request
     ABORTED = "Aborted"  # task was interrupted due to server issues
 
 

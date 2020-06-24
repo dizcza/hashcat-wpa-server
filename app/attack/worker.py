@@ -196,14 +196,12 @@ class HashcatWorker:
         hashcat_args.append(f"--workload-profile={uploaded_form.workload.data}")
         wordlist_path = uploaded_form.get_wordlist_path()
         rule = uploaded_form.get_rule()
-        try:
-            attack = CapAttack(file_22000=file_22000, lock=lock, wordlist=wordlist_path, rule=rule, hashcat_args=hashcat_args, timeout=uploaded_form.timeout.data)
-        except InvalidFileError:
-            with lock:
-                lock.cancel()
-                lock.set_status(TaskInfoStatus.REJECTED)
-            db.session.commit()
-            return
+        attack = CapAttack(file_22000=file_22000,
+                           lock=lock,
+                           wordlist=wordlist_path,
+                           rule=rule,
+                           hashcat_args=hashcat_args,
+                           timeout=uploaded_form.timeout.data)
         future = self.executor.submit(_crack_async, attack=attack)
         future.add_done_callback(self.callback_attack)
         with lock:

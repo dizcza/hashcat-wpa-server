@@ -8,7 +8,7 @@ success
 info
 {% elif task.status == "Running" %}
 warning
-{% elif "Error" in task.status or "Exception" in task.status or task.status in ("Aborted", "Rejected") %}
+{% elif "Error" in task.status or "Exception" in task.status or task.status == "Aborted" %}
 danger
 {% endif %}
 
