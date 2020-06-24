@@ -8,6 +8,7 @@ from wtforms.validators import Optional, ValidationError
 
 from app import app, db
 from app.domain import Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode, BrainClientFeature
+from app.utils import read_hashcat_brain_password
 from app.word_magic.wordlist import estimate_runtime_fmt, wordlists_available, wordlist_path_from_name, \
     find_wordlist_by_path
 
@@ -70,6 +71,15 @@ class UploadForm(FlaskForm):
     def runtime(self):
         runtime = estimate_runtime_fmt(wordlist_path=self.get_wordlist_path(), rule=self.get_rule())
         return runtime
+
+    def hashcat_args(self, secret=False):
+        hashcat_args = []
+        if self.brain.data:
+            hashcat_args.append("--brain-client")
+            hashcat_args.append(f"--brain-client-features={self.brain_client_feature.data}")
+            if secret:
+                hashcat_args.append(f"--brain-password={read_hashcat_brain_password()}")
+        return hashcat_args
 
     @staticmethod
     def validate_wordlist(form, field):

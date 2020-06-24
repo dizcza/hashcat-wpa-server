@@ -21,6 +21,9 @@ def subprocess_call(args: List[str]):
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
     out, err = process.communicate()
+    if err or process.returncode != 0:
+        logger.debug(out)
+        logger.error(err)
     return out, err
 
 

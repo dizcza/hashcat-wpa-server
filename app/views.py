@@ -69,9 +69,7 @@ def upload():
         file_22000 = convert_to_22000(cap_path)
         folder_split_by_essid = split_by_essid(file_22000)
         tasks = {}
-        hashcat_args = ""
-        if form.brain.data:
-            hashcat_args = f"{hashcat_args} --brain-client --brain-client-features={form.brain_client_feature.data}"
+        hashcat_args = ' '.join(form.hashcat_args())
         for file_essid in folder_split_by_essid.iterdir():
             bssid_essid = next(bssid_essid_from_22000(file_essid))
             bssid, essid = bssid_essid.split(':')
