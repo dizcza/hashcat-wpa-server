@@ -14,6 +14,8 @@ def subprocess_call(args: List[str]):
     """
     args = list(map(str, args))
     logger.debug(">>> {}".format(' '.join(args)))
+    if not all(args):
+        raise ValueError(f"Empty arg in {args}")
     process = subprocess.Popen(args,
                                universal_newlines=True,
                                stdout=subprocess.PIPE,

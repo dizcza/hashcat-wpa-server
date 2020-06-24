@@ -196,6 +196,7 @@ class HashcatWorker:
         if uploaded_form.brain.data:
             # --brain-client is already there
             hashcat_args = f"{hashcat_args} --brain-password={read_hashcat_brain_password()}"
+        hashcat_args = hashcat_args.strip()
         wordlist_path = uploaded_form.get_wordlist_path()
         rule = uploaded_form.get_rule()
         try:
