@@ -88,8 +88,8 @@ That's all! Navigate to [localhost:9111](localhost:9111). Run `docker volume ins
 ```
 export HASHCAT_ADMIN_USER=admin
 export HASHCAT_ADMIN_PASSWORD=<your-secret-password>
-docker-compose -f docker-compose.yml build  # inside the docker/ folder
-docker-compose -f docker-compose.yml up -d
+nvidia-docker-compose -f docker-compose.yml build  # inside the docker/ folder
+nvidia-docker-compose -f docker-compose.yml up -d
 ```
 
 That's all! Navigate to [localhost:9111](localhost:9111) as in the previous step. Run `docker volume ls --filter name=docker_hashcat*` to list hashcat-wpa-server related docker volumes.

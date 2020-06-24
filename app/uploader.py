@@ -20,7 +20,7 @@ def check_incomplete_tasks():
 
 
 def backward_db_compatibility():
-    for task in UploadedTask.query.filter_by(status="InterruptedError('Cancelled')"):
+    for task in UploadedTask.query.filter(UploadedTask.status.startswith("InterruptedError('Cancelled'")):
         task.status = TaskInfoStatus.CANCELLED
     db.session.commit()
 

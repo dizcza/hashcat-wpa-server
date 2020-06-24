@@ -138,11 +138,7 @@ def estimate_runtime_fmt(wordlist_path: Path, rule: Rule) -> str:
     if speed == 0:
         return "unknown"
 
-    # add extra words to account for the 'fast' run, which includes
-    # 160k digits8, 120k top1k+best64 and ESSID manipulation
-    # (300k hamming ball, 70k digits append mask)
-    n_words = WordList.fast_count
-
+    n_words = 0
     if wordlist_path is not None:
         wordlist = find_wordlist_by_path(wordlist_path)
         if wordlist is None:
@@ -150,6 +146,12 @@ def estimate_runtime_fmt(wordlist_path: Path, rule: Rule) -> str:
         n_words += wordlist.count
 
     n_candidates = n_words * count_rules(rule)
+
+    # add extra words to account for the 'fast' run, which includes
+    # 160k digits8, 120k top1k+best64 and ESSID manipulation
+    # (300k hamming ball, 70k digits append mask)
+    n_candidates += WordList.fast_count
+
     runtime = int(n_candidates / speed)  # in seconds
     runtime_ftm = str(datetime.timedelta(seconds=runtime))
     return runtime_ftm

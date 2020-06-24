@@ -1,26 +1,6 @@
 {% extends "base.html" %}
 {% import "bootstrap/wtf.html" as wtf %}
 
-
-{% macro form_errors(form, hiddens=True) %}
-  {%- if form.errors %}
-    {%- for fieldname, errors in form.errors.items() %}
-      {%- if bootstrap_is_hidden_field(form[fieldname]) and hiddens or
-             not bootstrap_is_hidden_field(form[fieldname]) and hiddens != 'only' %}
-        {%- for error in errors %}
-         <div class="alert alert-danger alert-dismissible" role="alert">
-         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-             <span aria-hidden="true">&times;</span>
-         </button>
-         {{error}}
-         </div>
-        {%- endfor %}
-      {%- endif %}
-    {%- endfor %}
-  {%- endif %}
-{%- endmacro %}
-
-
 {% block styles %}
 {{super()}}
 <link rel="stylesheet" href="{{url_for('static', filename='upload.css')}}">
@@ -38,15 +18,14 @@
 {% endmacro %}
 
 
-{% block content %}
-{{ super() }}
+{% block page_content %}
 
 <div class="container-fluid">
     <h1>Upload handshake capture</h1>
     <form action="" method="post" class="form" enctype="multipart/form-data" role="form" onchange="updateEstimatedRuntime()">
         <!-- csrf_token is in the hidden_tag -->
         {{ form.hidden_tag() }}
-        {{ form_errors(form) }}
+        {{ wtf.form_errors(form) }}
 
         <div class="row field-boxed">
             <div class="col-md-6">

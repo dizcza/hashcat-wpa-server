@@ -4,7 +4,6 @@ ignored
 migrations
 database/
 .git
-bash
 captures
 env
 logs
