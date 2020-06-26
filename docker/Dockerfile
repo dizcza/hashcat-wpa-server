@@ -34,8 +34,8 @@ COPY . /root/hashcat-wpa-server
 
 # TODO: remove exit code once https://github.com/hashcat/hashcat/issues/2465 is fixed
 RUN hashcat --stdout --rules=/root/hashcat-wpa-server/rules/best64.rule \
-    --outfile=/root/hashcat-wpa-server/wordlists/Top1575-probable-v2-rule-best64.txt \
-    /root/hashcat-wpa-server/wordlists/Top1575-probable-v2.txt ; exit 0
+    /root/hashcat-wpa-server/wordlists/Top1575-probable-v2.txt | \
+    sort -u > /root/hashcat-wpa-server/wordlists/Top1575-probable-v2-rule-best64.txt ; exit 0
 
 RUN LC_ALL=C tr -dc '[:alnum:]' < /dev/urandom | head -c20 > /root/hashcat-wpa-server/app/hashcat_brain_password
 

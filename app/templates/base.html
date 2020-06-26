@@ -62,8 +62,8 @@
 <div class="container">
     <div class="jumbotron">
         <h1 class="display-4">Hashcat WPA/WPA2 server</h1>
-        <p class="lead">Hashcat WPA/WPA2 server is an open source Flask-based web server for wrapping hashcat commands to restore the "forgotten" passwords from a WPA2 handshake file capture. It supports all known WPA capture file formats: Airodump, EAPOL, PMKID, and <a href="https://github.com/ZerBea/hcxdumptool">.pcapng</a>. A capture file can have multiple handshakes of different types.</p>
-        <p>Once you <a href="{{ url_for('upload') }}">upload</a> a handshake, several attacks are run apart from the main wordlist choice. For more information refer to the <a href="https://github.com/dizcza/hashcat-wpa-server">development page</a>.</p>
+        <p class="lead">Hashcat WPA/WPA2 server is an open source Flask-based web server for wrapping hashcat commands to restore the "forgotten" passwords from a WPA2 handshake file capture. It supports all known WPA capture file formats: Airodump, EAPOL, PMKID, and <code>.pcapng</code>. A capture file can have multiple handshakes of different types.</p>
+        <a class="btn btn-primary btn-lg" href="{{ url_for('learn_more') }}" role="button">Learn more</a>
         <hr class="my-4">
         <p style="font-size:16px;">Developed by Danylo Ulianych</p>
     </div>

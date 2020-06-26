@@ -28,7 +28,7 @@ def proceed_login(user: User, remember=False):
     login_user(user, remember=remember)
     next_page = request.args.get('next')
     if not is_safe_url(next_page):
-        return flask.abort(400)
+        return flask.abort(HTTPStatus.NOT_ACCEPTABLE)
     flask.flash('Successfully logged in.')
     return redirect(next_page or flask.url_for('user_profile'))
 
@@ -37,6 +37,10 @@ def proceed_login(user: User, remember=False):
 @app.route('/index')
 def index():
     return render_template('base.html')
+
+@app.route('/learn_more')
+def learn_more():
+    return render_template('learn_more.html')
 
 
 @app.shell_context_processor
@@ -59,7 +63,7 @@ def upload():
     form = UploadForm()
     if form.validate_on_submit():
         if not user_has_roles(current_user, RoleEnum.USER):
-            return flask.abort(403, description="You do not have the permission to start jobs.")
+            return flask.abort(HTTPStatus.FORBIDDEN, description="You do not have the permission to start jobs.")
         # flask-uploads already uses werkzeug.secure_filename()
         filename = cap_uploads.save(request.files['capture'], folder=current_user.username)
         cap_path = Path(app.config['CAPTURES_DIR']) / filename

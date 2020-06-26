@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block page_content %}
+
+<div class="container-fluid">
+    <h2>Supported file capture formats</h2>
+
+    <div class="container" style="max-width: 30%">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th scope="col">Capture file type</th>
+                <th scope="col">Allowed file extensions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>Airodump</td>
+                <td>.cap</td>
+            </tr>
+            <tr>
+                <td>Bettercap</td>
+                <td>.pcap</td>
+            </tr>
+            <tr>
+                <td>hcxdumptool</td>
+                <td>.pcapng</td>
+            </tr>
+            <tr>
+                <td>Hashcat EAPOL HCCAPX</td>
+                <td>.hccapx, .2500</td>
+            </tr>
+            <tr>
+                <td>Hashcat PMKID</td>
+                <td>.pmkid, .16800</td>
+            </tr>
+            <tr>
+                <td>Hashcat EAPOL/PMKID</td>
+                <td>.22000</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>The first three data types, <code>*.cap</code>, <code>*.pcap</code>, and <code>*.pcapng</code>, are raw file
+        formats and the rest are processed - stripped from these raw files, which include irrelevant WLAN traffic
+        packets.
+    </p>
+
+    <p>Every capture file is essentially converted into a <code>.22000</code> file because the latter file format is
+        generic.</p>
+
+
+    <h2>How to create capture files?</h2>
+
+    <p>There are several open-source free tools that allow you to capture handshakes in WLAN traffic. In any case, your
+        wireless adapter must support Monitor Mode (most laptops and external WiFi adapters support it). Follow the
+        <a href="https://null-byte.wonderhowto.com/how-to/hack-wi-fi-cracking-wpa2-psk-passwords-using-aircrack-ng-0148366/">tutorial</a>
+        for how to capture a handshake with <code>airodump-ng</code> command. And below is a list of the tools that
+        you can use to capture handshakes.
+    </p>
+
+    <div class="container" style="max-width: 50%">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th scope="col">Tool</th>
+                <th scope="col">Description</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>Airodump</td>
+                <td>A part of <a href="https://www.aircrack-ng.org/install.html">aircrack-ng</a>, the oldest and yet
+                    still used tools set. Many tutorials are based on this tool.
+                </td>
+            </tr>
+            <tr>
+                <td><a href="https://www.bettercap.org/">Bettercap</a></td>
+                <td>Web user interface to capture WiFi packets and much more.</td>
+            </tr>
+            <tr>
+                <td><a href="https://github.com/ZerBea/hcxdumptool">hcxdumptool</a></td>
+                <td>The recommended tool. Capturing WiFi packets is as easy as <code>hcxdumptool -o output.pcapng -i
+                    &lt;wlan-interface&gt;</code></td>
+            </tr>
+            <tr>
+                <td><a href="https://github.com/derv82/wifite2">wifite2</a></td>
+                <td>Automates the process of capturing handshakes with <code>aircrack-ng</code> suite.</td>
+            </tr>
+            <tr>
+                <td><a href="https://github.com/chrisk44/Hijacker">Hijacker</a></td>
+                <td>A great tool for Android smartphones. Embeds <code>aircrack-ng</code> suite.</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>The handshake is captured. What's next?</h2>
+
+    <p>After you capture a handshake in any of the allowed file formats specified above, navigate to the
+        <a href="{{ url_for('upload') }}">upload</a> menu. Once you upload a handshake, several attacks are run apart
+        from the main wordlist choice. The progress result is shown on the
+        <a href="{{ url_for('user_profile') }}">User Profile</a> page.
+    </p>
+
+
+    <h2>Development page</h2>
+
+    <p>You can find the development page on <a href="https://github.com/dizcza/hashcat-wpa-server">github</a>. Please
+        open issues for any type of questions and problems you encounter.
+    </p>
+
+
+</div>
+
+{% endblock %}

@@ -110,7 +110,7 @@ class BaseAttack:
         for reverse in range(2):
             with tempfile.NamedTemporaryFile(mode='w') as f:
                 hashcat_stdout = HashcatCmdStdout(outfile=f.name)
-                hashcat_stdout.add_wordlists(*wordlist_order, speial_args=['-a1'])
+                hashcat_stdout.add_wordlists(*wordlist_order, options=['-a1'])
                 subprocess_call(hashcat_stdout.build())
                 hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
                 hashcat_cmd.add_wordlists(f.name)
@@ -176,12 +176,15 @@ class BaseAttack:
     @monitor_timer
     def run_names_with_digits(self):
         # excluded from the fast run
+        # for each case-changed <name> in (Name, name, NAME) do
+        #  - append digits
+        #  - prepend digits
         with open(WordListDefault.NAMES_UA_RU_WITH_DIGITS.path, 'w') as f:
             wordlist_order = [WordListDefault.NAMES_UA_RU, WordListDefault.DIGITS_APPEND]
             for left in ['left', 'right']:
                 for rule_names in ['', 'T0', 'u']:
                     hashcat_stdout = HashcatCmdStdout(outfile=f.name)
-                    hashcat_stdout.add_wordlists(*wordlist_order, speial_args=['-a1', f'--rule-{left}={rule_names}'])
+                    hashcat_stdout.add_wordlists(*wordlist_order, options=['-a1', f'--rule-{left}={rule_names}'])
                     subprocess_call(hashcat_stdout.build())
                 wordlist_order = wordlist_order[::-1]
         hashcat_cmd = self.new_cmd()

@@ -2,6 +2,7 @@ import os
 import warnings
 from enum import Enum, unique
 from functools import wraps
+from http import HTTPStatus
 from typing import Iterable, Union
 
 import flask
@@ -158,7 +159,7 @@ def roles_required(*requirements: RoleEnum):
             # User must have the required roles
             if not user_has_roles(current_user, *requirements):
                 # Redirect to the unauthorized page
-                return flask.abort(403, description="You do not have the permissions.")
+                return flask.abort(HTTPStatus.FORBIDDEN, description="You do not have the permissions.")
 
             # It's OK to call the view
             return view_function(*args, **kwargs)

@@ -3,8 +3,9 @@ import datetime
 from flask_uploads import UploadSet, configure_uploads
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
-from wtforms import RadioField, IntegerField, SubmitField, BooleanField
-from wtforms.validators import Optional, ValidationError
+from wtforms.fields import RadioField, SubmitField, BooleanField
+from wtforms.fields.html5 import IntegerField
+from wtforms.validators import Optional, ValidationError, NumberRange
 
 from app import app, db
 from app.domain import Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode, BrainClientFeature
@@ -46,7 +47,7 @@ class UploadedTask(db.Model):
 class UploadForm(FlaskForm):
     wordlist = RadioField('Wordlist', choices=wordlists_available(), default=NONE_ENUM, description="The higher the rate, the better")
     rule = RadioField('Rule', choices=Rule.to_form(), default=NONE_ENUM)
-    timeout = IntegerField('Timeout in minutes, optional', validators=[Optional()])
+    timeout = IntegerField('Timeout in minutes, optional', validators=[Optional(), NumberRange(min=1)])
     workload = RadioField("Workload", choices=Workload.to_form(), default=Workload.Default.value)
     brain = BooleanField("Hashcat Brain", default=False, description="Hashcat Brain skips already tried password candidates")
     brain_client_feature = RadioField("Brain client features", choices=BrainClientFeature.to_form(),
