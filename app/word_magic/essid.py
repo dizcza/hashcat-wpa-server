@@ -19,15 +19,17 @@ def split_uppercase(word: str) -> set:
     return simple_words
 
 
-def essid_compounds_num(essid: str):
-    return len([compound for compound in wordninja.split(essid) if len(compound) >= 2])
+def word_compounds(word: str, min_length=2):
+    return [compound for compound in wordninja.split(word) if len(compound) >= min_length]
 
 
-def split_word_compounds(word: str, max_compounds=MAX_COMPOUNDS):
+def word_compounds_permutation(word: str, max_compounds=MAX_COMPOUNDS, min_length=2, alpha_only=False):
     """
     catonsofa -> cat, on, sofa
     """
-    compounds = [compound for compound in wordninja.split(word) if len(compound) >= 2]
+    compounds = word_compounds(word, min_length=min_length)
+    if alpha_only:
+        compounds = filter(re.compile("[a-z]", flags=re.IGNORECASE).match, compounds)
     compounds = sorted(compounds, key=len, reverse=True)[:max_compounds]
     compounds_perm = list(compounds)
     for r in range(2, len(compounds) + 1):
@@ -41,13 +43,15 @@ def collect_essid_parts(essid_origin: str, max_compounds=MAX_COMPOUNDS):
 
     regex_non_char = re.compile('[^a-zA-Z]')
     essid_parts = {essid_origin}
-    essid_parts.update(split_word_compounds(essid_origin, max_compounds=max_compounds))
+    essid_parts.add(re.sub(r'\W+', '', essid_origin))
+    essid_parts.add(re.sub('[^a-z]+', '', essid_origin, flags=re.IGNORECASE))
+    essid_parts.update(word_compounds_permutation(essid_origin, max_compounds=max_compounds))
     regex_split_parts = regex_non_char.split(essid_origin)
     regex_split_parts = list(filter(len, regex_split_parts))
 
     for word in regex_split_parts:
-        essid_parts.update(split_word_compounds(word, max_compounds=max_compounds))
-        essid_parts.update(split_word_compounds(word.lower(), max_compounds=max_compounds))
+        essid_parts.update(word_compounds_permutation(word, max_compounds=max_compounds))
+        essid_parts.update(word_compounds_permutation(word.lower(), max_compounds=max_compounds))
 
     essid_parts.update(regex_split_parts)
     essid_parts.update(split_uppercase(essid_origin))
@@ -62,7 +66,7 @@ def collect_essid_parts(essid_origin: str, max_compounds=MAX_COMPOUNDS):
 
 if __name__ == '__main__':
     for essid in ["Tanya007", "My_rabbit", "Myrabbit", "MyRabbit", "PetitCafe2017"]:
-        compounds = sorted(split_word_compounds(essid))
+        compounds = sorted(word_compounds_permutation(essid))
         candidates = sorted(collect_essid_parts(essid))
         print(f"'{essid}'\n\t{len(compounds)} compounds: {compounds}")
         print(f"\t{len(candidates)} candidates: {candidates}")

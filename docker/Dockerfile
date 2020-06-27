@@ -11,6 +11,8 @@ RUN wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O /tmp/get
 # wordlists
 RUN mkdir -p /root/hashcat-wpa-server/wordlists/user
 WORKDIR /root/hashcat-wpa-server/wordlists
+RUN wget -q https://download.weakpass.com/wordlists/1852/Top109Million-probable-v2.txt.gz
+RUN gunzip -d Top109Million-probable-v2.txt.gz
 RUN for dict in Top1575-probable-v2.txt Top304Thousand-probable-v2.txt; do \
     wget -q --no-check-certificate https://github.com/berzerk0/Probable-Wordlists/raw/master/Real-Passwords/$dict; \
     done
@@ -18,6 +20,13 @@ RUN for keymap in /root/kwprocessor/keymaps/*; do \
     kwp /root/kwprocessor/basechars/tiny.base $keymap \
         /root/kwprocessor/routes/2-to-16-max-3-direction-changes.route >> /root/hashcat-wpa-server/wordlists/keyboard-walk.txt; \
     done
+
+# OMEN
+WORKDIR /root/hashcat-wpa-server
+RUN git clone https://github.com/RUB-SysSec/OMEN.git && cd OMEN && make
+RUN cd OMEN && ./createNG --iPwdList=/root/hashcat-wpa-server/wordlists/Top109Million-probable-v2.txt
+RUN rm /root/hashcat-wpa-server/wordlists/Top109Million-probable-v2.txt
+
 
 RUN mkdir -p /root/hashcat-wpa-server/captures
 

@@ -27,12 +27,19 @@
         {{ form.hidden_tag() }}
         {{ wtf.form_errors(form) }}
 
-        <div class="row field-boxed">
-            <div class="col-md-6">
-                <div class="col">{{ render_field(form.wordlist) }}</div>
+        <div class="field-boxed">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="col">{{ render_field(form.wordlist) }}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="col">{{ render_field(form.rule) }}</div>
+                </div>
             </div>
-            <div class="col-md-4">
-                <div class="col">{{ render_field(form.rule) }}</div>
+            <div class="row">
+                <div class="col-md-3">
+                    {{ render_field(form.omen, inline=True) }}
+                </div>
             </div>
         </div>
 
@@ -56,18 +63,20 @@
 {{super()}}
 
 <script>
+    const omen = document.getElementById('omen');
+    const brain_checkbox = document.getElementById('brain');
+    const brain_feature = document.getElementById('brain-client-feature-div');
+
     function updateEstimatedRuntime() {
         $.post("/estimate_runtime", {
             wordlist: document.querySelector('input[name="wordlist"]:checked').value,
             rule: document.querySelector('input[name="rule"]:checked').value,
+            omen: omen.checked,
         })
         .done(function(response) {
             $('#runtime').text(response);
         });
     }
-
-    const brain_checkbox = document.getElementById('brain');
-    const brain_feature = document.getElementById('brain-client-feature-div');
 
     brain_checkbox.addEventListener('change', (event) => {
       if (event.target.checked) {
