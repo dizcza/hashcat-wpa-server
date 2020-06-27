@@ -35,6 +35,7 @@ COPY ./requirements.txt /root/hashcat-wpa-server/requirements.txt
 RUN pip3 install -r /root/hashcat-wpa-server/requirements.txt
 
 RUN mkdir -p /root/hashcat-wpa-server/logs/supervisor
+RUN mkdir -p /root/hashcat-wpa-server/brain
 
 WORKDIR /root/hashcat-wpa-server
 

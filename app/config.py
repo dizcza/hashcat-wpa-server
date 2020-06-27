@@ -21,7 +21,7 @@ DATABASE_PATH = DATABASE_DIR / "hashcat_wpa.db"
 # Hashcat
 HASHCAT_STATUS_TIMER = 20  # seconds
 BENCHMARK_FILE = APP_DIR / "benchmark.csv"
-HASHCAT_BRAIN_PASSWORD_PATH = APP_DIR / "hashcat_brain_password"
+HASHCAT_BRAIN_PASSWORD_PATH = ROOT_DIR / "brain" / "hashcat_brain_password"
 
 
 class Config:

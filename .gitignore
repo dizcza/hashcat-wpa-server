@@ -26,8 +26,8 @@ nvidia-docker-compose.yml
 # hashcat benchmarks
 app/benchmark.csv
 
-# hashcat brain password
-app/hashcat_brain_password
+# hashcat brain server
+brain/
 
 # Alembic database migration
 migrations/

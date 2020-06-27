@@ -142,7 +142,7 @@ def count_wordlist(wordlist_path):
 
 def create_omen_hint(hints):
     OMEN_HINT_FILE.write_text('\n'.join(hints))
-    OMEN_HINT_ALPHA_FILE.write_text('1\t'.join([''] * len(hints)))
+    OMEN_HINT_ALPHA_FILE.write_text('\t'.join(['1'] * len(hints)))
     curr_dir = os.getcwd()
     os.chdir(OMEN_DIR)
     subprocess_call(['./enumNG', f'--hint={OMEN_HINT_FILE}', f'--alpha={OMEN_HINT_ALPHA_FILE}',
