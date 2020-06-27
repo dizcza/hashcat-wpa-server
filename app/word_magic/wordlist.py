@@ -31,13 +31,7 @@ class WordList:
         # todo make a public func
         if self._count is not None:
             return
-        out, err = subprocess_call(['wc', '-l', str(self.path)])
-        out = out.rstrip('\n')
-        counter = 0
-        if re.fullmatch(f"\d+ {self.path}", out):
-            counter, path = out.split(' ')
-        counter = int(counter)
-        self.count = counter
+        self.count = count_wordlist(self.path)
 
     @property
     def path(self):
@@ -131,6 +125,16 @@ def count_rules(rule: Rule):
         return 1
     rules = read_mask(rule.path)
     return len(rules)
+
+
+def count_wordlist(wordlist_path):
+    wordlist_path = str(wordlist_path)
+    out, err = subprocess_call(['wc', '-l', wordlist_path])
+    out = out.rstrip('\n')
+    counter = 0
+    if re.fullmatch(f"\d+ {wordlist_path}", out):
+        counter, path = out.split(' ')
+    return int(counter)
 
 
 def estimate_runtime_fmt(wordlist_path: Path, rule: Rule) -> str:

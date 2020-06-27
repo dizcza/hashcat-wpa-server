@@ -1,4 +1,5 @@
 import argparse
+import math
 import re
 import shutil
 import tempfile
@@ -9,14 +10,15 @@ from typing import Union
 
 from tqdm import tqdm
 
-from app.logger import logger
 from app.attack.convert import split_by_essid
 from app.attack.hashcat_cmd import HashcatCmdCapture, HashcatCmdStdout
 from app.config import ESSID_TRIED
 from app.domain import Rule, WordListDefault, Mask
+from app.logger import logger
 from app.utils import read_plain_key, subprocess_call, bssid_essid_from_22000, check_file_22000
-from app.word_magic.essid import collect_essid_parts
+from app.word_magic.essid import collect_essid_parts, essid_compounds_num, MAX_COMPOUNDS_DIGITS_APPEND
 from app.word_magic.hamming import hamming_ball
+from app.word_magic.wordlist import count_rules, count_wordlist
 
 
 def monitor_timer(func):
@@ -80,16 +82,43 @@ class BaseAttack:
                 continue
             bssid, essid = bssid_essid.split(':')
             essid = bytes.fromhex(essid).decode('utf-8')
+
+            # (1) Hamming ball attack
+            self._run_essid_hamming(hcap_fpath_essid=hcap_fpath_essid, essid=essid)
+
+            # (2) best64 rule attack
             essid_filepath = essid_as_wordlist_dir / re.sub(r'\W+', '', essid)  # strip all except digits, letters and '_'
             with open(essid_filepath, 'w') as f:
                 f.write('\n'.join(collect_essid_parts(essid)))
             self._run_essid_rule(hcap_fpath=hcap_fpath_essid, essid_wordlist_path=essid_filepath)
+
+            # (3) digits_append attack
+            if essid_compounds_num(essid) > MAX_COMPOUNDS_DIGITS_APPEND:
+                with open(essid_filepath, 'w') as f:
+                    f.write('\n'.join(collect_essid_parts(essid, max_compounds=MAX_COMPOUNDS_DIGITS_APPEND)))
             self._run_essid_digits(hcap_fpath_essid=hcap_fpath_essid, essid_wordlist_path=essid_filepath)
-            self._run_essid_hamming(hcap_fpath_essid=hcap_fpath_essid, essid=essid)
+
             with open(ESSID_TRIED, 'a') as f:
                 f.write(bssid_essid + '\n')
         shutil.rmtree(essid_as_wordlist_dir)
         shutil.rmtree(split_by_essid_dir)
+
+    @staticmethod
+    def compute_essid_candidates_num(essid: str, hamming_d=2):
+        essid_parts = len(collect_essid_parts(essid))
+        n_rules = count_rules(Rule.ESSID)
+        n_compounds = essid_parts * n_rules
+        digits_append = count_wordlist(WordListDefault.DIGITS_APPEND.path)
+        if essid_compounds_num(essid) > MAX_COMPOUNDS_DIGITS_APPEND:
+            n_digits_append = len(collect_essid_parts(
+                essid, max_compounds=MAX_COMPOUNDS_DIGITS_APPEND)) * digits_append
+        else:
+            n_digits_append = essid_parts * digits_append
+        s = len(essid)
+        n_hamming = math.comb(s, hamming_d) * s ** hamming_d * 3 * 2
+        n_total = n_compounds + n_digits_append + n_hamming
+        print(f"{n_total=:.2e}: {n_compounds=:.2e}, {n_digits_append=:.2e}, {n_hamming=:.2e}")
+
 
     @monitor_timer
     def _run_essid_rule(self, hcap_fpath: Path, essid_wordlist_path: Path):
@@ -222,4 +251,5 @@ def crack_22000():
 
 
 if __name__ == '__main__':
+    # BaseAttack.compute_essid_candidates_num("lrtgn5s19b41e21f1202unc77i8093")
     crack_22000()
