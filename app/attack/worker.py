@@ -5,7 +5,7 @@ from asyncio import CancelledError
 from pathlib import Path
 
 from app import db, lock_app
-from app.attack.base_attack import BaseAttack, monitor_timer
+from app.attack.base_attack import BaseAttack
 from app.attack.hashcat_cmd import run_with_status, HashcatCmdCapture
 from app.config import BENCHMARK_FILE
 from app.domain import Rule, TaskInfoStatus, InvalidFileError, ProgressLock
@@ -16,7 +16,8 @@ from app.utils import read_plain_key, date_formatted, subprocess_call, read_hash
 
 class CapAttack(BaseAttack):
 
-    def __init__(self, file_22000, lock: ProgressLock, wordlist: Path = None, rule: Rule = None, hashcat_args=(), timeout=None):
+    def __init__(self, file_22000, lock: ProgressLock, wordlist: Path = None, rule: Rule = None, omen=False,
+                 hashcat_args=(), timeout=None):
         super().__init__(file_22000=file_22000,
                          hashcat_args=hashcat_args,
                          verbose=False)
@@ -24,6 +25,7 @@ class CapAttack(BaseAttack):
         self.timeout = timeout
         self.wordlist = wordlist
         self.rule = rule
+        self.omen = omen
 
     def cancel_if_needed(self):
         with self.lock:
@@ -60,7 +62,6 @@ class CapAttack(BaseAttack):
             self.lock.set_status("Running ESSID attack")
         super().run_essid_attack()
 
-    @monitor_timer
     def run_top1k(self):
         if not self.is_attack_needed():
             return
@@ -68,7 +69,6 @@ class CapAttack(BaseAttack):
             self.lock.set_status("Running top1k with rules")
         super().run_top1k()
 
-    @monitor_timer
     def run_digits8(self):
         if not self.is_attack_needed():
             return
@@ -76,7 +76,11 @@ class CapAttack(BaseAttack):
             self.lock.set_status("Running digits8")
         super().run_digits8()
 
-    @monitor_timer
+    def _run_essid_omen(self, hcap_fpath_essid: Path, essid: str):
+        if not self.omen:
+            return
+        super()._run_essid_omen(hcap_fpath_essid=hcap_fpath_essid, essid=essid)
+
     def run_main_wordlist(self):
         """
         Run main attack, specified by the user through the client app.
@@ -90,7 +94,7 @@ class CapAttack(BaseAttack):
                 time.sleep(5)
                 self.cancel_if_needed()
         with self.lock:
-            self.lock.set_status(f"Running the main wordlist")
+            self.lock.set_status("Running the main wordlist")
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlists(self.wordlist)
         hashcat_cmd.add_rule(self.rule)
@@ -107,6 +111,10 @@ class CapAttack(BaseAttack):
             task.status = TaskInfoStatus.RUNNING
             db.session.commit()
         super().run_all()
+        if self.omen:
+            with self.lock:
+                self.lock.set_status("Running OMEN")
+            self.run_omen_general()
         self.run_main_wordlist()
 
 
@@ -200,6 +208,7 @@ class HashcatWorker:
                            lock=lock,
                            wordlist=wordlist_path,
                            rule=rule,
+                           omen=uploaded_form.omen.data,
                            hashcat_args=hashcat_args,
                            timeout=uploaded_form.timeout.data)
         future = self.executor.submit(_crack_async, attack=attack)

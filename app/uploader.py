@@ -47,7 +47,7 @@ class UploadedTask(db.Model):
 class UploadForm(FlaskForm):
     wordlist = RadioField('Wordlist', choices=wordlists_available(), default=NONE_ENUM, description="The higher the rate, the better")
     rule = RadioField('Rule', choices=Rule.to_form(), default=NONE_ENUM)
-    omen = BooleanField('OMEN', default=False, description="Probabilistic candidates generator")
+    omen = BooleanField('OMEN', default=False, description="Probabilistic candidates generator, OMEN+, with ESSID as the hint")
     timeout = IntegerField('Timeout in minutes, optional', validators=[Optional(), NumberRange(min=1)])
     workload = RadioField("Workload", choices=Workload.to_form(), default=Workload.Default.value)
     brain = BooleanField("Hashcat Brain", default=False, description="Hashcat Brain skips already tried password candidates")

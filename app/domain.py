@@ -52,6 +52,7 @@ class WordListDefault(Enum):
     KEYBOARD_WALK = "keyboard-walk.txt"
     NAMES_UA_RU = "names_ua-ru.txt"
     NAMES_UA_RU_WITH_DIGITS = "names_ua-ru_with_digits.txt"
+    OMEN_GENERAL = "omen.txt"
 
     @property
     def path(self):

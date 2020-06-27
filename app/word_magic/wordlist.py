@@ -165,7 +165,9 @@ def estimate_runtime_fmt(wordlist_path: Path, rule: Rule, omen: bool) -> str:
     n_candidates = n_words * count_rules(rule)
 
     if omen:
-        n_candidates += OMEN_GENERATE_CANDIDATES
+        # first, ESSID-specific OMEN+
+        # second, OMEN general
+        n_candidates += 2 * OMEN_GENERATE_CANDIDATES
 
     # add extra words to account for the 'fast' run, which includes
     # 160k digits8, 120k top1k+best64 and ESSID manipulation

@@ -11,7 +11,7 @@ LOGS_DIR = ROOT_DIR / "logs"
 
 # OMEN
 OMEN_DIR = ROOT_DIR / "OMEN"
-OMEN_GENERATED = OMEN_DIR / "results" / "createdPWs.txt"
+OMEN_ESSID = OMEN_DIR / "results" / "createdPWs.txt"
 OMEN_GENERATE_CANDIDATES = 10_000_000
 
 DATABASE_DIR = ROOT_DIR / "database"

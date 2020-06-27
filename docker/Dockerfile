@@ -25,6 +25,7 @@ RUN for keymap in /root/kwprocessor/keymaps/*; do \
 WORKDIR /root/hashcat-wpa-server
 RUN git clone https://github.com/RUB-SysSec/OMEN.git && cd OMEN && make
 RUN cd OMEN && ./createNG --iPwdList=/root/hashcat-wpa-server/wordlists/Top109Million-probable-v2.txt
+RUN cd OMEN && ./enumNG -m10000000 -p > /root/hashcat-wpa-server/wordlists/omen.txt
 RUN rm /root/hashcat-wpa-server/wordlists/Top109Million-probable-v2.txt
 
 

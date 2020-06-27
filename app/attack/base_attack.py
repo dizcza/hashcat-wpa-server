@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from app.attack.convert import split_by_essid
 from app.attack.hashcat_cmd import HashcatCmdCapture, HashcatCmdStdout
-from app.config import ESSID_TRIED, OMEN_GENERATED
+from app.config import ESSID_TRIED, OMEN_ESSID
 from app.domain import Rule, WordListDefault, Mask
 from app.logger import logger
 from app.utils import read_plain_key, subprocess_call, bssid_essid_from_22000, check_file_22000
@@ -163,7 +163,7 @@ class BaseAttack:
             compounds.update([word.lower(), word.capitalize()])
         create_omen_hint(compounds)
         hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
-        hashcat_cmd.add_wordlists(OMEN_GENERATED)
+        hashcat_cmd.add_wordlists(OMEN_ESSID)
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
@@ -221,6 +221,13 @@ class BaseAttack:
             hashcat_cmd = self.new_cmd()
             hashcat_cmd.add_wordlists(f.name)
             subprocess_call(hashcat_cmd.build())
+
+    @monitor_timer
+    def run_omen_general(self):
+        # excluded from the fast run
+        hashcat_cmd = self.new_cmd()
+        hashcat_cmd.add_wordlists(WordListDefault.OMEN_GENERAL)
+        subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
     def run_names_with_digits(self):

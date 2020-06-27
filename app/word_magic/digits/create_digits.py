@@ -40,7 +40,10 @@ def create_days(flashback_years: int, date_fmt=("%m%d%Y", "%d%m%Y", "%Y%m%d", "%
         for dt in rrule(DAILY, dtstart=start_day, until=end_day):
             days.add(dt.strftime(date_formatted))
     for year in range(end_day.year):
-        days.add(f"{year}{year}")
+        year = str(year)
+        for reverse in range(2):
+            days.add(f"{year}{year}")
+            year = year[::-1]
     return sorted(days)
 
 
