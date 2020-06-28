@@ -35,6 +35,7 @@ method:
   - Split ESSID in word compounds with [wordninja](https://github.com/keredson/wordninja). For example "PetitCafe2017" ESSID is split in `['2017', '2017Cafe', '2017CafePetit', '2017Petit', 'Cafe', ..., 'CafePetit2017']` which increases the chance of finding passwords of type "PetitXXXX" by running the combinator attack for each of the word compounds combination. Technically, for each `essid_i` word compound, it runs
       - essid_i + digits_append.txt (prepend and append) combinator attack (`-a1`);
       - essid_i + best64.rule attack;
+  - [OMEN+](https://github.com/RUB-SysSec/OMEN) hints attack: use ESSID word compounds as hints to generate probabilistic password candidates;
 * `run_top1k`: Top1575-probable-v2.txt + best64.rule attack.
 * `run_digits8`: birthdays 100 years backward, digits masks like aabbccdd (refer to [mask_8-12.txt](app/word_magic/digits/mask_8-12.txt)), digits cycles, and more.
 * `run_keyboard_walk`: [keyboard-walk](https://github.com/hashcat/kwprocessor) attack.
