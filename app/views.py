@@ -11,7 +11,8 @@ from flask_login import login_user, logout_user, login_required, current_user
 from app import app, db
 from app.attack.convert import split_by_essid, convert_to_22000
 from app.attack.worker import HashcatWorker
-from app.domain import TaskInfoStatus, Rule
+from app.domain import TaskInfoStatus, Rule, InvalidFileError
+from app.logger import logger
 from app.login import LoginForm, RegistrationForm, User, RoleEnum, register_user, create_first_users, Role, \
     roles_required, user_has_roles
 from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks, backward_db_compatibility
@@ -68,9 +69,13 @@ def upload():
         filename = cap_uploads.save(request.files['capture'], folder=current_user.username)
         cap_path = Path(app.config['CAPTURES_DIR']) / filename
         cap_path = Path(shlex.quote(str(cap_path)))
+        try:
+            file_22000 = convert_to_22000(cap_path)
+        except (FileNotFoundError, InvalidFileError) as error:
+            logger.exception(error)
+            return flask.abort(HTTPStatus.BAD_REQUEST, description="Bad input capture file.")
         wordlist_path = form.get_wordlist_path()
         Thread(target=download_wordlist, args=(wordlist_path,)).start()
-        file_22000 = convert_to_22000(cap_path)
         folder_split_by_essid = split_by_essid(file_22000)
         tasks = {}
         hashcat_args = ' '.join(form.hashcat_args())
