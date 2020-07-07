@@ -19,12 +19,6 @@ RUN for keymap in /root/kwprocessor/keymaps/*; do \
         /root/kwprocessor/routes/2-to-16-max-3-direction-changes.route >> /root/hashcat-wpa-server/wordlists/keyboard-walk.txt; \
     done
 
-# OMEN
-WORKDIR /root/hashcat-wpa-server
-RUN git clone https://github.com/RUB-SysSec/OMEN.git && cd OMEN && make
-RUN cd OMEN && wget -q --no-check-certificate https://www.dropbox.com/s/724st8ibk3tq43d/OMEN.tar.gz && tar xzf OMEN.tar.gz && rm OMEN.tar.gz
-RUN cd OMEN && ./enumNG -m10000000 -p > /root/hashcat-wpa-server/wordlists/omen.txt
-
 
 RUN mkdir -p /root/hashcat-wpa-server/captures
 

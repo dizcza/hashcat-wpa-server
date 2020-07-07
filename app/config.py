@@ -9,11 +9,6 @@ RULES_DIR = ROOT_DIR / "rules"
 MASKS_DIR = ROOT_DIR / "masks"
 LOGS_DIR = ROOT_DIR / "logs"
 
-# OMEN
-OMEN_DIR = ROOT_DIR / "OMEN"
-OMEN_ESSID = OMEN_DIR / "results" / "createdPWs.txt"
-OMEN_GENERATE_CANDIDATES = 10_000_000
-
 DATABASE_DIR = ROOT_DIR / "database"
 ESSID_TRIED = DATABASE_DIR / "essid_tried"
 DATABASE_PATH = DATABASE_DIR / "hashcat_wpa.db"

@@ -8,15 +8,12 @@ from threading import RLock
 
 from app import lock_app
 from app.attack.hashcat_cmd import HashcatCmdStdout
-from app.config import WORDLISTS_USER_DIR, WORDLISTS_DIR, OMEN_DIR, OMEN_GENERATE_CANDIDATES
+from app.config import WORDLISTS_USER_DIR, WORDLISTS_DIR
 from app.domain import WordListDefault, Rule, NONE_ENUM
 from app.logger import logger
 from app.utils import subprocess_call
 from app.utils.file_io import calculate_md5, read_last_benchmark
 from app.word_magic.digits.create_digits import read_mask
-
-OMEN_HINT_FILE = OMEN_DIR / "hints.txt"
-OMEN_HINT_ALPHA_FILE = OMEN_DIR / "alpha-hints.txt"
 
 
 class WordList:
@@ -140,17 +137,7 @@ def count_wordlist(wordlist_path):
     return int(counter)
 
 
-def create_omen_hint(hints):
-    OMEN_HINT_FILE.write_text('\n'.join(hints))
-    OMEN_HINT_ALPHA_FILE.write_text('\t'.join(['1'] * len(hints)))
-    curr_dir = os.getcwd()
-    os.chdir(OMEN_DIR)
-    subprocess_call(['./enumNG', f'--hint={OMEN_HINT_FILE}', f'--alpha={OMEN_HINT_ALPHA_FILE}',
-                     f'-m{OMEN_GENERATE_CANDIDATES}'])
-    os.chdir(curr_dir)
-
-
-def estimate_runtime_fmt(wordlist_path: Path, rule: Rule, omen: bool) -> str:
+def estimate_runtime_fmt(wordlist_path: Path, rule: Rule) -> str:
     speed = int(read_last_benchmark().speed)
     if speed == 0:
         return "unknown"
@@ -163,11 +150,6 @@ def estimate_runtime_fmt(wordlist_path: Path, rule: Rule, omen: bool) -> str:
         n_words += wordlist.count
 
     n_candidates = n_words * count_rules(rule)
-
-    if omen:
-        # first, ESSID-specific OMEN+
-        # second, OMEN general
-        n_candidates += 2 * OMEN_GENERATE_CANDIDATES
 
     # add extra words to account for the 'fast' run, which includes
     # 160k digits8, 120k top1k+best64 and ESSID manipulation

@@ -36,11 +36,6 @@
                     <div class="col">{{ render_field(form.rule) }}</div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-3">
-                    {{ render_field(form.omen, inline=True) }}
-                </div>
-            </div>
         </div>
 
         <p>Estimated runtime (per Access Point): <span id="runtime">{{ form.runtime }}</span></p>
@@ -63,7 +58,6 @@
 {{super()}}
 
 <script>
-    const omen = document.getElementById('omen');
     const brain_checkbox = document.getElementById('brain');
     const brain_feature = document.getElementById('brain-client-feature-div');
 
@@ -71,7 +65,6 @@
         $.post("/estimate_runtime", {
             wordlist: document.querySelector('input[name="wordlist"]:checked').value,
             rule: document.querySelector('input[name="rule"]:checked').value,
-            omen: omen.checked,
         })
         .done(function(response) {
             $('#runtime').text(response);

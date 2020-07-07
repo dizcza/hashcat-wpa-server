@@ -16,7 +16,7 @@ from app.utils import read_plain_key, date_formatted, subprocess_call, read_hash
 
 class CapAttack(BaseAttack):
 
-    def __init__(self, file_22000, lock: ProgressLock, wordlist: Path = None, rule: Rule = None, omen=False,
+    def __init__(self, file_22000, lock: ProgressLock, wordlist: Path = None, rule: Rule = None,
                  hashcat_args=(), timeout=None):
         super().__init__(file_22000=file_22000,
                          hashcat_args=hashcat_args,
@@ -25,7 +25,6 @@ class CapAttack(BaseAttack):
         self.timeout = timeout
         self.wordlist = wordlist
         self.rule = rule
-        self.omen = omen
 
     def cancel_if_needed(self):
         with self.lock:
@@ -76,11 +75,6 @@ class CapAttack(BaseAttack):
             self.lock.set_status("Running digits8")
         super().run_digits8()
 
-    def _run_essid_omen(self, hcap_fpath_essid: Path, essid: str):
-        if not self.omen:
-            return
-        super()._run_essid_omen(hcap_fpath_essid=hcap_fpath_essid, essid=essid)
-
     def run_main_wordlist(self):
         """
         Run main attack, specified by the user through the client app.
@@ -111,10 +105,6 @@ class CapAttack(BaseAttack):
             task.status = TaskInfoStatus.RUNNING
             db.session.commit()
         super().run_all()
-        if self.omen:
-            with self.lock:
-                self.lock.set_status("Running OMEN")
-            self.run_omen_general()
         self.run_main_wordlist()
 
 
@@ -208,7 +198,6 @@ class HashcatWorker:
                            lock=lock,
                            wordlist=wordlist_path,
                            rule=rule,
-                           omen=uploaded_form.omen.data,
                            hashcat_args=hashcat_args,
                            timeout=uploaded_form.timeout.data)
         future = self.executor.submit(_crack_async, attack=attack)

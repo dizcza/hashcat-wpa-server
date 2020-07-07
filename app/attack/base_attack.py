@@ -12,14 +12,14 @@ from tqdm import tqdm
 
 from app.attack.convert import split_by_essid
 from app.attack.hashcat_cmd import HashcatCmdCapture, HashcatCmdStdout
-from app.config import ESSID_TRIED, OMEN_ESSID
+from app.config import ESSID_TRIED
 from app.domain import Rule, WordListDefault, Mask
 from app.logger import logger
 from app.utils import read_plain_key, subprocess_call, bssid_essid_from_22000, check_file_22000
 from app.word_magic.essid import collect_essid_parts, word_compounds, word_compounds_permutation, \
     MAX_COMPOUNDS_DIGITS_APPEND
 from app.word_magic.hamming import hamming_ball
-from app.word_magic.wordlist import count_rules, count_wordlist, create_omen_hint
+from app.word_magic.wordlist import count_rules, count_wordlist
 
 
 def monitor_timer(func):
@@ -99,9 +99,6 @@ class BaseAttack:
                     f.write('\n'.join(collect_essid_parts(essid, max_compounds=MAX_COMPOUNDS_DIGITS_APPEND)))
             self._run_essid_digits(hcap_fpath_essid=hcap_fpath_essid, essid_wordlist_path=essid_filepath)
 
-            # (4) OMEN attack
-            self._run_essid_omen(hcap_fpath_essid=hcap_fpath_essid, essid=essid)
-
             with open(ESSID_TRIED, 'a') as f:
                 f.write(bssid_essid + '\n')
         shutil.rmtree(essid_as_wordlist_dir)
@@ -151,20 +148,6 @@ class BaseAttack:
                 hashcat_cmd.add_wordlists(f.name)
                 subprocess_call(hashcat_cmd.build())
             wordlist_order = wordlist_order[::-1]
-
-    @monitor_timer
-    def _run_essid_omen(self, hcap_fpath_essid: Path, essid: str):
-        compounds = set(word_compounds_permutation(essid, min_length=3, alpha_only=True))
-        compounds.add(re.sub(r'\W+', '', essid))
-        compounds.add(re.sub('[^a-z]+', '', essid, flags=re.IGNORECASE))
-        if len(compounds) == 0:
-            return
-        for word in list(compounds):
-            compounds.update([word.lower(), word.capitalize()])
-        create_omen_hint(compounds)
-        hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
-        hashcat_cmd.add_wordlists(OMEN_ESSID)
-        subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
     def _run_essid_hamming(self, hcap_fpath_essid: Path, essid: str, hamming_dist_max=2):
@@ -221,13 +204,6 @@ class BaseAttack:
             hashcat_cmd = self.new_cmd()
             hashcat_cmd.add_wordlists(f.name)
             subprocess_call(hashcat_cmd.build())
-
-    @monitor_timer
-    def run_omen_general(self):
-        # excluded from the fast run
-        hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlists(WordListDefault.OMEN_GENERAL)
-        subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
     def run_names_with_digits(self):

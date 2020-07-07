@@ -95,8 +95,7 @@ def upload():
 def estimate_runtime():
     wordlist = wordlist_path_from_name(request.form.get('wordlist'))
     rule = Rule.from_data(request.form.get('rule'))
-    omen = request.form.get('omen') == 'true'
-    runtime = estimate_runtime_fmt(wordlist_path=wordlist, rule=rule, omen=omen)
+    runtime = estimate_runtime_fmt(wordlist_path=wordlist, rule=rule)
     return jsonify(runtime)
 
 
