@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-
-hashcat -m2500 -w3 -a3 $1 ?d?d?d?d?d?d?d?d

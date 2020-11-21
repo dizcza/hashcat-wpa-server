@@ -104,4 +104,4 @@ docker-compose -f docker-compose.yml up -d
 
 ## User wordlists
 
-Hashcat-wpa-server app is shipped with default Top-xxx-probable [wordlists](app/domain.py). If you want to make use of your custom wordlists, place them in the folder defined by `docker inspect hashcat-wordlists` (might require root access).
+Hashcat-wpa-server app is shipped with the default Top-xxx-probable [wordlists](https://github.com/berzerk0/Probable-Wordlists). If you want to make use of your custom wordlists, place them in the folder defined by `docker inspect hashcat-wordlists` (might require root access).

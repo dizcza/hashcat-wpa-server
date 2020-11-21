@@ -12,3 +12,4 @@ rsync.exclude
 app/benchmark.csv
 README.md
 LICENCE
+OMEN

@@ -5,7 +5,6 @@ migrations/
 database/
 captures/
 docker/
-bash/
 env/
 logs/
 server_keys_backup/
@@ -13,3 +12,4 @@ wordlists/
 rsync.exclude
 app/benchmark.csv
 app/hashcat_brain_password
+OMEN/

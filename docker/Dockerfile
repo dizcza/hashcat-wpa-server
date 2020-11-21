@@ -18,6 +18,10 @@ RUN for keymap in /root/kwprocessor/keymaps/*; do \
     kwp /root/kwprocessor/basechars/tiny.base $keymap \
         /root/kwprocessor/routes/2-to-16-max-3-direction-changes.route >> /root/hashcat-wpa-server/wordlists/keyboard-walk.txt; \
     done
+COPY ./rules /root/hashcat-wpa-server/rules
+RUN hashcat --stdout --rules=/root/hashcat-wpa-server/rules/best64.rule \
+    /root/hashcat-wpa-server/wordlists/Top1575-probable-v2.txt | \
+    sort -u > /root/hashcat-wpa-server/wordlists/Top1575-probable-v2-rule-best64.txt
 
 
 RUN mkdir -p /root/hashcat-wpa-server/captures
@@ -33,13 +37,6 @@ WORKDIR /root/hashcat-wpa-server
 COPY ./nginx.conf /etc/nginx/nginx.conf
 COPY ./supervisor.conf /etc/supervisor/conf.d/hashcat_wpa.conf
 COPY . /root/hashcat-wpa-server
-
-# TODO: remove exit code once https://github.com/hashcat/hashcat/issues/2465 is fixed
-RUN hashcat --stdout --rules=/root/hashcat-wpa-server/rules/best64.rule \
-    /root/hashcat-wpa-server/wordlists/Top1575-probable-v2.txt | \
-    sort -u > /root/hashcat-wpa-server/wordlists/Top1575-probable-v2-rule-best64.txt ; exit 0
-
-RUN LC_ALL=C tr -dc '[:alnum:]' < /dev/urandom | head -c20 > /root/hashcat-wpa-server/app/hashcat_brain_password
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
