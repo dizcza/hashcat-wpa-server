@@ -1,5 +1,4 @@
 import datetime
-import os
 import re
 from copy import deepcopy
 from functools import lru_cache, wraps
@@ -9,7 +8,7 @@ from threading import RLock
 from app import lock_app
 from app.attack.hashcat_cmd import HashcatCmdStdout
 from app.config import WORDLISTS_USER_DIR, WORDLISTS_DIR
-from app.domain import WordListDefault, Rule, NONE_ENUM
+from app.domain import WordListDefault, Rule, NONE_STR
 from app.logger import logger
 from app.utils import subprocess_call
 from app.utils.file_io import calculate_md5, read_last_benchmark
@@ -19,27 +18,27 @@ from app.word_magic.digits.create_digits import read_mask
 class WordList:
     fast_count = 700_000
 
-    def __init__(self, name, rate=None, count=None, url=None, checksum=None):
-        self.name = name
+    def __init__(self, path, rate=None, count=None, url=None, checksum=None):
+        self.path = path
         self.rate = rate
-        self.count = self._count = count
+        self.count = count
         self.url = url
         self.checksum = checksum
         self.update_count()
 
     def update_count(self):
-        # todo make a public func
-        if self._count is not None:
-            return
-        self.count = count_wordlist(self.path)
+        if self.custom:
+            self.count = count_wordlist(self.path)
 
     @property
-    def path(self):
-        return WORDLISTS_DIR / self.name
+    def name(self):
+        if self.custom:
+            return f"user/{self.path.name}"
+        return self.path.name
 
     @property
     def custom(self) -> bool:
-        return bool(re.fullmatch(f"^user{os.path.sep}(.+?)$", self.name))
+        return str(self.path).startswith(str(WORDLISTS_USER_DIR))
 
     def __str__(self):
         extra = ""
@@ -68,28 +67,28 @@ class WordList:
 
 WORDLISTS_AVAILABLE = [
     WordList(
-        name=WordListDefault.TOP109M.value,
+        path=WordListDefault.TOP109M.path,
         rate=39,
         count=109_438_614,
         url="https://download.weakpass.com/wordlists/1852/Top109Million-probable-v2.txt.gz",
         checksum="c0a26fd763d56a753a5f62c517796d09"
     ),
     WordList(
-        name=WordListDefault.TOP29M.value,
+        path=WordListDefault.TOP29M.path,
         rate=30,
         count=29_040_646,
         url="https://download.weakpass.com/wordlists/1857/Top29Million-probable-v2.txt.gz",
         checksum="4d86278a7946fe9ad7016440e85ff2b6"
     ),
     WordList(
-        name=WordListDefault.TOP1M.value,
+        path=WordListDefault.TOP1M.path,
         rate=19,
         count=1_667_462,
         url="https://download.weakpass.com/wordlists/1855/Top1pt6Million-probable-v2.txt.gz",
         checksum="2d45c4aa9f4a87ece9ebcbd542613f50"
     ),
     WordList(
-        name=WordListDefault.TOP304K.value,
+        path=WordListDefault.TOP304K.path,
         rate=12,
         count=303_872,
         url="https://download.weakpass.com/wordlists/1859/Top304Thousand-probable-v2.txt.gz",
@@ -143,6 +142,8 @@ def estimate_runtime_fmt(wordlist_path: Path, rule: Rule) -> str:
         return "unknown"
 
     n_words = 0
+    if wordlist_path == NONE_STR:
+        wordlist_path = None
     if wordlist_path is not None:
         wordlist = find_wordlist_by_path(wordlist_path)
         if wordlist is None:
@@ -174,16 +175,11 @@ def create_fast_wordlists():
         subprocess_call(hashcat_stdout.build())
 
 
-def wordlist_path_from_name(wordlist_name):
-    if wordlist_name in (None, NONE_ENUM):
-        return None
-    return WORDLISTS_DIR / wordlist_name
-
-
 @with_lock
 def find_wordlist_by_path(wordlist_path):
     if wordlist_path is None:
         return None
+    wordlist_path = Path(wordlist_path)
     for wordlist in WORDLISTS_AVAILABLE:
         if wordlist.path == wordlist_path:
             return deepcopy(wordlist)
@@ -204,18 +200,18 @@ def wordlists_available():
 
     for wordlist in deleted:
         WORDLISTS_AVAILABLE.remove(wordlist)
+
+    WORDLISTS_USER_DIR.mkdir(exist_ok=True)
+    for custom_path in sorted(WORDLISTS_USER_DIR.iterdir()):
+        if custom_path not in exist_paths:
+            wordlist = WordList(path=custom_path)
+            WORDLISTS_AVAILABLE.append(wordlist)
+
     for wordlist in WORDLISTS_AVAILABLE:
         wordlist.update_count()
 
-    WORDLISTS_USER_DIR.mkdir(exist_ok=True)
-    for wordlist_path in sorted(WORDLISTS_USER_DIR.iterdir()):
-        if wordlist_path not in exist_paths:
-            name = str(wordlist_path).lstrip(str(WORDLISTS_DIR))
-            wordlist = WordList(name=name)
-            WORDLISTS_AVAILABLE.append(wordlist)
-
-    choices = [(NONE_ENUM, "(fast)")]
-    choices.extend((wlist.name, str(wlist)) for wlist in WORDLISTS_AVAILABLE)
+    choices = [(NONE_STR, "(fast)")]
+    choices.extend((str(wlist.path), str(wlist)) for wlist in WORDLISTS_AVAILABLE)
 
     return choices
 

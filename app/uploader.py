@@ -1,4 +1,5 @@
 import datetime
+from pathlib import Path
 
 from flask_uploads import UploadSet, configure_uploads
 from flask_wtf import FlaskForm
@@ -8,10 +9,9 @@ from wtforms.fields.html5 import IntegerField
 from wtforms.validators import Optional, ValidationError, NumberRange
 
 from app import app, db
-from app.domain import Rule, NONE_ENUM, TaskInfoStatus, Workload, HashcatMode, BrainClientFeature
+from app.domain import Rule, NONE_STR, TaskInfoStatus, Workload, HashcatMode, BrainClientFeature
 from app.utils import read_hashcat_brain_password
-from app.word_magic.wordlist import estimate_runtime_fmt, wordlists_available, wordlist_path_from_name, \
-    find_wordlist_by_path
+from app.word_magic.wordlist import estimate_runtime_fmt, wordlists_available, find_wordlist_by_path
 
 
 def check_incomplete_tasks():
@@ -45,8 +45,8 @@ class UploadedTask(db.Model):
 
 
 class UploadForm(FlaskForm):
-    wordlist = RadioField('Wordlist', choices=wordlists_available(), default=NONE_ENUM, description="The higher the rate, the better")
-    rule = RadioField('Rule', choices=Rule.to_form(), default=NONE_ENUM)
+    wordlist = RadioField('Wordlist', choices=wordlists_available(), default=NONE_STR, description="The higher the rate, the better")
+    rule = RadioField('Rule', choices=Rule.to_form(), default=NONE_STR)
     timeout = IntegerField('Timeout in minutes, optional', validators=[Optional(), NumberRange(min=1)])
     workload = RadioField("Workload", choices=Workload.to_form(), default=Workload.Default.value)
     brain = BooleanField("Hashcat Brain", default=False, description="Hashcat Brain skips already tried password candidates")
@@ -63,7 +63,15 @@ class UploadForm(FlaskForm):
         self.wordlist.choices = wordlists_available()
 
     def get_wordlist_path(self):
-        return wordlist_path_from_name(self.wordlist.data)
+        if self.wordlist.data == NONE_STR:
+            return None
+        return Path(self.wordlist.data)
+
+    def get_wordlist_name(self):
+        wordlist = find_wordlist_by_path(self.get_wordlist_path())
+        if wordlist is None:
+            return None
+        return wordlist.name
 
     def get_rule(self):
         return Rule.from_data(self.rule.data)
@@ -84,7 +92,7 @@ class UploadForm(FlaskForm):
 
     @staticmethod
     def validate_wordlist(form, field):
-        wordlist = wordlist_path_from_name(field.data)
+        wordlist = field.data
         if wordlist is None:
             # fast mode
             return

@@ -184,6 +184,7 @@ class BaseAttack:
 
     @monitor_timer
     def run_phone_mobile(self):
+        # EXCLUDED
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.set_mask(Mask.MOBILE_UA)
         subprocess_call(hashcat_cmd.build())

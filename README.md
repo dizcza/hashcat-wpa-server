@@ -62,8 +62,7 @@ For example, to run the `latest` tag (makes sense only if you have at least 1 GP
 docker run --runtime=nvidia -d \
     -e HASHCAT_ADMIN_USER=admin \
     -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> \
-    -v ${HOME}/hashcat_database:/root/hashcat-wpa-server/database \
-    -v hashcat-wordlists:/root/hashcat-wpa-server/wordlists/user \
+    -v ${HOME}/.hashcat/wpa-server:/root/.hashcat/wpa-server \
     -p 9111:80 \
     dizcza/hashcat-wpa-server:latest
 ```
@@ -74,34 +73,24 @@ If you don't posses a GPU, try `intel-cpu` or `pocl` tag:
 docker run -d \
     -e HASHCAT_ADMIN_USER=admin \
     -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> \
-    -v hashcat-database:/root/hashcat-wpa-server/database \
-    -v hashcat-wordlists:/root/hashcat-wpa-server/wordlists/user \
+    -v ${HOME}/.hashcat/wpa-server:/root/.hashcat/wpa-server \
     -p 9111:80 \
     dizcza/hashcat-wpa-server:intel-cpu
 ```
 
-That's all! Navigate to [localhost:9111](localhost:9111). Run `docker volume inspect hashcat-database` in a terminal (look for "Mountpoint") to find where `hashcat_wpa.db` SQLite database file with all users and uploaded tasks is stored on your host machine.
-
+That's all! Navigate to [localhost:9111](localhost:9111). All the captures, user-defined wordlists and rules, and the SQL database can be accessed at `~/.hashcat/wpa-server`.
 
 ### Building the image locally
 
 ```
 export HASHCAT_ADMIN_USER=admin
 export HASHCAT_ADMIN_PASSWORD=<your-secret-password>
-nvidia-docker-compose -f docker-compose.yml build  # inside the docker/ folder
+cd ./docker
+nvidia-docker-compose -f docker-compose.yml build
 nvidia-docker-compose -f docker-compose.yml up -d
-```
-
-That's all! Navigate to [localhost:9111](localhost:9111) as in the previous step. Run `docker volume ls --filter name=docker_hashcat*` to list hashcat-wpa-server related docker volumes.
-
-If you don't posses a GPU, run docker compose like so:
-
-```
-docker-compose -f docker-compose.yml build --build-arg branch=intel-cpu
-docker-compose -f docker-compose.yml up -d
 ```
 
 
 ## User wordlists
 
-Hashcat-wpa-server app is shipped with the default Top-xxx-probable [wordlists](https://github.com/berzerk0/Probable-Wordlists). If you want to make use of your custom wordlists, place them in the folder defined by `docker inspect hashcat-wordlists` (might require root access).
+Hashcat-wpa-server app is shipped with the default Top-xxx-probable [wordlists](https://github.com/berzerk0/Probable-Wordlists). If you want to make use of your custom wordlists, place them in `~/.hashcat/wpa-server/wordlists`.

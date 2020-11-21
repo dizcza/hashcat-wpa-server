@@ -16,11 +16,11 @@ from app.logger import logger
 from app.login import LoginForm, RegistrationForm, User, RoleEnum, register_user, create_first_users, Role, \
     roles_required, user_has_roles
 from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks, backward_db_compatibility
-from app.utils.file_io import read_last_benchmark, bssid_essid_from_22000, read_hashcat_brain_password
+from app.utils.file_io import read_last_benchmark, bssid_essid_from_22000
 from app.utils.nvidia_smi import NvidiaSmi
 from app.utils.utils import is_safe_url
 from app.word_magic import create_digits_wordlist, estimate_runtime_fmt, create_fast_wordlists
-from app.word_magic.wordlist import download_wordlist, wordlist_path_from_name
+from app.word_magic.wordlist import download_wordlist
 
 hashcat_worker = HashcatWorker(app)
 
@@ -74,8 +74,7 @@ def upload():
         except (FileNotFoundError, InvalidFileError) as error:
             logger.exception(error)
             return flask.abort(HTTPStatus.BAD_REQUEST, description="Bad input capture file.")
-        wordlist_path = form.get_wordlist_path()
-        Thread(target=download_wordlist, args=(wordlist_path,)).start()
+        Thread(target=download_wordlist, args=(form.get_wordlist_path(),)).start()
         folder_split_by_essid = split_by_essid(file_22000)
         tasks = {}
         hashcat_args = ' '.join(form.hashcat_args())
@@ -83,7 +82,7 @@ def upload():
             bssid_essid = next(bssid_essid_from_22000(file_essid))
             bssid, essid = bssid_essid.split(':')
             essid = bytes.fromhex(essid).decode('utf-8')
-            new_task = UploadedTask(user_id=current_user.id, filename=cap_path.name, wordlist=form.wordlist.data,
+            new_task = UploadedTask(user_id=current_user.id, filename=cap_path.name, wordlist=form.get_wordlist_name(),
                                     rule=form.rule.data, bssid=bssid, essid=essid, hashcat_args=hashcat_args)
             tasks[file_essid] = new_task
         db.session.add_all(tasks.values())
@@ -98,7 +97,7 @@ def upload():
 @app.route('/estimate_runtime', methods=['POST'])
 @login_required
 def estimate_runtime():
-    wordlist = wordlist_path_from_name(request.form.get('wordlist'))
+    wordlist = request.form.get('wordlist')
     rule = Rule.from_data(request.form.get('rule'))
     runtime = estimate_runtime_fmt(wordlist_path=wordlist, rule=rule)
     return jsonify(runtime)
@@ -194,8 +193,11 @@ def terminate():
     return jsonify("Terminated all jobs")
 
 
-@app.route('/brain_password')
+@app.route('/hashcat.potfile')
 @login_required
 @roles_required(RoleEnum.ADMIN)
 def brain_password():
-    return jsonify(read_hashcat_brain_password())
+    hashcat_potfile = Path.home() / ".hashcat" / "hashcat.potfile"
+    if hashcat_potfile.exists():
+        return hashcat_potfile.read_text()
+    return jsonify("Empty hashcat.potfile")

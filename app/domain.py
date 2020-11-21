@@ -8,7 +8,7 @@ from typing import Union
 
 from app.config import WORDLISTS_DIR, RULES_DIR, MASKS_DIR
 
-NONE_ENUM = str(None)
+NONE_STR = str(None)
 Benchmark = namedtuple('Benchmark', ('date', 'speed'))
 
 
@@ -29,12 +29,12 @@ class Rule(Enum):
     @staticmethod
     def to_form():
         # (id_value, description) pairs
-        choices = ((NONE_ENUM, "(None)"), (Rule.BEST_64.value, Rule.BEST_64.value))
+        choices = ((NONE_STR, "(None)"), (Rule.BEST_64.value, Rule.BEST_64.value))
         return choices
 
     @staticmethod
     def from_data(name: str):
-        if name in (None, NONE_ENUM):
+        if name in (None, NONE_STR):
             return None
         return Rule(name)
 

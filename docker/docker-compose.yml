@@ -1,3 +1,9 @@
+# Usage:
+#   mkdir -p ~/.hashcat/wpa-server
+#   cd ./docker
+#   docker-compose build --build-arg branch=latest (or intel-cpu)
+#   docker-compose up -d
+
 version: '3.7'
 
 services:
@@ -15,15 +21,7 @@ services:
        - "HASHCAT_ADMIN_PASSWORD=${HASHCAT_ADMIN_PASSWORD}"
        - "TERM=xterm"
     volumes:
-      - hashcat-database:/root/hashcat-wpa-server/database
-      - hashcat-wordlists:/root/hashcat-wpa-server/wordlists/user
-      - hashcat-migrations:/root/hashcat-wpa-server/migrations
-      - hashcat-cache:/root/.hashcat
+      - type: bind
+        source: ${HOME}/.hashcat/wpa-server
+        target: /root/.hashcat/wpa-server
     restart: always
-
-
-volumes:
-  hashcat-database:
-  hashcat-wordlists:
-  hashcat-migrations:
-  hashcat-cache:
