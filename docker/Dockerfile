@@ -29,7 +29,7 @@ RUN chmod -wx /root/hashcat-wpa-server/wordlists/*
 COPY ./requirements.txt /root/hashcat-wpa-server/requirements.txt
 RUN pip3 install -r /root/hashcat-wpa-server/requirements.txt
 
-RUN mkdir -p /root/.hashcat/wpa-server/logs/supervisor
+RUN mkdir -p /root/hashcat-wpa-server/logs/supervisor
 RUN mkdir -p /root/.hashcat/wpa-server/brain
 RUN mkdir -p /root/.hashcat/wpa-server/database
 RUN mkdir -p /root/.hashcat/wpa-server/captures

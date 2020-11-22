@@ -83,6 +83,7 @@ That's all! Navigate to [localhost:9111](localhost:9111). All the captures, user
 ### Building the image locally
 
 ```
+mkdir -p ~/.hashcat/wpa-server
 export HASHCAT_ADMIN_USER=admin
 export HASHCAT_ADMIN_PASSWORD=<your-secret-password>
 cd ./docker
