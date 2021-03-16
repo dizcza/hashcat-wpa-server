@@ -39,12 +39,32 @@ def create_days(flashback_years: int, date_fmt=("%m%d%Y", "%d%m%Y", "%Y%m%d", "%
     for date_formatted in date_fmt:
         for dt in rrule(DAILY, dtstart=start_day, until=end_day):
             days.add(dt.strftime(date_formatted))
-    for year in range(end_day.year):
+    for year in range(1000, end_day.year):
         year = str(year)
         for reverse in range(2):
             days.add(f"{year}{year}")
             year = year[::-1]
+        days.add(f"{year}{year[2:] * 2}")
+        days.add(f"{year}{int(year) + 1}")
+        suffix = int(year[2:])
+        for increment in [2, 3]:
+            suffix_inc = ''.join(f"{suffix + 1 + inc:02d}" for inc in range(increment))
+            days.add(f"{year}{suffix_inc}")
     return sorted(days)
+
+
+def create_increments():
+    digits = set()
+    for base in range(100):
+        val = ''.join(f"{base + inc:02d}" for inc in range(5))
+        digits.add(val)
+    for base in range(1000):
+        val = ''.join(f"{base + inc:03d}" for inc in range(3))
+        digits.add(val)
+    for base in range(10_000):
+        val = ''.join(f"{base + inc:04d}" for inc in range(2))
+        digits.add(val)
+    return digits
 
 
 def create_digits_mask(masks: Iterable, alphabet=string.digits, alphabet_size_max=4) -> list:
@@ -95,6 +115,7 @@ def read_mask(mask_path: str) -> list:
 
 
 def write_digits(digits: Union[set, list], path_to: str):
+    digits = sorted(set(digits))
     digits_count = len(digits)
     digits = '\n'.join(digits)
     with open(path_to, 'w') as f:
@@ -123,6 +144,7 @@ def create_digits_8(flashback_years=100, cycle_length_max=20):
         digits.extend(create_digits_mask(masks, alphabet=alphabet, alphabet_size_max=2))
     for password_length in range(8, cycle_length_max + 1):
         digits.extend(create_digits_cycle(password_length))
+    digits.extend(create_increments())
     write_digits(digits, digits_wordlist_path)
 
 
