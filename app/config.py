@@ -20,7 +20,7 @@ BENCHMARK_FILE = HASHCAT_WPA_CACHE_DIR / "benchmark.csv"
 HASHCAT_BRAIN_PASSWORD_PATH = HASHCAT_WPA_CACHE_DIR / "brain" / "hashcat_brain_password"
 
 # mkdirs
-HASHCAT_WPA_CACHE_DIR.mkdir(exist_ok=True)
+HASHCAT_WPA_CACHE_DIR.mkdir(exist_ok=True, parents=True)
 WORDLISTS_USER_DIR.mkdir(exist_ok=True)
 LOGS_DIR.mkdir(exist_ok=True)
 DATABASE_DIR.mkdir(exist_ok=True)
