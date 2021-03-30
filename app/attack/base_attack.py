@@ -44,7 +44,7 @@ class BaseAttack:
         :param verbose: show (True) or hide (False) tqdm
         """
         check_file_22000(file_22000)
-        self.file_22000 = Path(file_22000)
+        self.file_22000 = Path(file_22000).absolute()
         self.hashcat_args = tuple(hashcat_args)
         self.verbose = verbose
         self.key_file = self.file_22000.with_suffix('.key')
