@@ -242,11 +242,14 @@ def crack_22000():
     parser = argparse.ArgumentParser(description='Check weak passwords',
                                      usage="base_attack.py [-h] capture [hashcat-args]")
     parser.add_argument('capture', help='path to .22000')
+    parser.add_argument('--extra', help='Run extra attacks', action='store_true', default=False)
     args, hashcat_args = parser.parse_known_args()
     print(f"Hashcat args: {hashcat_args}")
     attack = BaseAttack(file_22000=args.capture, hashcat_args=hashcat_args)
     attack.run_all()
-    # attack.run_names_with_digits()
+    if args.extra:
+        print("Running extra run_names_with_digits attack")
+        attack.run_names_with_digits()
     key_password = read_plain_key(attack.key_file)
     if key_password:
         print("WPA key is found!\n", key_password)
