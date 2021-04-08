@@ -19,8 +19,7 @@ RUN for keymap in /root/kwprocessor/keymaps/*; do \
         /root/kwprocessor/routes/2-to-16-max-3-direction-changes.route >> /root/hashcat-wpa-server/wordlists/keyboard-walk.txt; \
     done
 RUN mkdir -p /root/.hashcat/wpa-server
-COPY ./rules /root/.hashcat/wpa-server/rules
-RUN hashcat --stdout --rules=/root/.hashcat/wpa-server/rules/best64.rule \
+RUN hashcat --stdout --rules=/root/hashcat/rules/best64.rule \
     /root/hashcat-wpa-server/wordlists/Top1575-probable-v2.txt | \
     sort -u > /root/hashcat-wpa-server/wordlists/Top1575-probable-v2-rule-best64.txt
 RUN chmod -wx /root/hashcat-wpa-server/wordlists/*
