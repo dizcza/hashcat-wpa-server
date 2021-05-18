@@ -16,15 +16,12 @@ def subprocess_call(args: List[str]):
     logger.debug(">>> {}".format(' '.join(args)))
     if not all(args):
         raise ValueError(f"Empty arg in {args}")
-    process = subprocess.Popen(args,
-                               universal_newlines=True,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    out, err = process.communicate()
-    if err or process.returncode != 0:
-        logger.debug(out)
-        logger.error(err)
-    return out, err
+    completed = subprocess.run(args, universal_newlines=True,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if completed.stderr or completed.returncode != 0:
+        logger.debug(completed.stdout)
+        logger.error(completed.stderr)
+    return completed.stdout, completed.stderr
 
 
 def is_safe_url(target):

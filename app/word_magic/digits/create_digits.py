@@ -118,9 +118,8 @@ def read_mask(mask_path: str) -> list:
 def write_digits(digits: Union[set, list], path_to: str):
     digits = sorted(set(digits))
     digits_count = len(digits)
-    digits = '\n'.join(digits)
     with open(path_to, 'w') as f:
-        f.write(digits)
+        f.write('\n'.join(digits))
     logger.debug(f"Wrote {digits_count} digits to {path_to}")
 
 

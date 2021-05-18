@@ -12,6 +12,7 @@ from app.attack.convert import split_by_essid
 from app.attack.hashcat_cmd import HashcatCmdCapture, HashcatCmdStdout
 from app.config import ESSID_TRIED
 from app.domain import Rule, WordListDefault, Mask
+from app.logger import logger
 from app.utils import read_plain_key, subprocess_call, bssid_essid_from_22000, \
     check_file_22000
 from app.word_magic import create_digits_wordlist, create_fast_wordlists
@@ -88,9 +89,10 @@ class BaseAttack:
             bssid, essid = bssid_essid.split(':')
             essid = bytes.fromhex(essid).decode('utf-8')
             password_candidates = get_password_candidates(essid=essid)
+            logger.debug(f"ESSID '{essid}' password candidates: {len(password_candidates)}")
 
             with tempfile.NamedTemporaryFile(mode='w') as f:
-                f.writelines(password_candidates)
+                f.write('\n'.join(password_candidates))
                 hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
                 hashcat_cmd.add_wordlists(f.name)
                 subprocess_call(hashcat_cmd.build())

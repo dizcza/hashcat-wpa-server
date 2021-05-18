@@ -87,13 +87,12 @@ def _collect_essid_rule(essid_wordlist_path: Path):
     """
     Run ESSID + best64.rule attack.
     """
-    with tempfile.NamedTemporaryFile(mode='w') as f:
+    with tempfile.NamedTemporaryFile(mode='w+') as f:
         hashcat_stdout = HashcatCmdStdout(outfile=f.name)
         hashcat_stdout.add_wordlists(essid_wordlist_path)
         hashcat_stdout.add_rule(Rule.ESSID)
         subprocess_call(hashcat_stdout.build())
-        with open(f.name) as f:
-            candidates = f.readlines()
+        candidates = f.read().splitlines()
     return candidates
 
 
@@ -101,12 +100,11 @@ def _collect_essid_digits(essid_wordlist_path: Path):
     candidates = set()
     wordlist_order = [essid_wordlist_path, WordListDefault.DIGITS_APPEND]
     for reverse in range(2):
-        with tempfile.NamedTemporaryFile(mode='w') as ftemp:
-            hashcat_stdout = HashcatCmdStdout(outfile=ftemp.name)
+        with tempfile.NamedTemporaryFile(mode='w+') as f:
+            hashcat_stdout = HashcatCmdStdout(outfile=f.name)
             hashcat_stdout.add_wordlists(*wordlist_order, options=['-a1'])
             subprocess_call(hashcat_stdout.build())
-            with open(ftemp.name) as f:
-                candidates.update(f.readlines())
+            candidates.update(f.read().splitlines())
         wordlist_order = wordlist_order[::-1]
     return candidates
 
@@ -138,16 +136,15 @@ def get_password_candidates(essid):
     # (2) best64 rule attack
     # strip all except digits, letters and '_'
     essid_filepath = essid_as_wordlist_dir / re.sub(r'\W+', '', essid)
-    with open(essid_filepath, 'w') as f:
-        f.writelines(_collect_essid_parts(essid))
+    essid_filepath.write_text('\n'.join(_collect_essid_parts(essid)))
     password_candidates.update(_collect_essid_rule(essid_filepath))
 
     # (3) digits_append attack
     if len(_word_compounds(essid)) > MAX_COMPOUNDS_DIGITS_APPEND:
         # Rewrite the file to limit the no. of compounds
-        with open(essid_filepath, 'w') as f:
-            f.writelines(_collect_essid_parts(essid,
-                                              max_compounds=MAX_COMPOUNDS_DIGITS_APPEND))
+        compounds = _collect_essid_parts(essid,
+                                         max_compounds=MAX_COMPOUNDS_DIGITS_APPEND)
+        essid_filepath.write_text('\n'.join(compounds))
     password_candidates.update(_collect_essid_digits(essid_filepath))
 
     shutil.rmtree(essid_as_wordlist_dir)
