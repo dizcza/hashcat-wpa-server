@@ -15,11 +15,14 @@ from app.attack.hashcat_cmd import HashcatCmdCapture, HashcatCmdStdout
 from app.config import ESSID_TRIED
 from app.domain import Rule, WordListDefault, Mask
 from app.logger import logger
-from app.utils import read_plain_key, subprocess_call, bssid_essid_from_22000, check_file_22000
-from app.word_magic.essid import collect_essid_parts, word_compounds, word_compounds_permutation, \
+from app.utils import read_plain_key, subprocess_call, bssid_essid_from_22000, \
+    check_file_22000
+from app.word_magic import create_digits_wordlist, create_fast_wordlists
+from app.word_magic.essid import collect_essid_parts, word_compounds, \
     MAX_COMPOUNDS_DIGITS_APPEND
 from app.word_magic.hamming import hamming_ball
-from app.word_magic.wordlist import count_rules, count_wordlist
+from app.word_magic.wordlist import count_rules, count_wordlist, \
+    WORDLISTS_AVAILABLE
 
 
 def monitor_timer(func):
@@ -33,6 +36,13 @@ def monitor_timer(func):
         return res
 
     return wrapped
+
+
+def prepare_first_run():
+    for wlist in WORDLISTS_AVAILABLE:
+        wlist.download()
+    create_digits_wordlist()
+    create_fast_wordlists()
 
 
 class BaseAttack:
@@ -228,10 +238,10 @@ class BaseAttack:
         """
         Run all attacks.
         """
-        self.run_essid_attack()
         self.run_top1k()
         self.run_digits8()
         self.run_keyboard_walk()
+        self.run_essid_attack()
         self.run_names()
 
 
@@ -259,4 +269,5 @@ def crack_22000():
 
 if __name__ == '__main__':
     # BaseAttack.compute_essid_candidates_num("lrtgn5s19b41e21f1202unc77i8093")
+    prepare_first_run()
     crack_22000()

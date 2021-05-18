@@ -4,6 +4,7 @@ from copy import deepcopy
 from functools import lru_cache, wraps
 from pathlib import Path
 from threading import RLock
+import shutil
 
 from app import lock_app
 from app.attack.hashcat_cmd import HashcatCmdStdout
@@ -58,10 +59,13 @@ class WordList:
         gzip_file = self.url.split('/')[-1]
         gzip_file = self.path.with_name(gzip_file)
         logger.debug(f"Downloading {gzip_file}")
-        while calculate_md5(gzip_file) != self.checksum:
-            subprocess_call(['wget', self.url, '-O', gzip_file])
+        if calculate_md5(gzip_file) != self.checksum:
+            subprocess_call(['wget', '-q', self.url, '-O', gzip_file])
         with lock_app:
             subprocess_call(['gzip', '-d', gzip_file])
+        # the format of a gzip file is name.txt.gz
+        txt_path = gzip_file.parent / gzip_file.stem
+        shutil.move(txt_path, self.path)
         logger.debug(f"Downloaded and extracted {self.path}")
 
 
@@ -78,7 +82,7 @@ WORDLISTS_AVAILABLE = [
         rate=30,
         count=29_040_646,
         url="https://download.weakpass.com/wordlists/1857/Top29Million-probable-v2.txt.gz",
-        checksum="4d86278a7946fe9ad7016440e85ff2b6"
+        checksum="807ee2cf835660b474b6fd15bca962cf"
     ),
     WordList(
         path=WordListDefault.TOP1M.path,
@@ -169,10 +173,18 @@ def create_fast_wordlists():
     if not WordListDefault.TOP1K_RULE_BEST64.path.exists():
         # it should be already created in a docker
         logger.warning(f"{WordListDefault.TOP1K_RULE_BEST64.name} does not exist. Creating")
+        top1k_url = "https://download.weakpass.com/wordlists/1854/Top1575-probable2.txt.gz"
+        wlist_top1k = WordList(path=WordListDefault.TOP1K.path, url=top1k_url,
+                               checksum="070a10f5e7a23f12ec6fc8c8c0ccafe8")
+        wlist_top1k.download()
         hashcat_stdout = HashcatCmdStdout(outfile=WordListDefault.TOP1K_RULE_BEST64.path)
         hashcat_stdout.add_wordlists(WordListDefault.TOP1K)
         hashcat_stdout.add_rule(Rule.BEST_64)
         subprocess_call(hashcat_stdout.build())
+        with open(WordListDefault.TOP1K_RULE_BEST64.path) as f:
+            unique = set(f.readlines())
+        with open(WordListDefault.TOP1K_RULE_BEST64.path, 'w') as f:
+            f.writelines(unique)
 
 
 @with_lock
