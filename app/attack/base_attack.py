@@ -151,7 +151,7 @@ class BaseAttack:
         #  - append digits
         #  - prepend digits
         with open(WordListDefault.NAMES_UA_RU_WITH_DIGITS.path, 'w') as f:
-            wordlist_order = [WordListDefault.NAMES_UA_RU, WordListDefault.DIGITS_APPEND]
+            wordlist_order = [WordListDefault.NAMES_UA_RU, WordListDefault.DIGITS_APPEND_SHORT]
             for left in ['left', 'right']:
                 for rule_names in ['', 'T0', 'u']:
                     hashcat_stdout = HashcatCmdStdout(outfile=f.name)
