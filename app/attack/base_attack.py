@@ -89,7 +89,7 @@ class BaseAttack:
             essid = bytes.fromhex(essid).decode('utf-8')
             password_candidates = get_password_candidates(essid=essid)
 
-            with tempfile.NamedTemporaryFile(mode='w+b') as f:
+            with tempfile.NamedTemporaryFile(mode='w') as f:
                 f.writelines(password_candidates)
                 hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
                 hashcat_cmd.add_wordlists(f.name)
@@ -135,7 +135,7 @@ class BaseAttack:
 
     @monitor_timer
     def run_names(self):
-        with tempfile.NamedTemporaryFile(mode='w+b') as f:
+        with tempfile.NamedTemporaryFile(mode='w') as f:
             hashcat_stdout = HashcatCmdStdout(outfile=f.name)
             hashcat_stdout.add_wordlists(WordListDefault.NAMES_UA_RU)
             hashcat_stdout.add_rule(Rule.ESSID)

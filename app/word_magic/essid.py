@@ -87,7 +87,7 @@ def _collect_essid_rule(essid_wordlist_path: Path):
     """
     Run ESSID + best64.rule attack.
     """
-    with tempfile.NamedTemporaryFile(mode='w+b') as f:
+    with tempfile.NamedTemporaryFile(mode='w') as f:
         hashcat_stdout = HashcatCmdStdout(outfile=f.name)
         hashcat_stdout.add_wordlists(essid_wordlist_path)
         hashcat_stdout.add_rule(Rule.ESSID)
@@ -101,7 +101,7 @@ def _collect_essid_digits(essid_wordlist_path: Path):
     candidates = set()
     wordlist_order = [essid_wordlist_path, WordListDefault.DIGITS_APPEND]
     for reverse in range(2):
-        with tempfile.NamedTemporaryFile(mode='w+b') as ftemp:
+        with tempfile.NamedTemporaryFile(mode='w') as ftemp:
             hashcat_stdout = HashcatCmdStdout(outfile=ftemp.name)
             hashcat_stdout.add_wordlists(*wordlist_order, options=['-a1'])
             subprocess_call(hashcat_stdout.build())
