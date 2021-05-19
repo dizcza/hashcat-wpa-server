@@ -85,7 +85,8 @@ def _collect_essid_rule(essid_wordlist_path: Path):
     """
     Run ESSID + best64.rule attack.
     """
-    with tempfile.NamedTemporaryFile(mode='w+') as f:
+    with tempfile.NamedTemporaryFile(mode='w+', errors='ignore') as f:
+        # Ignore UnicodeDecodeError: 'utf-8' codec can't decode byte ...
         hashcat_stdout = HashcatCmdStdout(outfile=f.name)
         hashcat_stdout.add_wordlists(essid_wordlist_path)
         hashcat_stdout.add_rule(Rule.ESSID)
@@ -110,7 +111,7 @@ def _run_essid_digits(compounds_fpath: Path, hashcat_cmd=None, fast=True):
         # reduce IO operations, run the hashcat attack directly
         fast = False
     for reverse in range(2):
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
+        with tempfile.NamedTemporaryFile(mode='w+', errors='ignore') as f:
             hashcat_stdout = HashcatCmdStdout(outfile=f.name)
             hashcat_stdout.add_wordlists(*wordlist_order, options=['-a1'])
             subprocess_call(hashcat_stdout.build())
