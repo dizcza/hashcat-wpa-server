@@ -16,7 +16,7 @@ from app.logger import logger
 from app.utils import read_plain_key, subprocess_call, bssid_essid_from_22000, \
     check_file_22000
 from app.word_magic import create_digits_wordlist, create_fast_wordlists
-from app.word_magic.essid import get_password_candidates
+from app.word_magic.essid import run_essid_attack
 from app.word_magic.wordlist import WORDLISTS_AVAILABLE
 
 
@@ -43,14 +43,16 @@ def download_wordlists():
 class BaseAttack:
     timers = defaultdict(lambda: dict(count=0, elapsed=1e-6))
 
-    def __init__(self, file_22000: Union[str, Path], hashcat_args=(), verbose=True):
+    def __init__(self, file_22000: Union[str, Path], hashcat_args=(), fast=True, verbose=True):
         """
         :param file_22000: .22000 hashcat capture file path
+        :param fast: ESSID+digits fast or long attack
         :param verbose: show (True) or hide (False) tqdm
         """
         check_file_22000(file_22000)
         self.file_22000 = Path(file_22000).absolute()
         self.hashcat_args = tuple(hashcat_args)
+        self.fast = fast
         self.verbose = verbose
         self.key_file = self.file_22000.with_suffix('.key')
         self.session = self.file_22000.name
@@ -88,14 +90,9 @@ class BaseAttack:
                 continue
             bssid, essid = bssid_essid.split(':')
             essid = bytes.fromhex(essid).decode('utf-8')
-            password_candidates = get_password_candidates(essid=essid)
-            logger.debug(f"ESSID '{essid}' password candidates: {len(password_candidates)}")
-
-            with tempfile.NamedTemporaryFile(mode='w') as f:
-                f.write('\n'.join(password_candidates))
-                hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
-                hashcat_cmd.add_wordlists(f.name)
-                subprocess_call(hashcat_cmd.build())
+            hashcat_cmd = self.new_cmd(hcap_file=hcap_fpath_essid)
+            run_essid_attack(essid=essid, hashcat_cmd=hashcat_cmd,
+                             fast=self.fast)
 
             with open(ESSID_TRIED, 'a') as f:
                 f.write(bssid_essid + '\n')
@@ -182,10 +179,12 @@ def crack_22000():
     parser = argparse.ArgumentParser(description='Check weak passwords',
                                      usage="base_attack.py [-h] capture [hashcat-args]")
     parser.add_argument('capture', help='path to .22000')
+    parser.add_argument('--fast', help='ESSID+digits fast (True) or long (False) attack', action='store_true', default=True)
     parser.add_argument('--extra', help='Run extra attacks', action='store_true', default=False)
     args, hashcat_args = parser.parse_known_args()
-    print(f"Hashcat args: {hashcat_args}")
-    attack = BaseAttack(file_22000=args.capture, hashcat_args=hashcat_args)
+    print(f"Hashcat args: {hashcat_args}, fast={args.fast}, extra={args.extra}")
+    attack = BaseAttack(file_22000=args.capture, hashcat_args=hashcat_args,
+                        fast=args.fast)
     attack.run_all()
     if args.extra:
         print("Running extra run_names_with_digits attack")
