@@ -179,8 +179,8 @@ def crack_22000():
     parser = argparse.ArgumentParser(description='Check weak passwords',
                                      usage="base_attack.py [-h] capture [hashcat-args]")
     parser.add_argument('capture', help='path to .22000')
-    parser.add_argument('--fast', help='ESSID+digits fast (True) or long (False) attack', action='store_true', default=True)
-    parser.add_argument('--extra', help='Run extra attacks', action='store_true', default=False)
+    parser.add_argument('--fast', help='ESSID+digits fast (True) or long (False) attack', action='store_true')
+    parser.add_argument('--extra', help='Run extra attacks', action='store_true')
     args, hashcat_args = parser.parse_known_args()
     print(f"Hashcat args: {hashcat_args}, fast={args.fast}, extra={args.extra}")
     attack = BaseAttack(file_22000=args.capture, hashcat_args=hashcat_args,

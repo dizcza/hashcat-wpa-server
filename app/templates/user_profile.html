@@ -21,7 +21,16 @@ danger
     {% if current_user.is_active %}
     <p>You're logged in as <b>{{ current_user.username }}</b>. Privileges: {{ current_user.roles }}</p>
     {% endif %}
-    <p>Available GPUs: {{ gpus }} </p>
+    <p>
+      <a class="btn btn-primary" data-toggle="collapse" href="#hashcat-devices" role="button" aria-expanded="false" aria-controls="collapseExample">
+        Available devices
+      </a>
+    </p>
+    <div class="collapse" id="hashcat-devices">
+      <div class="card card-body">
+        {{ devices }}
+      </div>
+    </div>
     <hr>
 
     <h2>Uploaded captures</h2>

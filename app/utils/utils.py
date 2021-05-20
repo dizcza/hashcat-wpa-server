@@ -1,9 +1,10 @@
 import datetime
 import subprocess
+from functools import lru_cache
 from typing import List
 from urllib.parse import urlparse, urljoin
 
-from flask import request
+from flask import request, Markup
 
 from app.logger import logger
 
@@ -32,3 +33,10 @@ def is_safe_url(target):
 
 def date_formatted() -> str:
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+
+
+@lru_cache()
+def hashcat_devices_info():
+    hashcat_devices, _ = subprocess_call(['hashcat', '-I'])
+    hashcat_devices = f"<code>$ hashcat -I</code>\n<samp>{hashcat_devices}</samp>"
+    return Markup(hashcat_devices.replace('\n', '<br>'))

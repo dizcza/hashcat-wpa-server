@@ -36,7 +36,7 @@
                         {% else %}
                         <li><a href="{{ url_for('logout') }}">Sign Out</a></li>
                         {% endif %}
-                        <li><a href="{{ url_for('upload') }}">Upload WPA Handshake</a></li>
+                        <li><a href="{{ url_for('upload') }}">Upload a WPA Handshake</a></li>
                         <li><a href="{{ url_for('user_profile') }}">
                             User Profile
                             {% if not current_user.is_anonymous %}

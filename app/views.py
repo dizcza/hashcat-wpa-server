@@ -17,8 +17,7 @@ from app.login import LoginForm, RegistrationForm, User, RoleEnum, register_user
     roles_required, user_has_roles
 from app.uploader import cap_uploads, UploadForm, UploadedTask, check_incomplete_tasks, backward_db_compatibility
 from app.utils.file_io import read_last_benchmark, bssid_essid_from_22000
-from app.utils.nvidia_smi import NvidiaSmi
-from app.utils.utils import is_safe_url
+from app.utils.utils import is_safe_url, hashcat_devices_info
 from app.word_magic import create_digits_wordlist, estimate_runtime_fmt, create_fast_wordlists
 from app.word_magic.wordlist import download_wordlist
 
@@ -107,7 +106,7 @@ def estimate_runtime():
 @login_required
 def user_profile():
     return render_template('user_profile.html', title='Home', tasks=current_user.uploads[::-1],
-                           benchmark=read_last_benchmark(), gpus=NvidiaSmi.get_gpus(), progress=progress())
+                           benchmark=read_last_benchmark(), devices=hashcat_devices_info(), progress=progress())
 
 
 @app.route('/progress')
@@ -196,7 +195,7 @@ def terminate():
 @app.route('/hashcat.potfile')
 @login_required
 @roles_required(RoleEnum.ADMIN)
-def brain_password():
+def hashcat_potfile():
     hashcat_potfile = Path.home() / ".hashcat" / "hashcat.potfile"
     if hashcat_potfile.exists():
         return hashcat_potfile.read_text()

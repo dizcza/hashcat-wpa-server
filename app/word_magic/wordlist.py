@@ -121,7 +121,7 @@ def download_wordlist(wordlist_path: Path):
     wordlist.download()
 
 
-@lru_cache(maxsize=4)
+@lru_cache()
 def count_rules(rule: Rule):
     # counts the multiplier
     if rule is None:
