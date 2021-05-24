@@ -40,6 +40,8 @@ method:
 * `run_keyboard_walk`: [keyboard-walk](https://github.com/hashcat/kwprocessor) attack.
 * `run_names`: names_ua-ru.txt with best64 attack.
 
+## Demo
+
 Check out a running server on a CPU instance: http://85.217.171.57:9111. To surf the site, login with the `guest:guest` credentials. (Yes, you don't have the permissions to start jobs. Contact me if necessary.)
 
 
@@ -56,7 +58,7 @@ There are 3 docker tags (branches):
 * `intel-cpu`: Intel CPUs;
 * `pocl`: an alternative to `intel-cpu` tag, an open source implementation of OpenCL.
 
-For example, to run the `latest` tag (makes sense only if you have at least 1 GPU), open a terminal and run
+For example, to run the `latest` tag (makes sense only if you have at least one GPU), open a terminal and run
 
 ```
 docker run --runtime=nvidia -d \
@@ -67,7 +69,7 @@ docker run --runtime=nvidia -d \
     dizcza/hashcat-wpa-server:latest
 ```
 
-If you don't posses a GPU, try `intel-cpu` or `pocl` tag:
+If you don't have a GPU, try `intel-cpu` or `pocl` tag:
 
 ```
 docker run -d \
@@ -78,7 +80,7 @@ docker run -d \
     dizcza/hashcat-wpa-server:intel-cpu
 ```
 
-That's all! Navigate to [localhost:9111](localhost:9111). All the captures, user-defined wordlists and rules, and the SQL database can be accessed at `~/.hashcat/wpa-server`.
+That's all! Navigate to [localhost:9111](localhost:9111). All the captures, user-defined wordlists and rules, and the SQL database are stored in the `~/.hashcat/wpa-server` folder.
 
 ### Building the image locally
 
@@ -94,4 +96,4 @@ nvidia-docker-compose -f docker-compose.yml up -d
 
 ## User wordlists
 
-Hashcat-wpa-server app is shipped with the default Top-xxx-probable [wordlists](https://github.com/berzerk0/Probable-Wordlists). If you want to make use of your custom wordlists, place them in `~/.hashcat/wpa-server/wordlists`.
+Hashcat-wpa-server app is shipped with the default Top-xxx-probable [wordlists](https://github.com/berzerk0/Probable-Wordlists). If you want to make use of your custom wordlists, place them in the `~/.hashcat/wpa-server/wordlists` folder (create one).
