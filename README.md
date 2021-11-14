@@ -1,19 +1,12 @@
 [![Docker Hub](http://dockeri.co/image/dizcza/hashcat-wpa-server)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/)
 
-[![](https://images.microbadger.com/badges/version/dizcza/hashcat-wpa-server:latest.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:latest)
-[![](https://images.microbadger.com/badges/image/dizcza/hashcat-wpa-server:latest.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:latest)
-
-[![](https://images.microbadger.com/badges/version/dizcza/hashcat-wpa-server:intel-cpu.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:intel-cpu)
-[![](https://images.microbadger.com/badges/image/dizcza/hashcat-wpa-server:intel-cpu.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:intel-cpu)
-
-[![](https://images.microbadger.com/badges/version/dizcza/hashcat-wpa-server:pocl.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:pocl)
-[![](https://images.microbadger.com/badges/image/dizcza/hashcat-wpa-server:pocl.svg)](https://microbadger.com/images/dizcza/hashcat-wpa-server:pocl)
-
+[![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/latest?label=latest)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
+[![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/intel-cpu?label=intel-cpu)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
+[![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/pocl?label=pocl)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
 
 # Hashcat WPA/WPA2 server
 
-Yet another WPA/WPA2 hashes cracker web server. Powered by [hashcat](https://hashcat.net/hashcat/), written in Python 3.6. The
-backend is implemented with Flask.
+Yet another WPA/WPA2 hashes cracker web server. Powered by [hashcat](https://hashcat.net/hashcat/). The backend is written in Python Flask.
 
 Supported capture file formats:
 * .pcapng (hcxdumptool)
@@ -47,10 +40,21 @@ Check out a running server on a CPU instance: http://85.217.171.57:9111. To surf
 
 ## Deployment
 
+### Launching from the terminal
+
+Run the following commands from the root `hashcat-wpa-server` folder:
+
+```
+pip install -r requirements.txt  # required only once
+
+HASHCAT_ADMIN_USER=admin HASHCAT_ADMIN_PASSWORD=<your-secret-password> gunicorn app:app
+```
+
+### Docker containers
+
 **Note**. Using GPU hardware requires [nvidia-docker2](https://github.com/NVIDIA/nvidia-docker) to be installed on your host machine.
 
-
-### Using Docker Hub
+#### Using Docker Hub
 
 There are 3 docker tags (branches):
 
@@ -80,9 +84,9 @@ docker run -d \
     dizcza/hashcat-wpa-server:intel-cpu
 ```
 
-That's all! Navigate to [localhost:9111](localhost:9111). All the captures, user-defined wordlists and rules, and the SQL database are stored in the `~/.hashcat/wpa-server` folder.
+That's all! Navigate to [localhost:9111](localhost:9111). The captured hasdshakes, user-defined wordlists and rules, and the SQL database will be stored in the `~/.hashcat/wpa-server` folder.
 
-### Building the image locally
+#### Building the image locally
 
 ```
 mkdir -p ~/.hashcat/wpa-server
