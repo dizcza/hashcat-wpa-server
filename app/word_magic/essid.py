@@ -1,6 +1,7 @@
 import re
 import shutil
 import tempfile
+import uuid
 from copy import deepcopy
 from itertools import permutations
 from pathlib import Path
@@ -141,8 +142,8 @@ def run_essid_attack(essid, hashcat_cmd=None, fast=True):
         password_candidates.update(_collect_essid_hamming(essid=essid))
 
     # (2) best64 rule attack
-    # strip all except digits, letters and '_'
-    compounds_fpath = essid_as_wordlist_dir / re.sub(r'\W+', '', essid)
+    # A random unique file path.
+    compounds_fpath = essid_as_wordlist_dir / str(uuid.uuid4())
     compounds_fpath.write_text('\n'.join(essid_compounds))
     password_candidates.update(_collect_essid_rule(compounds_fpath))
 

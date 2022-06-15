@@ -38,6 +38,20 @@ method:
 Check out a running server on a CPU instance: http://85.217.171.57:9111. To surf the site, login with the `guest:guest` credentials. (Yes, you don't have the permissions to start jobs. Contact me if necessary.)
 
 
+## Command line interface
+
+You can quickly test a handshake file against non-secure passwords, in other words, run the `(fast)` mode from a terminal:
+
+```bash
+python app/attack/base_attack.py /path/to/handshake.22000
+```
+
+```
+optional arguments:
+  --fast      Run ESSID+digits attack with fewer examples. Default: turned off
+  --extra     Run extra attacks (names UA)
+```
+
 ## Deployment
 
 ### Launching from the terminal

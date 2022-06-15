@@ -135,7 +135,7 @@ def generate_mask_stdout(mask_len: int, pattern_len: int):
             print(''.join(mask))
 
 
-def create_digits_8(flashback_years=100, cycle_length_max=20):
+def create_digits_8(flashback_years=200, cycle_length_max=20):
     digits = create_days(flashback_years)
     masks = read_mask(Mask.MASK_8.path)
     digits.extend(create_digits_mask(masks, alphabet=string.digits, alphabet_size_max=4))
