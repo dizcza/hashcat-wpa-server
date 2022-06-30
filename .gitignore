@@ -9,6 +9,7 @@ captures/
 OMEN/
 
 !wordlists/names_ua-ru.txt
+!wordlists/names_ru-cyrrilic.txt
 
 # found keys
 *.key

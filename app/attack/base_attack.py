@@ -17,7 +17,7 @@ from app.utils import read_plain_key, subprocess_call, bssid_essid_from_22000, \
     check_file_22000
 from app.word_magic import create_digits_wordlist, create_fast_wordlists
 from app.word_magic.essid import run_essid_attack
-from app.word_magic.wordlist import WORDLISTS_AVAILABLE
+from app.word_magic.wordlist import WORDLISTS_AVAILABLE, cyrrilic2qwerty
 
 
 def monitor_timer(func):
@@ -43,7 +43,7 @@ def download_wordlists():
 class BaseAttack:
     timers = defaultdict(lambda: dict(count=0, elapsed=1e-6))
 
-    def __init__(self, file_22000: Union[str, Path], hashcat_args=(), fast=True, verbose=True):
+    def __init__(self, file_22000: Union[str, Path], hashcat_args=(), fast=False, verbose=True):
         """
         :param file_22000: .22000 hashcat capture file path
         :param fast: ESSID+digits fast or long attack
@@ -136,7 +136,8 @@ class BaseAttack:
     def run_names(self):
         with tempfile.NamedTemporaryFile(mode='w') as f:
             hashcat_stdout = HashcatCmdStdout(outfile=f.name)
-            hashcat_stdout.add_wordlists(WordListDefault.NAMES_UA_RU)
+            hashcat_stdout.add_wordlists(WordListDefault.NAMES_UA_RU,
+                                         WordListDefault.NAMES_RU_CYRILLIC)
             hashcat_stdout.add_rule(Rule.ESSID)
             subprocess_call(hashcat_stdout.build())
             hashcat_cmd = self.new_cmd()

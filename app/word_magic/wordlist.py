@@ -228,5 +228,14 @@ def wordlists_available():
     return choices
 
 
+def cyrrilic2qwerty(wlist: WordListDefault):
+    txt_cyrrilic = wlist.path.read_text().lower()
+    ru = "йцукенгшщзхъфывапролджэячсмитьбю."
+    en = "qwertyuiop[]asdfghjkl;'zxcvbnm,./"
+    table = txt_cyrrilic.maketrans(ru, en)
+    txt_qwerty = txt_cyrrilic.translate(table)
+    return txt_qwerty
+
+
 if __name__ == '__main__':
     create_fast_wordlists()

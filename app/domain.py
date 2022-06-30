@@ -52,6 +52,7 @@ class WordListDefault(Enum):
     DIGITS_APPEND_SHORT = "digits_append_short.txt"
     KEYBOARD_WALK = "keyboard-walk.txt"
     NAMES_UA_RU = "names_ua-ru.txt"
+    NAMES_RU_CYRILLIC = "names_ru-cyrrilic.txt"
     NAMES_UA_RU_WITH_DIGITS = "names_ua-ru_with_digits.txt"
 
     @property
