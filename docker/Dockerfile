@@ -5,7 +5,7 @@ RUN apt-get update && \
     apt-get install -y bzip2 python3-distutils nginx supervisor
 RUN useradd --no-create-home nginx
 
-RUN wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py && \
+RUN wget --no-check-certificate https://bootstrap.pypa.io/pip/3.6/get-pip.py -O /tmp/get-pip.py && \
     python3 /tmp/get-pip.py
 
 # wordlists
