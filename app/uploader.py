@@ -93,7 +93,7 @@ class UploadForm(FlaskForm):
     @staticmethod
     def validate_wordlist(form, field):
         wordlist = field.data
-        if wordlist is None:
+        if wordlist == NONE_STR:
             # fast mode
             return
 

@@ -98,7 +98,7 @@ docker run -d \
     dizcza/hashcat-wpa-server:intel-cpu
 ```
 
-That's all! Navigate to [localhost:9111](localhost:9111). The captured hasdshakes, user-defined wordlists and rules, and the SQL database will be stored in the `~/.hashcat/wpa-server` folder.
+That's all! Navigate to [localhost:9111](localhost:9111). The captured handshakes, user-defined wordlists and rules, and the SQL database will be stored in the `~/.hashcat/wpa-server` folder.
 
 #### Building the image locally
 
