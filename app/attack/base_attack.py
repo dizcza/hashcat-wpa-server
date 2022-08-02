@@ -11,13 +11,13 @@ from tqdm import tqdm
 from app.attack.convert import split_by_essid
 from app.attack.hashcat_cmd import HashcatCmdCapture, HashcatCmdStdout
 from app.config import ESSID_TRIED
-from app.domain import Rule, WordListDefault, Mask
+from app.domain import Rule, WordList, Mask
 from app.logger import logger
 from app.utils import read_plain_key, subprocess_call, bssid_essid_from_22000, \
     check_file_22000
 from app.word_magic import create_digits_wordlist, create_fast_wordlists
 from app.word_magic.essid import run_essid_attack
-from app.word_magic.wordlist import WORDLISTS_AVAILABLE, cyrrilic2qwerty
+from app.word_magic.wordlist import WordListDefault
 
 
 def monitor_timer(func):
@@ -34,7 +34,7 @@ def monitor_timer(func):
 
 
 def download_wordlists():
-    for wlist in WORDLISTS_AVAILABLE:
+    for wlist in WordListDefault.list():
         wlist.download()
     create_digits_wordlist()
     create_fast_wordlists()
@@ -107,7 +107,7 @@ class BaseAttack:
         For more information refer to `digits/create_digits.py`
         """
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlists(WordListDefault.DIGITS_8)
+        hashcat_cmd.add_wordlists(WordList.DIGITS_8)
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
@@ -116,7 +116,7 @@ class BaseAttack:
         - Top1575-probable-v2.txt with best64 rules
         """
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlists(WordListDefault.TOP1K_RULE_BEST64)
+        hashcat_cmd.add_wordlists(WordList.TOP1K_RULE_BEST64)
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
@@ -129,15 +129,15 @@ class BaseAttack:
     @monitor_timer
     def run_keyboard_walk(self):
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlists(WordListDefault.KEYBOARD_WALK)
+        hashcat_cmd.add_wordlists(WordList.KEYBOARD_WALK)
         subprocess_call(hashcat_cmd.build())
 
     @monitor_timer
     def run_names(self):
         with tempfile.NamedTemporaryFile(mode='w') as f:
             hashcat_stdout = HashcatCmdStdout(outfile=f.name)
-            hashcat_stdout.add_wordlists(WordListDefault.NAMES_UA_RU,
-                                         WordListDefault.NAMES_RU_CYRILLIC)
+            hashcat_stdout.add_wordlists(WordList.NAMES_UA_RU,
+                                         WordList.NAMES_RU_CYRILLIC)
             hashcat_stdout.add_rule(Rule.ESSID)
             subprocess_call(hashcat_stdout.build())
             hashcat_cmd = self.new_cmd()
@@ -150,8 +150,8 @@ class BaseAttack:
         # for each case-changed <name> in (Name, name, NAME) do
         #  - append digits
         #  - prepend digits
-        with open(WordListDefault.NAMES_UA_RU_WITH_DIGITS.path, 'w') as f:
-            wordlist_order = [WordListDefault.NAMES_UA_RU, WordListDefault.DIGITS_APPEND_SHORT]
+        with open(WordList.NAMES_UA_RU_WITH_DIGITS.path, 'w') as f:
+            wordlist_order = [WordList.NAMES_UA_RU, WordList.DIGITS_APPEND_SHORT]
             for left in ['left', 'right']:
                 for rule_names in ['', 'T0', 'u']:
                     hashcat_stdout = HashcatCmdStdout(outfile=f.name)
@@ -159,7 +159,7 @@ class BaseAttack:
                     subprocess_call(hashcat_stdout.build())
                 wordlist_order = wordlist_order[::-1]
         hashcat_cmd = self.new_cmd()
-        hashcat_cmd.add_wordlists(WordListDefault.NAMES_UA_RU_WITH_DIGITS)
+        hashcat_cmd.add_wordlists(WordList.NAMES_UA_RU_WITH_DIGITS)
         subprocess_call(hashcat_cmd.build())
 
     def run_all(self):

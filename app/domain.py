@@ -40,7 +40,7 @@ class Rule(Enum):
 
 
 @unique
-class WordListDefault(Enum):
+class WordList(Enum):
     TOP109M = "Top109Million-probable-v2.txt"
     TOP29M = "Top29Million-probable-v2.txt"
     TOP1M = "Top1pt6Million-probable-v2.txt"

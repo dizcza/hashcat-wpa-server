@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Union, List
 
 from app.config import HASHCAT_STATUS_TIMER
-from app.domain import Rule, WordListDefault, ProgressLock, TaskInfoStatus, Mask, HashcatMode
+from app.domain import Rule, WordList, ProgressLock, TaskInfoStatus, Mask, HashcatMode
 
 HASHCAT_WARNINGS = (
     "nvmlDeviceGetCurrPcieLinkWidth",
@@ -72,10 +72,10 @@ class HashcatCmd:
     def add_rule(self, rule: Rule):
         self.rules.append(rule)
 
-    def add_wordlists(self, *wordlists: Union[WordListDefault, str, Path], options: List[str] = ()):
+    def add_wordlists(self, *wordlists: Union[WordList, str, Path], options: List[str] = ()):
         wordlists_new = list(options)
         for wlist in wordlists:
-            if isinstance(wlist, WordListDefault):
+            if isinstance(wlist, WordList):
                 wlist = wlist.path
             wordlists_new.append(str(wlist))
         self.wordlists.extend(wordlists_new)

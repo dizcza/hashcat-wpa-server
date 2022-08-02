@@ -9,7 +9,7 @@ from pathlib import Path
 import wordninja
 
 from app.attack.hashcat_cmd import HashcatCmdStdout
-from app.domain import Rule, WordListDefault
+from app.domain import Rule, WordList
 from app.logger import logger
 from app.utils import subprocess_call
 from app.word_magic.hamming import hamming_ball
@@ -103,9 +103,9 @@ def _run_essid_digits(compounds_fpath: Path, hashcat_cmd=None, fast=True):
     candidates = set()
     wordlist_order = [compounds_fpath]
     if fast:
-        wordlist_order.append(WordListDefault.DIGITS_APPEND_SHORT)
+        wordlist_order.append(WordList.DIGITS_APPEND_SHORT)
     else:
-        wordlist_order.append(WordListDefault.DIGITS_APPEND)
+        wordlist_order.append(WordList.DIGITS_APPEND)
     with open(compounds_fpath) as f:
         compounds_count = len(f.readlines())
     if compounds_count > 1000 and hashcat_cmd is not None:

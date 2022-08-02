@@ -10,7 +10,7 @@ from dateutil.rrule import rrule, DAILY
 
 from app.config import WORDLISTS_DIR
 from app.logger import logger
-from app.domain import WordListDefault
+from app.domain import WordList
 
 DIGITS_DIR = Path(__file__).parent
 WORDLISTS_DIR.mkdir(exist_ok=True)
@@ -144,7 +144,7 @@ def create_digits_8(flashback_years=200, cycle_length_max=20):
     for password_length in range(8, cycle_length_max + 1):
         digits.extend(create_digits_cycle(password_length))
     digits.extend(create_increments())
-    write_digits(digits, WordListDefault.DIGITS_8.path)
+    write_digits(digits, WordList.DIGITS_8.path)
 
 
 def create_digits_append(short: bool, flashback_years=100, cycle_length_max=4):
@@ -157,9 +157,9 @@ def create_digits_append(short: bool, flashback_years=100, cycle_length_max=4):
     234567890     digits cycle (left and right)
     """
     if short:
-        digits_wordlist = WordListDefault.DIGITS_APPEND_SHORT
+        digits_wordlist = WordList.DIGITS_APPEND_SHORT
     else:
-        digits_wordlist = WordListDefault.DIGITS_APPEND
+        digits_wordlist = WordList.DIGITS_APPEND
     digits = set(range(100))
     curr_year = date.today().year
     digits.update(range(curr_year, curr_year - flashback_years - 1, -1))

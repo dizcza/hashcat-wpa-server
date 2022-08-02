@@ -1,22 +1,22 @@
 import datetime
 import re
-from copy import deepcopy
-from functools import lru_cache, wraps
-from pathlib import Path
-from threading import RLock
 import shutil
+from copy import deepcopy
+from functools import lru_cache
+from pathlib import Path
+from typing import Union
 
 from app import lock_app
 from app.attack.hashcat_cmd import HashcatCmdStdout
-from app.config import WORDLISTS_USER_DIR, WORDLISTS_DIR
-from app.domain import WordListDefault, Rule, NONE_STR
+from app.config import WORDLISTS_USER_DIR
+from app.domain import WordList, Rule, NONE_STR
 from app.logger import logger
 from app.utils import subprocess_call
 from app.utils.file_io import calculate_md5, read_last_benchmark
 from app.word_magic.digits.create_digits import read_mask
 
 
-class WordList:
+class WordListInfo:
     fast_count = 700_000
 
     def __init__(self, path, rate=None, count=None, url=None, checksum=None):
@@ -69,48 +69,47 @@ class WordList:
         logger.debug(f"Downloaded and extracted {self.path}")
 
 
-WORDLISTS_AVAILABLE = [
-    WordList(
-        path=WordListDefault.TOP109M.path,
+class WordListDefault:
+    TOP109M = WordListInfo(
+        path=WordList.TOP109M.path,
         rate=39,
         count=109_438_614,
         url="https://download.weakpass.com/wordlists/1852/Top109Million-probable-v2.txt.gz",
         checksum="c0a26fd763d56a753a5f62c517796d09"
-    ),
-    WordList(
-        path=WordListDefault.TOP29M.path,
+    )
+    TOP29M = WordListInfo(
+        path=WordList.TOP29M.path,
         rate=30,
         count=29_040_646,
         url="https://download.weakpass.com/wordlists/1857/Top29Million-probable-v2.txt.gz",
         checksum="807ee2cf835660b474b6fd15bca962cf"
-    ),
-    WordList(
-        path=WordListDefault.TOP1M.path,
+    )
+    TOP1M = WordListInfo(
+        path=WordList.TOP1M.path,
         rate=19,
         count=1_667_462,
         url="https://download.weakpass.com/wordlists/1855/Top1pt6Million-probable-v2.txt.gz",
         checksum="2d45c4aa9f4a87ece9ebcbd542613f50"
-    ),
-    WordList(
-        path=WordListDefault.TOP304K.path,
+    )
+    TOP304K = WordListInfo(
+        path=WordList.TOP304K.path,
         rate=12,
         count=303_872,
         url="https://download.weakpass.com/wordlists/1859/Top304Thousand-probable-v2.txt.gz",
         checksum="f99e6a581597cbdc76efc1bcc001a9ed"
-    ),
-]
+    )
 
-wlock = RLock()
+    @staticmethod
+    def list():
+        return [WordListDefault.TOP109M, WordListDefault.TOP29M,
+                WordListDefault.TOP1M, WordListDefault.TOP304K]
 
-
-def with_lock(func):
-    @wraps(func)
-    def decorated(*args, **kwargs):
-        with wlock:
-            res = func(*args, **kwargs)
-        return res
-
-    return decorated
+    @staticmethod
+    def get(path):
+        d = {}
+        for wlist in WordListDefault.list():
+            d[str(wlist.path)] = wlist
+        return d.get(str(path))
 
 
 def download_wordlist(wordlist_path: Path):
@@ -130,6 +129,7 @@ def count_rules(rule: Rule):
     return len(rules)
 
 
+@lru_cache()
 def count_wordlist(wordlist_path):
     wordlist_path = str(wordlist_path)
     out, err = subprocess_call(['wc', '-l', wordlist_path])
@@ -159,7 +159,7 @@ def estimate_runtime_fmt(wordlist_path: Path, rule: Rule) -> str:
     # add extra words to account for the 'fast' run, which includes
     # 160k digits8, 120k top1k+best64 and ESSID manipulation
     # (300k hamming ball, 70k digits append mask)
-    n_candidates += WordList.fast_count
+    n_candidates += WordListInfo.fast_count
 
     runtime = int(n_candidates / speed)  # in seconds
     runtime_ftm = str(datetime.timedelta(seconds=runtime))
@@ -170,65 +170,45 @@ def create_fast_wordlists():
     # note that dumping all combinations in a file is not equivalent to
     # directly adding top1k wordlist and best64 rule because hashcat ignores
     # patterns that are <8 chars _before_ expanding a candidate with the rule.
-    if not WordListDefault.TOP1K_RULE_BEST64.path.exists():
+    if not WordList.TOP1K_RULE_BEST64.path.exists():
         # it should be already created in a docker
-        logger.warning(f"{WordListDefault.TOP1K_RULE_BEST64.name} does not exist. Creating")
+        logger.warning(f"{WordList.TOP1K_RULE_BEST64.name} does not exist. Creating")
         top1k_url = "https://download.weakpass.com/wordlists/1854/Top1575-probable2.txt.gz"
-        wlist_top1k = WordList(path=WordListDefault.TOP1K.path, url=top1k_url,
-                               checksum="070a10f5e7a23f12ec6fc8c8c0ccafe8")
+        wlist_top1k = WordListInfo(path=WordList.TOP1K.path, url=top1k_url,
+                                   checksum="070a10f5e7a23f12ec6fc8c8c0ccafe8")
         wlist_top1k.download()
-        hashcat_stdout = HashcatCmdStdout(outfile=WordListDefault.TOP1K_RULE_BEST64.path)
-        hashcat_stdout.add_wordlists(WordListDefault.TOP1K)
+        hashcat_stdout = HashcatCmdStdout(outfile=WordList.TOP1K_RULE_BEST64.path)
+        hashcat_stdout.add_wordlists(WordList.TOP1K)
         hashcat_stdout.add_rule(Rule.BEST_64)
         subprocess_call(hashcat_stdout.build())
-        with open(WordListDefault.TOP1K_RULE_BEST64.path) as f:
+        with open(WordList.TOP1K_RULE_BEST64.path) as f:
             unique = set(f.readlines())
-        with open(WordListDefault.TOP1K_RULE_BEST64.path, 'w') as f:
+        with open(WordList.TOP1K_RULE_BEST64.path, 'w') as f:
             f.writelines(unique)
 
 
-@with_lock
-def find_wordlist_by_path(wordlist_path):
+def find_wordlist_by_path(wordlist_path) -> Union[WordListInfo, None]:
     if wordlist_path is None:
         return None
-    wordlist_path = Path(wordlist_path)
-    for wordlist in WORDLISTS_AVAILABLE:
-        if wordlist.path == wordlist_path:
-            return deepcopy(wordlist)
-    return None
+    wlist = WordListDefault.get(wordlist_path)
+    if wlist is None:
+        # user wordlist
+        return WordListInfo(wordlist_path)
+    return deepcopy(wlist)
 
 
-@with_lock
-def wordlists_available():
-    # return pairs of (id-value, display: str)
-    deleted = []
-    exist_paths = set()
-
-    for wordlist in filter(lambda wlist: wlist.custom, WORDLISTS_AVAILABLE):
-        if wordlist.path.exists():
-            exist_paths.add(wordlist.path)
-        else:
-            deleted.append(wordlist)
-
-    for wordlist in deleted:
-        WORDLISTS_AVAILABLE.remove(wordlist)
-
-    WORDLISTS_USER_DIR.mkdir(exist_ok=True)
+def wordlist_choices():
+    wlists_info = WordListDefault.list()
     for custom_path in sorted(WORDLISTS_USER_DIR.iterdir()):
-        if custom_path not in exist_paths:
-            wordlist = WordList(path=custom_path)
-            WORDLISTS_AVAILABLE.append(wordlist)
-
-    for wordlist in WORDLISTS_AVAILABLE:
-        wordlist.update_count()
+        wlists_info.append(WordListInfo(path=custom_path))
 
     choices = [(NONE_STR, "(fast)")]
-    choices.extend((str(wlist.path), str(wlist)) for wlist in WORDLISTS_AVAILABLE)
+    choices.extend((str(wlist.path), str(wlist)) for wlist in wlists_info)
 
     return choices
 
 
-def cyrrilic2qwerty(wlist: WordListDefault):
+def cyrrilic2qwerty(wlist: WordList):
     txt_cyrrilic = wlist.path.read_text().lower()
     ru = "йцукенгшщзхъфывапролджэячсмитьбю."
     en = "qwertyuiop[]asdfghjkl;'zxcvbnm,./"

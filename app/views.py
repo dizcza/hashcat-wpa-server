@@ -72,7 +72,7 @@ def upload():
             file_22000 = convert_to_22000(cap_path)
         except (FileNotFoundError, InvalidFileError) as error:
             logger.exception(error)
-            return flask.abort(HTTPStatus.BAD_REQUEST, description="Bad input capture file.")
+            return flask.abort(HTTPStatus.BAD_REQUEST, description=str(error))
         Thread(target=download_wordlist, args=(form.get_wordlist_path(),)).start()
         folder_split_by_essid = split_by_essid(file_22000)
         tasks = {}

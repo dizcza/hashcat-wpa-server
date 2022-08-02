@@ -37,6 +37,6 @@ def date_formatted() -> str:
 
 @lru_cache()
 def hashcat_devices_info():
-    hashcat_devices, _ = subprocess_call(['hashcat', '-I'])
-    hashcat_devices = f"<code>$ hashcat -I</code>\n<samp>{hashcat_devices}</samp>"
+    hashcat_devices, _ = subprocess_call(['hashcat', '-I', '--force'])
+    hashcat_devices = f"<code>$ hashcat -I --force</code>\n<samp>{hashcat_devices}</samp>"
     return Markup(hashcat_devices.replace('\n', '<br>'))

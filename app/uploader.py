@@ -11,7 +11,7 @@ from wtforms.validators import Optional, ValidationError, NumberRange
 from app import app, db
 from app.domain import Rule, NONE_STR, TaskInfoStatus, Workload, HashcatMode, BrainClientFeature
 from app.utils import read_hashcat_brain_password
-from app.word_magic.wordlist import estimate_runtime_fmt, wordlists_available, find_wordlist_by_path
+from app.word_magic.wordlist import estimate_runtime_fmt, wordlist_choices, find_wordlist_by_path
 
 
 def check_incomplete_tasks():
@@ -45,7 +45,7 @@ class UploadedTask(db.Model):
 
 
 class UploadForm(FlaskForm):
-    wordlist = RadioField('Wordlist', choices=wordlists_available(), default=NONE_STR, description="The higher the rate, the better")
+    wordlist = RadioField('Wordlist', choices=wordlist_choices(), default=NONE_STR, description="The higher the rate, the better")
     rule = RadioField('Rule', choices=Rule.to_form(), default=NONE_STR)
     timeout = IntegerField('Timeout in minutes, optional', validators=[Optional(), NumberRange(min=1)])
     workload = RadioField("Workload", choices=Workload.to_form(), default=Workload.Default.value)
@@ -56,11 +56,9 @@ class UploadForm(FlaskForm):
                                                                            message='Airodump & Hashcat capture files only')])
     submit = SubmitField('Submit')
 
-    # TODO: pass render_kw=dict(disabled=True) in RadioField
-
     def __init__(self):
         super().__init__()
-        self.wordlist.choices = wordlists_available()
+        self.wordlist.choices = wordlist_choices()
 
     def get_wordlist_path(self):
         if self.wordlist.data == NONE_STR:
@@ -89,20 +87,6 @@ class UploadForm(FlaskForm):
             if secret:
                 hashcat_args.append(f"--brain-password={read_hashcat_brain_password()}")
         return hashcat_args
-
-    @staticmethod
-    def validate_wordlist(form, field):
-        wordlist = field.data
-        if wordlist == NONE_STR:
-            # fast mode
-            return
-
-        # update the wordlists
-        wordlists_available()
-
-        wordlist = find_wordlist_by_path(wordlist)
-        if wordlist is None:
-            raise ValidationError(f"The chosen wordlist does not exist anymore.")
 
 
 cap_uploads = UploadSet(name='files', extensions=HashcatMode.valid_suffixes(), default_dest=lambda app: app.config['CAPTURES_DIR'])
