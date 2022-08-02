@@ -58,7 +58,7 @@ danger
             <td>{{ task.id }}</td>
             <td>{{ task.filename }}</td>
             <td>{{ task.uploaded_time.strftime('%Y-%m-%d %H:%M') }}</td>
-            <td>{{ task.duration }}</td>
+            <td class="duration">{{ task.duration }}</td>
             <td>{{ task.bssid }}</td>
             <td>{{ task.essid }}</td>
             <td>{{ task.wordlist }}</td>
@@ -96,6 +96,7 @@ danger
             let task_row = $("#task" + task_progress.task_id);
             task_row.find("td.progress").text(task_progress.progress);
             task_row.find("td.status").text(task_progress.status);
+            task_row.find("td.duration").text(task_progress.duration);
             task_row.find("td.found_key").text(task_progress.found_key);
         }
     }

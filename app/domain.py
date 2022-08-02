@@ -168,10 +168,14 @@ class ProgressLock:
         self.completed = True
         self.progress = 100
 
-    def update_dict(self):
+    @property
+    def duration(self):
         duration = int(time.time() - self._start_time)
         duration = datetime.timedelta(seconds=duration)
-        return dict(found_key=self.found_key, duration=duration, completed=self.completed,
+        return str(duration)
+
+    def update_dict(self):
+        return dict(found_key=self.found_key, duration=self.duration, completed=self.completed,
                     status=self.status)
 
     def __enter__(self):
