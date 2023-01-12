@@ -3,17 +3,16 @@ FROM dizcza/docker-hashcat:$branch
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y software-properties-common  # needed add-apt-repository
-RUN add-apt-repository ppa:deadsnakes/ppa -y
 RUN apt-get update && \
-    apt-get install -y bzip2 python3.9 python3.9-distutils python3.9-venv nginx supervisor apt-utils
+    apt-get install -y bzip2 python3.8-distutils python3.8-venv nginx supervisor apt-utils
+
 RUN useradd --no-create-home nginx
 
 RUN wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py && \
-    python3.9 /tmp/get-pip.py
+    python3.8 /tmp/get-pip.py
 
 ENV VIRTUAL_ENV=/opt/venv
-RUN python3.9 -m venv $VIRTUAL_ENV
+RUN python3.8 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 RUN pip install --upgrade pip
 

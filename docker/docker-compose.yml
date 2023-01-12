@@ -9,6 +9,12 @@ version: '3.7'
 services:
   hashcat-wpa-server:
     image: "hashcat-wpa-server:latest"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [ gpu ]
     build:
       context: ..
       dockerfile: docker/Dockerfile

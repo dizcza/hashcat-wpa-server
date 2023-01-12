@@ -1,5 +1,3 @@
-[![Docker Hub](http://dockeri.co/image/dizcza/hashcat-wpa-server)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/)
-
 [![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/latest?label=latest)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
 [![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/intel-cpu?label=intel-cpu)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
 [![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/pocl?label=pocl)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
@@ -7,6 +5,8 @@
 # Hashcat WPA/WPA2 server
 
 Yet another WPA/WPA2 hashes cracker web server. Powered by [hashcat](https://hashcat.net/hashcat/). The backend is written in Python Flask.
+
+Served on [Dockerhub](https://hub.docker.com/r/dizcza/hashcat-wpa-server). Deployed on http://85.217.171.57:9111/.
 
 Supported capture file formats:
 * .pcapng (hcxdumptool)
@@ -54,7 +54,7 @@ optional arguments:
 
 ## Deployment
 
-### Launching from the terminal
+### Directly on your host machine
 
 Run the following commands from the root `hashcat-wpa-server` folder:
 
@@ -79,7 +79,7 @@ There are 3 docker tags (branches):
 For example, to run the `latest` tag (makes sense only if you have at least one GPU), open a terminal and run
 
 ```
-docker run --runtime=nvidia -d \
+docker run --gpus all -d \
     -e HASHCAT_ADMIN_USER=admin \
     -e HASHCAT_ADMIN_PASSWORD=<your-secret-password> \
     -v ${HOME}/.hashcat/wpa-server:/root/.hashcat/wpa-server \
@@ -103,12 +103,17 @@ That's all! Navigate to [localhost:9111](localhost:9111). The captured handshake
 #### Building the image locally
 
 ```
+git clone https://github.com/dizcza/hashcat-wpa-server.git
+cd hashcat-wpa-server/docker
+
+# Set environment variables and create the home directory
 mkdir -p ~/.hashcat/wpa-server
 export HASHCAT_ADMIN_USER=admin
 export HASHCAT_ADMIN_PASSWORD=<your-secret-password>
-cd ./docker
-nvidia-docker-compose -f docker-compose.yml build
-nvidia-docker-compose -f docker-compose.yml up -d
+
+# Build & run
+docker compose build
+docker compose up
 ```
 
 
