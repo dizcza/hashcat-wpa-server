@@ -8,7 +8,7 @@ itsdangerous==1.1.0
 SQLAlchemy==1.4.3
 Flask-Reuploaded==0.5.0
 Flask-Bootstrap==3.3.7.1
-Werkzeug==1.0.1
+Werkzeug==2.2.3
 WTForms==2.3.3
 python-dateutil==2.8.1
 gunicorn==20.1.0
