@@ -47,8 +47,13 @@ COPY . /root/hashcat-wpa-server
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
+ENV PYTHONPATH=.
+
 RUN flask db init --directory=/root/.hashcat/wpa-server/database/migrations
 RUN flask db migrate --directory=/root/.hashcat/wpa-server/database/migrations
 RUN flask db upgrade --directory=/root/.hashcat/wpa-server/database/migrations
+
+WORKDIR /root/hashcat-wpa-server
+RUN python3 app/attack/base_attack.py -h
 
 CMD supervisord -n -c /etc/supervisor/supervisord.conf

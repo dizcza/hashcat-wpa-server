@@ -1,4 +1,5 @@
 [![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/latest?label=latest)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
+[[![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/cuda?label=cuda)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
 [![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/intel-cpu?label=intel-cpu)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
 [![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/pocl?label=pocl)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
 
@@ -52,6 +53,10 @@ optional arguments:
   --extra     Run extra attacks (names UA)
 ```
 
+** Note **
+This will take ~1 minute to run for the first time to download necessary files.
+
+
 ## Deployment
 
 ### Directly on your host machine
@@ -69,9 +74,9 @@ HASHCAT_ADMIN_USER=admin HASHCAT_ADMIN_PASSWORD=<your-secret-password> gunicorn 
 
 #### Using Docker Hub
 
-There are 3 docker tags (branches):
+There are 4 docker tags (platforms):
 
-* `latest`: Nvidia GPUs;
+* `latest` and `cuda`: Nvidia GPUs (`cuda` tag preferred);
 * `intel-cpu`: Intel CPUs;
 * `pocl`: an alternative to `intel-cpu` tag, an open source implementation of OpenCL.
 
@@ -127,3 +132,8 @@ Available targets & platforms are shown in the readme header.
 ## User wordlists
 
 Hashcat-wpa-server app is shipped with the default Top-xxx-probable [wordlists](https://github.com/berzerk0/Probable-Wordlists). If you want to make use of your custom wordlists, place them in the `~/.hashcat/wpa-server/wordlists` folder (create one).
+
+
+## Troubleshooting
+
+* If you get an error like "sql cannot write a database to readonly file", fix file permissions with the following command: `sudo chown -R $USER:$USER ~/.hashcat/wpa-server/`
