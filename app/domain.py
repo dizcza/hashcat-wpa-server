@@ -17,10 +17,11 @@ class InvalidFileError(Exception):
     pass
 
 
-@unique
-class Rule(Enum):
-    BEST_64 = "best64.rule"
+class Rule:
     ESSID = "essid.rule"
+
+    def __init__(self, name):
+        self.value = name
 
     @property
     def path(self):
@@ -29,8 +30,12 @@ class Rule(Enum):
     @staticmethod
     def to_form():
         # (id_value, description) pairs
-        choices = ((NONE_STR, "(None)"), (Rule.BEST_64.value, Rule.BEST_64.value))
-        return choices
+        choices = [(NONE_STR, "(None)")]
+        for path in sorted(RULES_DIR.iterdir()):
+            # Essid rule is used in attack_essid only
+            if path.name != Rule.ESSID:
+                choices.append((path.name, path.name))
+        return tuple(choices)
 
     @staticmethod
     def from_data(name: str):
@@ -172,7 +177,7 @@ class ProgressLock:
     def duration(self):
         duration = int(time.time() - self._start_time)
         duration = datetime.timedelta(seconds=duration)
-        return str(duration)
+        return duration
 
     def update_dict(self):
         return dict(found_key=self.found_key, duration=self.duration, completed=self.completed,

@@ -4,17 +4,9 @@ FROM dizcza/docker-hashcat:$branch
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -y bzip2 python3.8-distutils python3.8-venv nginx supervisor apt-utils
+    apt-get install -y bzip2 python3-distutils python3-venv python3-pip nginx supervisor apt-utils
 
 RUN useradd --no-create-home nginx
-
-RUN wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py && \
-    python3.8 /tmp/get-pip.py
-
-ENV VIRTUAL_ENV=/opt/venv
-RUN python3.8 -m venv $VIRTUAL_ENV
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-RUN pip install --upgrade pip
 
 # wordlists
 RUN mkdir -p /root/hashcat-wpa-server/wordlists
@@ -32,9 +24,14 @@ RUN hashcat --stdout --rules=/root/hashcat/rules/best64.rule \
     sort -u > /root/hashcat-wpa-server/wordlists/Top1575-probable-v2-rule-best64.txt
 RUN chmod -wx /root/hashcat-wpa-server/wordlists/*
 
+# rules
+RUN mkdir -p /root/.hashcat/wpa-server/rules
+WORKDIR /root/hashcat-wpa-server/rules
+RUN wget --no-check-certificate https://github.com/Unic0rn28/hashcat-rules/raw/main/unicorn%20rules/UnicornLorge.rule
+RUN wget --no-check-certificate https://github.com/stealthsploit/OneRuleToRuleThemStill/raw/main/OneRuleToRuleThemStill.rule
 
 COPY ./requirements.txt /root/hashcat-wpa-server/requirements.txt
-RUN pip install -r /root/hashcat-wpa-server/requirements.txt
+RUN pip3 install -r /root/hashcat-wpa-server/requirements.txt
 
 RUN mkdir -p /root/hashcat-wpa-server/logs/supervisor
 RUN mkdir -p /root/.hashcat/wpa-server/brain
@@ -47,7 +44,6 @@ WORKDIR /root/hashcat-wpa-server
 COPY ./nginx.conf /etc/nginx/nginx.conf
 COPY ./supervisor.conf /etc/supervisor/conf.d/hashcat_wpa.conf
 COPY . /root/hashcat-wpa-server
-RUN rm -rf /root/hashcat-wpa-server/rules
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8

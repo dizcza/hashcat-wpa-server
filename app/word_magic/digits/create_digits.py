@@ -5,6 +5,7 @@ from datetime import date
 from enum import Enum, unique
 from pathlib import Path
 from typing import Union, Iterable
+from tqdm import trange
 
 from dateutil.rrule import rrule, DAILY
 
@@ -187,6 +188,15 @@ def create_digits_short(flashback_years=50, cycle_length_max=10):
         digits.update(create_digits_cycle(password_length))
     digits.update(create_days(flashback_years, date_fmt=("%d%m%Y",)))
     write_digits(digits, digits_wordlist_path)
+
+
+def create_digit_triples(n=8, k=4):
+    m = n - k
+    with open(WORDLISTS_DIR / f"digits_triple_{n}_{k}.txt", 'w') as f:
+        for d in trange(10 ** n):
+            s = f"{d:0{n}d}"
+            if len(set(s)) <= m:
+                f.write(f"{s}\n")
 
 
 def create_digits_wordlist():

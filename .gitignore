@@ -32,3 +32,8 @@ brain/
 
 # Alembic database migration
 migrations/
+
+rules/*
+!rules/best64.rule
+!rules/essid.rule
+

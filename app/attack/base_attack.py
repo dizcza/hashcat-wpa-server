@@ -138,7 +138,7 @@ class BaseAttack:
             hashcat_stdout = HashcatCmdStdout(outfile=f.name)
             hashcat_stdout.add_wordlists(WordList.NAMES_UA_RU,
                                          WordList.NAMES_RU_CYRILLIC)
-            hashcat_stdout.add_rule(Rule.ESSID)
+            hashcat_stdout.add_rule(Rule(Rule.ESSID))
             subprocess_call(hashcat_stdout.build())
             hashcat_cmd = self.new_cmd()
             hashcat_cmd.add_wordlists(f.name)

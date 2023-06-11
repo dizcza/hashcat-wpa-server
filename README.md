@@ -115,6 +115,14 @@ docker compose build
 docker compose up
 ```
 
+If you want to build an image targeting a specific platform, pass it as the `branch` arg to the build command:
+
+```
+docker compose build --build-arg branch=cuda
+```
+
+Available targets & platforms are shown in the readme header.
+
 
 ## User wordlists
 

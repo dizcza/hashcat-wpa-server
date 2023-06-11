@@ -124,7 +124,7 @@ def progress():
                 task_progress = dict(task_id=task_id,
                                      progress=f"{lock.progress:.2f}",
                                      status=lock.status,
-                                     duration=lock.duration,
+                                     duration=str(lock.duration),
                                      found_key=lock.found_key)
                 tasks_progress.append(task_progress)
     return jsonify(tasks_progress)

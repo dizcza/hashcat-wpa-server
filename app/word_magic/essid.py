@@ -90,7 +90,7 @@ def _collect_essid_rule(essid_wordlist_path: Path):
         # Ignore UnicodeDecodeError: 'utf-8' codec can't decode byte ...
         hashcat_stdout = HashcatCmdStdout(outfile=f.name)
         hashcat_stdout.add_wordlists(essid_wordlist_path)
-        hashcat_stdout.add_rule(Rule.ESSID)
+        hashcat_stdout.add_rule(Rule(Rule.ESSID))
         subprocess_call(hashcat_stdout.build())
         candidates = f.read().splitlines()
     return candidates
