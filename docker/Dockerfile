@@ -49,8 +49,11 @@ ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 ENV PYTHONPATH=.
 
-RUN flask db init --directory=/root/.hashcat/wpa-server/database/migrations
-RUN flask db migrate --directory=/root/.hashcat/wpa-server/database/migrations
-RUN flask db upgrade --directory=/root/.hashcat/wpa-server/database/migrations
+RUN echo "#!/bin/bash\n" \
+         "flask db init --directory=/root/.hashcat/wpa-server/database/migrations\n" \
+         "flask db migrate --directory=/root/.hashcat/wpa-server/database/migrations\n" \
+         "flask db upgrade --directory=/root/.hashcat/wpa-server/database/migrations\n" \
+          > /root/hashcat-wpa-server/start.sh
+RUN chmod +x /root/hashcat-wpa-server/start.sh
 
 CMD supervisord -n -c /etc/supervisor/supervisord.conf
