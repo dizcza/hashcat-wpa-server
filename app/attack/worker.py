@@ -4,7 +4,7 @@ import time
 from asyncio import CancelledError
 from pathlib import Path
 
-from app import db, lock_app
+from app import app, db, lock_app
 from app.attack.base_attack import BaseAttack
 from app.attack.hashcat_cmd import run_with_status, HashcatCmdCapture
 from app.config import BENCHMARK_FILE
@@ -101,9 +101,10 @@ class CapAttack(BaseAttack):
         with self.lock:
             task_id = self.lock.task_id
         with lock_app:
-            task = UploadedTask.query.get(task_id)
-            task.status = TaskInfoStatus.RUNNING
-            db.session.commit()
+            with app.app_context():
+                task = UploadedTask.query.get(task_id)
+                task.status = TaskInfoStatus.RUNNING
+                db.session.commit()
         super().run_all()
         self.run_main_wordlist()
 
@@ -178,8 +179,9 @@ class HashcatWorker:
             lock.finish()
             update_dict = lock.update_dict()
             task_id = lock.task_id
-        UploadedTask.query.filter_by(id=task_id).update(update_dict)
-        db.session.commit()
+        with app.app_context():
+            UploadedTask.query.filter_by(id=task_id).update(update_dict)
+            db.session.commit()
         self.locks_onetime.append(lock)
 
     def submit_capture(self, file_22000, uploaded_form: UploadForm, task: UploadedTask):
