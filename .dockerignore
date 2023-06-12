@@ -8,7 +8,8 @@ docker/
 env/
 logs/
 server_keys_backup/
-wordlists/
+wordlists/*
+!wordlists/names_ua*
 rsync.exclude
 app/benchmark.csv
 app/hashcat_brain_password

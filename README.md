@@ -1,5 +1,5 @@
 [![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/latest?label=latest)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
-[[![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/cuda?label=cuda)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
+[![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/cuda?label=cuda)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
 [![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/intel-cpu?label=intel-cpu)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
 [![](https://img.shields.io/docker/image-size/dizcza/hashcat-wpa-server/pocl?label=pocl)](https://hub.docker.com/r/dizcza/hashcat-wpa-server/tags)
 
