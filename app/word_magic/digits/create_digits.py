@@ -200,6 +200,8 @@ def create_digit_triples(n=8, k=4):
 
 
 def create_digits_wordlist():
+    if WordList.DIGITS_8.path.exists():
+        return
     create_digits_8()
     create_digits_append(short=False)
     create_digits_append(short=True)

@@ -4,8 +4,7 @@ from pathlib import Path
 from flask_uploads import UploadSet, configure_uploads
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
-from wtforms.fields import RadioField, SubmitField, BooleanField
-from wtforms.fields.html5 import IntegerField
+from wtforms.fields import RadioField, SubmitField, BooleanField, IntegerField
 from wtforms.validators import Optional, ValidationError, NumberRange
 
 from app import app, db

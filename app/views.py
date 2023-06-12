@@ -48,15 +48,6 @@ def make_shell_context():
     return dict(db=db, User=User, Role=Role, UploadedTask=UploadedTask)
 
 
-@app.before_first_request
-def before_first_request():
-    create_first_users()
-    create_digits_wordlist()
-    create_fast_wordlists()
-    check_incomplete_tasks()
-    backward_db_compatibility()
-
-
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
@@ -201,3 +192,9 @@ def hashcat_potfile():
     if hashcat_potfile.exists():
         return hashcat_potfile.read_text()
     return jsonify("Empty hashcat.potfile")
+
+
+with app.app_context():
+    create_first_users()
+    check_incomplete_tasks()
+    backward_db_compatibility()

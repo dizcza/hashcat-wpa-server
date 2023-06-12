@@ -106,6 +106,7 @@ class BaseAttack:
         - simple digits like 88888888, 12345678, etc.
         For more information refer to `digits/create_digits.py`
         """
+        create_digits_wordlist()
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlists(WordList.DIGITS_8)
         subprocess_call(hashcat_cmd.build())
@@ -115,6 +116,7 @@ class BaseAttack:
         """
         - Top1575-probable-v2.txt with best64 rules
         """
+        create_fast_wordlists()
         hashcat_cmd = self.new_cmd()
         hashcat_cmd.add_wordlists(WordList.TOP1K_RULE_BEST64)
         subprocess_call(hashcat_cmd.build())
