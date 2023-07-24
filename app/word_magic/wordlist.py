@@ -131,13 +131,18 @@ def count_rules(rule: Rule):
 
 @lru_cache()
 def count_wordlist(wordlist_path):
-    wordlist_path = str(wordlist_path)
-    out, err = subprocess_call(['wc', '-l', wordlist_path])
-    out = out.rstrip('\n')
-    counter = 0
-    if re.fullmatch(f"\d+ {wordlist_path}", out):
-        counter, path = out.split(' ')
-    return int(counter)
+    st_size_mb = Path(wordlist_path).stat().st_size / (2 ** 20)
+    if st_size_mb < 150:
+        wordlist_path = str(wordlist_path)
+        out, err = subprocess_call(['wc', '-l', wordlist_path])
+        out = out.rstrip('\n')
+        counter = 0
+        if re.fullmatch(f"\d+ {wordlist_path}", out):
+            counter, path = out.split(' ')
+        return int(counter)
+    count_per_mb = 100510.62068189554  # from top109M
+    count_approx = int(st_size_mb * count_per_mb)
+    return count_approx
 
 
 def estimate_runtime_fmt(wordlist_path: Path, rule: Rule) -> str:
