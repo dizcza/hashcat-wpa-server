@@ -17,11 +17,9 @@ class InvalidFileError(Exception):
     pass
 
 
-class Rule:
+class Rule(Enum):
+    BEST_64 = "best64.rule"
     ESSID = "essid.rule"
-
-    def __init__(self, name):
-        self.value = name
 
     @property
     def path(self):

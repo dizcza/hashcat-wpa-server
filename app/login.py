@@ -123,11 +123,11 @@ def create_first_users():
     admin_name = os.environ['HASHCAT_ADMIN_USER']
     if not User.query.filter(User.username == admin_name).first():
         # no 'admin' user yet
-        warnings.warn("It appears that you're running hashcat-wpa-server for the first time. Please run in a terminal "
-                      "the following commands to mitigate database migration in the future:"
-                      "\n flask db init"
-                      "\n flask db migrate"
-                      "\n flask db upgrade")
+        print("It appears that you're running hashcat-wpa-server for the first time. "
+              "To migrate database in the future, run:"
+              "\n flask db init"
+              "\n flask db migrate"
+              "\n flask db upgrade")
         register_user(user=admin_name, password=os.environ['HASHCAT_ADMIN_PASSWORD'],
                       roles=(RoleEnum.ADMIN, RoleEnum.USER))
 
