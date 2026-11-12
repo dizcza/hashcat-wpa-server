@@ -69,6 +69,15 @@ pip install -r requirements.txt  # required only once
 HASHCAT_ADMIN_USER=admin HASHCAT_ADMIN_PASSWORD=<your-secret-password> gunicorn app:app
 ```
 
+To serve it through the host's nginx on port 9111 (with request limits and the
+[bad bot blocker](https://github.com/mitchellkrogza/nginx-ultimate-bad-bot-blocker)),
+use the site config [`hashcat-wpa-server.vhost`](hashcat-wpa-server.vhost):
+
+```
+sudo cp hashcat-wpa-server.vhost /etc/nginx/sites-available/
+sudo nginx -t && sudo nginx -s reload
+```
+
 ### Docker containers
 
 
